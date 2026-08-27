@@ -91,6 +91,8 @@ html,body{height:100%;overflow:hidden;background:#1B2A1B;font-family:var(--ui);c
   text-shadow:0 1px 0 rgba(0,0,0,.35)}
 .badge .prix.cher{background:#FF5C7A}
 .badge .prix.servie{background:#4CC97A;padding:1px 8px}
+.badge .prix.monte{background:#FF5C7A;animation:monte .4s ease-in-out 6}
+@keyframes monte{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
 
 /* ---- DAMES ---- */
 .dame{width:54px;height:54px;pointer-events:none;display:flex;align-items:center;justify-content:center;
@@ -128,6 +130,13 @@ html,body{height:100%;overflow:hidden;background:#1B2A1B;font-family:var(--ui);c
 #modou #mHalo{animation:halo 1.7s ease-in-out infinite}
 @keyframes halo{0%,100%{opacity:.95}50%{opacity:.4}}
 #modou.marche #mHalo{animation-duration:.6s}
+#modou .dit{position:absolute;left:50%;bottom:100%;margin-bottom:4px;
+  transform:translateX(-50%) scale(.6);transform-origin:50% 100%;
+  background:var(--blanc);border:3px solid var(--trait);border-radius:13px;
+  padding:4px 10px;font-size:11px;font-weight:900;white-space:nowrap;color:var(--trait);
+  box-shadow:0 3px 0 var(--trait);opacity:0;pointer-events:none;
+  transition:opacity .18s,transform .22s cubic-bezier(.3,1.6,.5,1)}
+#modou .dit.on{opacity:1;transform:translateX(-50%) scale(1)}
 #modou.dedans{opacity:.16}
 #modou.epuise{filter:drop-shadow(0 5px 6px rgba(0,0,0,.4)) grayscale(.45) brightness(.86)}
 #modou.epuise #mHalo{stroke:#FF5C7A}
@@ -245,6 +254,12 @@ html,body{height:100%;overflow:hidden;background:#1B2A1B;font-family:var(--ui);c
   border:3px solid var(--trait);box-shadow:var(--ombre);font-family:var(--ui);
   font-size:15px;font-weight:900;line-height:1;color:var(--trait);cursor:pointer}
 #sonBtn.coupe{background:#D8D2C6;color:#8E877A}
+#voixBtn{position:fixed;right:44px;bottom:calc(222px + env(safe-area-inset-bottom));
+  z-index:42;width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.85);
+  border:3px solid var(--trait);box-shadow:var(--ombre);font-family:var(--ui);
+  font-size:15px;line-height:1;color:var(--trait);cursor:pointer}
+#voixBtn.coupe{background:#D8D2C6}
+#voixBtn:active{transform:translateY(2px);box-shadow:0 1px 0 var(--trait)}
 #sonBtn:active{transform:translateY(2px);box-shadow:0 1px 0 var(--trait)}
 #camBtn:active{transform:translateY(2px);box-shadow:0 1px 0 var(--trait)}
 
@@ -262,6 +277,8 @@ html,body{height:100%;overflow:hidden;background:#1B2A1B;font-family:var(--ui);c
   z-index:3;pointer-events:none;opacity:0;transition:opacity .2s;
   border:4px solid #FFC53D;background:rgba(255,197,61,.22)}
 #cible.on{opacity:1;animation:pulseCible .9s ease-in-out infinite}
+#cible.guide{border-color:#FF7FB0;background:rgba(255,127,176,.3);
+  width:70px;height:70px;margin:-35px 0 0 -35px;animation:pulseCible .55s ease-in-out infinite}
 @keyframes pulseCible{0%,100%{transform:scale(.82)}50%{transform:scale(1.12)}}
 
 /* joystick flottant : il apparaît sous le doigt, n'importe où sur le plateau */
@@ -368,6 +385,7 @@ button.cta{touch-action:manipulation;position:relative;z-index:2}
 
 <button id="camBtn">⊕</button>
 <button id="sonBtn">♪</button>
+<button id="voixBtn">🗣</button>
 <div id="stick"><div id="knob"></div></div>
 <div id="flottant"><div id="flottantKnob"></div></div>
 
@@ -595,7 +613,7 @@ function carteSVG(){
    ========================================================= */
 'use strict';
 
-var BUILD_TAG = 'LQD-v3.9';
+var BUILD_TAG = 'LQD-v4.2';
 document.getElementById('build').textContent = BUILD_TAG;
 
 /* ---------- affichage des erreurs, pour pouvoir diagnostiquer ---------- */
@@ -636,6 +654,7 @@ function surAppui(e){
       return;
     }
     if (n.id === 'sonBtn'){ try { basculerSon(); } catch (err) {} return; }
+    if (n.id === 'voixBtn'){ try { basculerVoix(); } catch (err) {} return; }
     n = n.parentNode;
   }
 }
@@ -654,7 +673,8 @@ var CFG = {
   ARGENT_DEPART: 510,
   GAIN_CHANTIER: 51,      // francs par seconde de travail
   COUT_CHANTIER: 9,       // le chantier paie bien, mais il casse le dos
-  INFLATION: 0.9,         // les prix font +90 % au trentième jour
+  PALIER_JOURS: 15,       // tous les 15 jours...
+  PALIER_HAUSSE: 0.30,    // ...tout augmente de 30 %
 
   VITESSE: 12.5,
   VIT_PLEIN: 1.40,        // à 100 de force, Modou file
@@ -704,12 +724,16 @@ var CFG = {
 /* ---------- LES QUATRE DAMES ---------- */
 var DAMES = [
   { id:1, nom:'Première Dame',  lieu:'SANTE',  cri:'Je tousse encore…',
+    demande:'Modou, ach\u00e8te-moi mes m\u00e9dicaments.', voix:{ hauteur:0.92, vitesse:0.84 },
     usure:0.58, muette:false, bed:{x:45.7,y:60.0}, col:'--sante'  },
   { id:2, nom:'Deuxième Dame',  lieu:'AMOUR',  cri:'Tu ne me vois plus.',
+    demande:'Modou, am\u00e8ne-moi des fleurs.', voix:{ hauteur:1.22, vitesse:0.98 },
     usure:0.68, muette:false, bed:{x:54.3,y:60.0}, col:'--amour'  },
   { id:3, nom:'Troisième Dame', lieu:'TEMPLE', cri:'…',
+    demande:'Modou, j\u2019ai besoin de pri\u00e8res.', voix:{ hauteur:1.08, vitesse:0.76 },
     usure:0.48, muette:true,  bed:{x:45.7,y:75.0}, col:'--spirit' },
   { id:4, nom:'Quatrième Dame', lieu:'BANQUE', cri:'Il me faut ça demain.',
+    demande:'Modou, j\u2019ai besoin d\u2019argent.', voix:{ hauteur:1.42, vitesse:1.12 },
     usure:0.84, muette:false, bed:{x:54.3,y:75.0}, col:'--argent' }
 ];
 
@@ -886,6 +910,7 @@ function nouvelEtat(){
     exode:[null,null,null,null],
     ordreDepart:[],
     viseRetour:false,
+    vu:{},
     auto:null,
     nuit:0, etaitNuit:false,
     journal:[],
@@ -923,9 +948,12 @@ function calculerNuit(){
 }
 
 /* ---------- PRIX DU JOUR ---------- */
+function palierActuel(jour){
+  return Math.floor((jour || S.jour) / CFG.PALIER_JOURS);
+}
 function prixDuJour(cle){
   var base = LIEUX[cle].prix;
-  var k = 1 + CFG.INFLATION * ((S.jour - 1) / (CFG.JOURS_REF - 1));
+  var k = Math.pow(1 + CFG.PALIER_HAUSSE, palierActuel());
   return Math.round(base * k);
 }
 
@@ -987,7 +1015,7 @@ function construire(){
   // Modou
   modouEl = document.createElement('div');
   modouEl.className = 'pos'; modouEl.id = 'modou';
-  modouEl.innerHTML = bonhommeSVG();
+  modouEl.innerHTML = bonhommeSVG() + '<div class="dit"></div>';
   layer.appendChild(modouEl);
 
   // jauges du haut
@@ -1345,6 +1373,98 @@ function majRecord(){
   if (el) el.textContent = MEILLEUR;
 }
 
+/* =========================================================
+   LES VOIX — synthèse du navigateur, aucun fichier audio
+   ========================================================= */
+var VOIX_ON = true;
+var VOIX = { homme:null, femme:null, prete:false };
+
+function chargerLesVoix(){
+  if (!('speechSynthesis' in window)) return;
+  var liste = [];
+  try { liste = window.speechSynthesis.getVoices() || []; } catch (e) { return; }
+  if (!liste.length) return;
+
+  var fr = liste.filter(function(v){ return (v.lang || '').toLowerCase().indexOf('fr') === 0; });
+  if (!fr.length) fr = liste;
+
+  var nomsHommes = /thomas|nicolas|daniel|paul|henri|guillaume|male|homme|jacques|antoine/i;
+  var nomsFemmes = /am[ée]lie|aur[ée]lie|marie|chantal|c[ée]line|virginie|female|femme|audrey|julie/i;
+
+  VOIX.homme = fr.filter(function(v){ return nomsHommes.test(v.name); })[0] || null;
+  VOIX.femme = fr.filter(function(v){ return nomsFemmes.test(v.name); })[0] || null;
+
+  // s'il n'y a qu'une seule voix, on différencie par la hauteur
+  if (!VOIX.homme) VOIX.homme = fr[0] || null;
+  if (!VOIX.femme) VOIX.femme = fr[fr.length > 1 ? 1 : 0] || null;
+  VOIX.prete = true;
+}
+if ('speechSynthesis' in window){
+  chargerLesVoix();
+  window.speechSynthesis.onvoiceschanged = chargerLesVoix;
+}
+
+var derniereParole = 0;
+function parler(texte, profil){
+  if (!VOIX_ON || !texte) return;
+  if (!('speechSynthesis' in window)) return;
+  var maintenant = Date.now();
+  if (maintenant - derniereParole < 250) return;   // on n'empile pas les phrases
+  derniereParole = maintenant;
+  try {
+    if (!VOIX.prete) chargerLesVoix();
+    window.speechSynthesis.cancel();
+    var u = new SpeechSynthesisUtterance(texte);
+    u.lang = 'fr-FR';
+    if (profil && profil.homme){
+      if (VOIX.homme) u.voice = VOIX.homme;
+      u.pitch = profil.hauteur !== undefined ? profil.hauteur : 0.62;
+      u.rate  = profil.vitesse !== undefined ? profil.vitesse : 0.95;
+    } else {
+      if (VOIX.femme) u.voice = VOIX.femme;
+      u.pitch = profil && profil.hauteur !== undefined ? profil.hauteur : 1.2;
+      u.rate  = profil && profil.vitesse !== undefined ? profil.vitesse : 1.0;
+    }
+    u.volume = 1;
+    window.speechSynthesis.speak(u);
+  } catch (e) {}
+}
+function couperLaParole(){
+  try { if ('speechSynthesis' in window) window.speechSynthesis.cancel(); } catch (e) {}
+}
+var VOIX_MODOU = { homme:true, hauteur:0.62, vitesse:0.96 };
+function parleDame(i, texte){
+  if (i < 0 || i >= DAMES.length) return;
+  parler(texte, DAMES[i].voix);
+}
+function basculerVoix(){
+  VOIX_ON = !VOIX_ON;
+  if (!VOIX_ON) couperLaParole();
+  var b = document.getElementById('voixBtn');
+  if (b){ b.textContent = VOIX_ON ? '\uD83D\uDDE3' : '\uD83D\uDD07'; b.classList.toggle('coupe', !VOIX_ON); }
+  if (VOIX_ON) parler('Je t\u2019\u00e9coute.', VOIX_MODOU);
+}
+
+/* ---------- LE GUIDAGE : chaque règle une seule fois, au bon moment ---------- */
+function guider(cle, texte, ms){
+  if (!S || S.vu[cle]) return;
+  S.vu[cle] = true;
+  modouDit(texte, ms || 2800);
+}
+
+/* ---------- CE QUE MODOU DIT ---------- */
+var ditT = null;
+function modouDit(txt, ms, muet){
+  if (!muet) parler(txt, VOIX_MODOU);
+  if (!modouEl) return;
+  var b = modouEl.querySelector('.dit');
+  if (!b) return;
+  b.textContent = txt;
+  b.classList.add('on');
+  clearTimeout(ditT);
+  ditT = setTimeout(function(){ b.classList.remove('on'); }, ms || 2200);
+}
+
 /* ---------- FLASH ---------- */
 var flashT = null;
 function flash(txt, ms){
@@ -1500,6 +1620,31 @@ function allerLaBasInterne(sx, sy){
   }
   sonEntree();
 }
+function marquerHausse(){
+  Object.keys(badgesEl).forEach(function(k){
+    var el = badgesEl[k].querySelector('.prix');
+    if (el) el.classList.add('monte');
+  });
+  setTimeout(function(){
+    Object.keys(badgesEl).forEach(function(k){
+      var el = badgesEl[k].querySelector('.prix');
+      if (el) el.classList.remove('monte');
+    });
+  }, 2600);
+}
+
+function montrerLaRoute(){
+  if (!cibleEl) return;
+  cibleEl.style.left = CENTRE.x + '%';
+  cibleEl.style.top  = CENTRE.y + '%';
+  cibleEl.classList.add('on', 'guide');
+  clearTimeout(montrerLaRoute.t);
+  montrerLaRoute.t = setTimeout(function(){
+    cibleEl.classList.remove('guide');
+    if (!S || !S.auto) cibleEl.classList.remove('on');
+  }, 2600);
+}
+
 function stopperAuto(){
   if (!S || !S.auto) return;
   S.auto = null;
@@ -1617,6 +1762,7 @@ function tenterEchange(cle){
     if (mot) mot.textContent = L.mot;
     setTimeout(function(){ g.classList.add('donne'); }, 380);
   } else {
+    guider('sansargent', 'Je n\u2019ai pas assez. Je retourne au chantier.', 3000);
     var manque = prix - Math.floor(S.argent);
     if (mot) mot.textContent = 'Il te manque ' + manque + ' F.';
     g.classList.add('refus');
@@ -1640,6 +1786,7 @@ function majScene(dt){
     S.jauges[sc.iD] = Math.min(CFG.MAX_JAUGE, S.jauges[sc.iD] + CFG.GAIN_ACHAT * rend);
     S.force = Math.max(0, S.force - CFG.COUT_ACHAT);
     sonCaisse();
+    guider('achat', 'Voil\u00e0. Elle est servie. Je repasse au foyer.', 3000);
     S.foyer = false;
     volant('-' + sc.prix + ' F', '#FF7B92');
   }
@@ -1684,7 +1831,13 @@ function majCrises(){
     else if (v < CFG.SEUIL_MURMURE) n = 1;
 
     if (n !== S.crise[i]){
-      if (n === 2 && S.crise[i] < 2) sonAppel();
+      if (n === 2 && S.crise[i] < 2){
+        sonAppel();
+        if (i === urgente){
+          parleDame(i, DAMES[i].demande);
+          flash(DAMES[i].nom + ' : « ' + DAMES[i].demande + ' »', 2800);
+        }
+      }
       S.crise[i] = n;
     }
     damesEl[i].className = 'dame pos' +
@@ -1730,6 +1883,7 @@ function commencerExode(i){
   var bulle = damesEl[i].querySelector('.cri');
   if (bulle) bulle.textContent = 'Je m\u2019en vais…';
   sonDebout();
+  parleDame(i, 'Modou, je m\u2019en vais.');
   flash(D.nom + ' s\u2019en va. Rattrape-la avant la sortie !', 3000);
   noter(S.jour, D.nom + ' s\u2019est lev\u00e9e pour partir.');
   S.sortieVue = 2.2;
@@ -1749,6 +1903,7 @@ function majExode(dt){
       var b2 = damesEl[i].querySelector('.cri');
       if (b2) b2.textContent = 'Tu es venu.';
       sonFoyer();
+      parleDame(i, 'Tu es venu. Merci.');
       flash(DAMES[i].nom + ' revient se coucher.', 2200);
       noter(S.jour, DAMES[i].nom + ' a \u00e9t\u00e9 rattrap\u00e9e \u00e0 temps.');
     }
@@ -1822,6 +1977,7 @@ function faireRevenir(i){
   };
   S.sortieVue = 2.4;
   sonFoyer();
+  parleDame(i, 'Je reviens \u00e0 la maison.');
   volant('-' + CFG.PRIX_RETOUR + ' F', '#FFC53D');
   flash(D.nom + ' revient au foyer. Sa maison rouvre.', 3200);
   noter(S.jour, D.nom + ' est revenue \u2014 ' + CFG.PRIX_RETOUR + ' F.');
@@ -1868,7 +2024,11 @@ function rendre(){
                            : (S.force < CFG.SEUIL_FATIGUE ? '#FF9F45' : 'var(--or)');
   var niv = S.force < CFG.SEUIL_EPUISE ? 2 : (S.force < CFG.SEUIL_FATIGUE ? 1 : 0);
   if (niv > S.alerte){
-    if (niv === 1){ flash('Modou fatigue. Repasse au foyer.', 2000); note(280,0.32,'sine',0.22,0,BUS_EFF,200); }
+    if (niv === 1){
+      flash('Modou fatigue. Repasse au foyer.', 2000);
+      note(280,0.32,'sine',0.22,0,BUS_EFF,200);
+      guider('fatigue', 'Je fatigue. Je dois passer au foyer.', 2800);
+    }
     if (niv === 2){
       flash('\u00c9puis\u00e9 \u2014 le foyer se vide plus vite et la journ\u00e9e est \u00e0 refaire.', 2600);
       sonDebout();
@@ -1891,6 +2051,7 @@ function rendre(){
   if (S.sorties > 0 && !S.viseRetour){
     S.viseRetour = true;
     flash('Atteins ' + CFG.PRIX_RETOUR + ' F et elle revient.', 3000);
+    modouDit('Avec mille francs, je peux la ramener.', 3200);
   }
   if (S.sorties === 0) S.viseRetour = false;
   var nuitPleine = S.nuit > 0.5;
@@ -1902,7 +2063,7 @@ function rendre(){
   zonesEl.CENTRE.classList.toggle('foyerdu', !S.foyer && S.zone !== 'CENTRE');
   badgesEl.CENTRE.classList.toggle('foyerdu', !S.foyer);
   var bp = badgesEl.CENTRE.querySelector('.txt');
-  if (bp) bp.textContent = S.foyer ? 'FOYER' : 'REPASSE ICI';
+  if (bp) bp.textContent = S.foyer ? 'FOYER' : 'REVIENS ICI D\u2019ABORD';
   elJour.textContent = S.jour;
 
   // prix du jour sur les badges + zone trop chère
@@ -1974,11 +2135,16 @@ function tourDeBoucle(ts){
 
   var jour = Math.floor(S.temps / CFG.SEC_PAR_JOUR) + 1;
   if (jour !== S.jour){
+    var palierAvant = palierActuel(S.jour);
     S.jour = jour;
     sonJour();
-    if (jour % 10 === 0){
-      flash('Jour ' + jour + ' \u2014 tout co\u00fbte plus cher.', 1800);
-      noter(jour, 'Jour ' + jour + ' pass\u00e9. Les prix montent encore.');
+    if (palierActuel(jour) > palierAvant){
+      var hausse = Math.round(CFG.PALIER_HAUSSE * 100);
+      var total = Math.round((Math.pow(1 + CFG.PALIER_HAUSSE, palierActuel(jour)) - 1) * 100);
+      flash('Jour ' + jour + ' \u2014 la vie augmente de ' + hausse + ' %.', 3000);
+      noter(jour, 'Les prix montent de ' + hausse + ' % (' + total + ' % depuis le d\u00e9but).');
+      sonDebout();
+      marquerHausse();
     }
     if (jour > S.record){ S.record = jour; majRecord(); }
   }
@@ -2072,18 +2238,27 @@ function tourDeBoucle(ts){
   }
 
   if (S.zone === 'CENTRE'){
+    guider('foyer', 'Ici c\u2019est le foyer. Je reprends des forces.', 3000);
     if (S.force < 99){
       tickSouffle += dt;
       if (tickSouffle > 0.9){ tickSouffle = 0; sonSouffle(); }
     }
     var bonusNuit = 1 + (CFG.NUIT_SOUFFLE - 1) * S.nuit;
     S.force = Math.min(100, S.force + CFG.SOUFFLE_PAR_SEC * bonusNuit * dt);
-    if (!S.foyer){ S.foyer = true; sonFoyer(); }
+    if (!S.foyer){
+      S.foyer = true;
+      sonFoyer();
+      modouDit('Bon. Je peux repartir.', 1800);
+    }
   } else if (S.zone === 'CHANTIER'){
     if (estNuit){
       S.serie = 0;
-      if (S.cool <= 0){ flash('Le chantier est ferm\u00e9. Reviens au lever du jour.', 1900); S.cool = 2.4; }
+      if (S.cool <= 0){
+        modouDit('Le chantier est ferm\u00e9 la nuit.', 2400);
+        S.cool = 2.4;
+      }
     } else {
+      guider('chantier', 'Ici je gagne ma journ\u00e9e. Je reste et l\u2019argent monte.', 3200);
     var rendT = 1;
     if (S.force < CFG.SEUIL_EPUISE) rendT = CFG.RENDEMENT_EPUISE;
     else if (S.force < CFG.SEUIL_FATIGUE) rendT = CFG.RENDEMENT_FATIGUE;
@@ -2112,8 +2287,11 @@ function tourDeBoucle(ts){
       // maison fermée : rien ne se passe
     } else if (iZ >= 0 && !S.foyer){
       if (S.cool <= 0){
-        flash('Repasse par le foyer avant la maison suivante.', 2000);
-        S.cool = 2.2;
+        modouDit('Je dois d\u2019abord passer au foyer !', 2600);
+        flash('Retourne au foyer, au centre des quatre lits, avant d\u2019entrer ici.', 3000);
+        montrerLaRoute();
+        sonRefus();
+        S.cool = 2.6;
       }
     } else if (iZ >= 0 && S.exode[iZ] && S.exode[iZ].retour){
       // elle rentre déjà : inutile de repayer
@@ -2175,6 +2353,7 @@ function finir(cause){
   document.body.classList.remove('playing');
   joyFin();
   stopperAuto();
+  couperLaParole();
   rentrerTousLesVendeurs();
   majRecord();
   monter(BUS_MUS, 0, 1.2);
@@ -2335,8 +2514,11 @@ function demarrer(){
   document.body.classList.add('playing');
   document.getElementById('scrIntro').classList.add('hide');
   document.getElementById('scrFin').classList.add('hide');
-  flash('Tiens le plus longtemps possible. Trois d\u00e9parts et tout s\u2019arr\u00eate.', 3200);
   majRecord();
+  couperLaParole();
+  setTimeout(function(){
+    modouDit('Je vais d\u2019abord travailler au chantier.', 3200);
+  }, 500);
 }
 /* les boutons sont déjà branchés par délégation en haut du script */
 requestAnimationFrame(boucle);
