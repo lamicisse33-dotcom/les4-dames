@@ -66,6 +66,9 @@ html,body{height:100%;overflow:hidden;background:#1B2A1B;font-family:var(--ui);c
 .badge.foyerdu{opacity:1;background:#FFDCEB}
 .badge.foyerdu .txt{max-width:110px;opacity:1;margin:0}
 #sous.serie{box-shadow:0 3px 0 var(--trait),0 0 0 3px rgba(255,197,61,.65)}
+#sous.rachat{background:#C8892B;animation:viser 1.4s ease-in-out infinite}
+@keyframes viser{0%,100%{box-shadow:0 3px 0 var(--trait)}
+  50%{box-shadow:0 3px 0 var(--trait),0 0 0 5px rgba(255,197,61,.5)}}
 .zone.appel{border-color:var(--or);border-style:solid;background:rgba(255,197,61,.26);
   animation:appelZone 1s ease-in-out infinite}
 @keyframes appelZone{0%,100%{box-shadow:0 0 0 0 rgba(255,197,61,0)}
@@ -254,6 +257,13 @@ html,body{height:100%;overflow:hidden;background:#1B2A1B;font-family:var(--ui);c
   border-radius:50%;background:var(--blanc);border:3px solid var(--trait);
   box-shadow:0 3px 0 rgba(43,33,24,.45);will-change:transform}
 
+/* marqueur de destination */
+#cible{position:absolute;width:44px;height:44px;margin:-22px 0 0 -22px;border-radius:50%;
+  z-index:3;pointer-events:none;opacity:0;transition:opacity .2s;
+  border:4px solid #FFC53D;background:rgba(255,197,61,.22)}
+#cible.on{opacity:1;animation:pulseCible .9s ease-in-out infinite}
+@keyframes pulseCible{0%,100%{transform:scale(.82)}50%{transform:scale(1.12)}}
+
 /* joystick flottant : il apparaît sous le doigt, n'importe où sur le plateau */
 #flottant{position:fixed;left:0;top:0;width:124px;height:124px;margin:-62px 0 0 -62px;
   border-radius:50%;z-index:44;pointer-events:none;opacity:0;
@@ -340,7 +350,7 @@ button.cta{touch-action:manipulation;position:relative;z-index:2}
 </head>
 <body>
 
-<div id="scene"><div id="board"><div id="layer"></div></div></div>
+<div id="scene"><div id="board"><div id="layer"></div><div id="cible"></div></div></div>
 <div id="flash"></div>
 
 <div id="top">
@@ -542,7 +552,7 @@ function carteSVG(){
    ========================================================= */
 'use strict';
 
-var BUILD_TAG = 'LQD-v3.4';
+var BUILD_TAG = 'LQD-v3.6';
 document.getElementById('build').textContent = BUILD_TAG;
 
 /* ---------- affichage des erreurs, pour pouvoir diagnostiquer ---------- */
@@ -623,6 +633,9 @@ var CFG = {
   SEUIL_PARTIR: 0,        // à zéro, la Dame quitte le cercle
   SORTIES_FATALES: 3,     // trois départs et la partie est perdue
 
+  PRIX_RETOUR: 1000,      // avec cette somme, Modou fait revenir une Dame partie
+  JAUGE_RETOUR: 55,       // dans quel état elle revient
+  VIT_RETOUR: 2.4,        // elle revient plus vite qu'elle n'est partie
   VIT_DAME: 3.5,          // elle s'en va lentement : Modou peut encore la rattraper
   SORTIE_X: 108,          // au-delà du bord droit, elle est perdue
   DEUIL: [1.0, 1.45, 2.0],  // chaque Dame partie durcit tout le reste
@@ -679,17 +692,38 @@ var CHANTIER = { x:50.0, y:12.5, px:44.3, py:7.5, cx:46.6, cy:11.5, ly:20.5,
                  vend:{peau:'#6B4326', hab:'#FF8A3D', hab2:'#D96A22', tete:'#FFC53D', barbe:0, lun:0} };
 var CENTRE = { x:50.0, y:67.5, ly:88.0 };
 
-/* ---------- LE RÉSEAU D'ALLÉES (repère 1400 x 800) ---------- */
-var VOIES = [
-  [130,150,1270,150], [130,680,1270,680],
-  [130,150,130,680],  [1270,150,1270,680],
-  [700,150,700,680],  [130,415,1270,415],
-  [700,95,700,150],
-  [400,330,400,415], [1000,330,1000,415],
-  [400,600,400,680], [1000,600,1000,680]
+/* ---------- LE RÉSEAU D'ALLÉES (repère 1400 x 800) ----------
+   Les mêmes segments servent à trois choses : dessiner la carte,
+   empêcher Modou de couper à travers les jardins, et calculer ses trajets. */
+var NOEUDS = {
+  TL:[130,150],  TR:[1270,150],  BL:[130,680],  BR:[1270,680],
+  HE:[700,150],  BF:[700,680],   GO:[130,415],  DR:[1270,415],
+  CX:[700,415],  FO:[700,540],   CH:[700,95],
+  AK:[400,415],  AP:[400,330],   TK:[1000,415], TP:[1000,330],
+  BK:[400,680],  BP:[400,600],   SK:[1000,680], SP:[1000,600]
+};
+var ARETES = [
+  ['TL','HE'],['HE','TR'],
+  ['TL','GO'],['GO','BL'],
+  ['TR','DR'],['DR','BR'],
+  ['BL','BK'],['BK','BF'],['BF','SK'],['SK','BR'],
+  ['GO','AK'],['AK','CX'],['CX','TK'],['TK','DR'],
+  ['HE','CX'],['CX','FO'],['FO','BF'],
+  ['HE','CH'],['AK','AP'],['TK','TP'],['BK','BP'],['SK','SP']
 ];
+var VOIES = ARETES.map(function(a){
+  return [NOEUDS[a[0]][0], NOEUDS[a[0]][1], NOEUDS[a[1]][0], NOEUDS[a[1]][1]];
+});
+var VOISINS = {};
+(function(){
+  for (var k in NOEUDS) VOISINS[k] = [];
+  for (var i=0;i<ARETES.length;i++){
+    VOISINS[ARETES[i][0]].push(ARETES[i][1]);
+    VOISINS[ARETES[i][1]].push(ARETES[i][0]);
+  }
+})();
 var PLACE = { x0:552, y0:417, x1:848, y1:663 };
-var DEMI = 30;   // demi-largeur d'une allée
+var DEMI = 30;
 
 function distSeg(px, py, x1, y1, x2, y2){
   var dx = x2 - x1, dy = y2 - y1;
@@ -697,7 +731,7 @@ function distSeg(px, py, x1, y1, x2, y2){
   var t = L ? ((px - x1)*dx + (py - y1)*dy) / L : 0;
   t = Math.max(0, Math.min(1, t));
   var qx = x1 + t*dx, qy = y1 + t*dy;
-  return Math.sqrt((px-qx)*(px-qx) + (py-qy)*(py-qy));
+  return { d: Math.sqrt((px-qx)*(px-qx) + (py-qy)*(py-qy)), x:qx, y:qy, t:t };
 }
 function marchable(xPct, yPct){
   var X = xPct * 14, Y = yPct * 8;
@@ -705,9 +739,85 @@ function marchable(xPct, yPct){
       Y > PLACE.y0 - DEMI && Y < PLACE.y1 + DEMI) return true;
   for (var i=0;i<VOIES.length;i++){
     var v = VOIES[i];
-    if (distSeg(X, Y, v[0], v[1], v[2], v[3]) <= DEMI) return true;
+    if (distSeg(X, Y, v[0], v[1], v[2], v[3]).d <= DEMI) return true;
   }
   return false;
+}
+
+/* projette un point sur l'allée la plus proche et rend ses deux extrémités */
+function surLAllee(X, Y){
+  var best = null;
+  for (var i=0;i<ARETES.length;i++){
+    var a = ARETES[i][0], b = ARETES[i][1];
+    var r = distSeg(X, Y, NOEUDS[a][0], NOEUDS[a][1], NOEUDS[b][0], NOEUDS[b][1]);
+    if (!best || r.d < best.d) best = { d:r.d, x:r.x, y:r.y, a:a, b:b };
+  }
+  return best;
+}
+function ecart(a, b){
+  var dx = NOEUDS[a][0] - NOEUDS[b][0], dy = NOEUDS[a][1] - NOEUDS[b][1];
+  return Math.sqrt(dx*dx + dy*dy);
+}
+/* plus court chemin entre deux nœuds (Dijkstra, le graphe est minuscule) */
+function routeEntre(depart, arrivee){
+  var dist = {}, prec = {}, vus = {};
+  for (var k in NOEUDS) dist[k] = Infinity;
+  dist[depart] = 0;
+  while (true){
+    var u = null, mn = Infinity;
+    for (var n in dist){ if (!vus[n] && dist[n] < mn){ mn = dist[n]; u = n; } }
+    if (u === null) break;
+    if (u === arrivee) break;
+    vus[u] = true;
+    var vs = VOISINS[u];
+    for (var i=0;i<vs.length;i++){
+      var v = vs[i], alt = dist[u] + ecart(u, v);
+      if (alt < dist[v]){ dist[v] = alt; prec[v] = u; }
+    }
+  }
+  var route = [arrivee], c = arrivee;
+  while (c !== depart){
+    c = prec[c];
+    if (c === undefined) return null;
+    route.unshift(c);
+  }
+  return route;
+}
+
+/* trajet complet, de la position de Modou jusqu'au point touché */
+function trajetVers(cibleXpct, cibleYpct){
+  var MX = S.modou.x * 14, MY = S.modou.y * 8;
+  var CX2 = cibleXpct * 14, CY2 = cibleYpct * 8;
+  var dep = surLAllee(MX, MY), arr = surLAllee(CX2, CY2);
+  if (!dep || !arr) return null;
+
+  var meilleur = null;
+  var paires = [[dep.a, arr.a],[dep.a, arr.b],[dep.b, arr.a],[dep.b, arr.b]];
+  for (var i=0;i<paires.length;i++){
+    var r = routeEntre(paires[i][0], paires[i][1]);
+    if (!r) continue;
+    var L = Math.sqrt(Math.pow(dep.x-NOEUDS[r[0]][0],2) + Math.pow(dep.y-NOEUDS[r[0]][1],2));
+    for (var j=0;j<r.length-1;j++) L += ecart(r[j], r[j+1]);
+    var fin2 = r[r.length-1];
+    L += Math.sqrt(Math.pow(arr.x-NOEUDS[fin2][0],2) + Math.pow(arr.y-NOEUDS[fin2][1],2));
+    if (!meilleur || L < meilleur.L) meilleur = { L:L, r:r };
+  }
+  if (!meilleur) return null;
+
+  var pts = [{ x:dep.x/14, y:dep.y/8 }];
+  for (var k=0;k<meilleur.r.length;k++){
+    var N = NOEUDS[meilleur.r[k]];
+    pts.push({ x:N[0]/14, y:N[1]/8 });
+  }
+  pts.push({ x:arr.x/14, y:arr.y/8 });
+
+  // on enlève les points confondus
+  var net = [];
+  for (var m=0;m<pts.length;m++){
+    var p = pts[m], d = net.length ? net[net.length-1] : null;
+    if (!d || Math.abs(d.x-p.x) > 0.15 || Math.abs(d.y-p.y) > 0.15) net.push(p);
+  }
+  return net;
 }
 
 /* ---------- ÉTAT ---------- */
@@ -728,6 +838,9 @@ function nouvelEtat(){
     alerte:0,
     sortieVue:0,
     exode:[null,null,null,null],
+    ordreDepart:[],
+    viseRetour:false,
+    auto:null,
     nuit:0, etaitNuit:false,
     journal:[],
     record:0,
@@ -1234,7 +1347,7 @@ function joyBouge(e){
   knob.style.transform = 'translate(' + (dx*k).toFixed(1) + 'px,' + (dy*k).toFixed(1) + 'px)';
   var m = Math.min(1, d/lim);
   if (m < 0.14){ JOY.dx = 0; JOY.dy = 0; }
-  else { JOY.dx = (dx/(d||1))*m; JOY.dy = (dy/(d||1))*m; }
+  else { JOY.dx = (dx/(d||1))*m; JOY.dy = (dy/(d||1))*m; stopperAuto(); }
   if (e.cancelable) e.preventDefault();
 }
 function joyFin(){ JOY.actif = false; JOY.dx = 0; JOY.dy = 0; JOY.id = null;
@@ -1250,7 +1363,7 @@ window.addEventListener('mouseup',   function(){ if (JOY.id === 'souris') joyFin
 /* ---------- DEUXIÈME COMMANDE : le doigt libre sur le plateau ----------
    On peut poser le doigt n'importe où et tirer dans une direction.
    Un joystick flottant apparaît sous le doigt. Le joystick fixe reste actif. */
-var DOIGT = { actif:false, id:null, ox:0, oy:0, dx:0, dy:0, r:56 };
+var DOIGT = { actif:false, id:null, ox:0, oy:0, dx:0, dy:0, r:56, t0:0, glisse:false };
 var flottant = document.getElementById('flottant');
 var flottantKnob = document.getElementById('flottantKnob');
 
@@ -1271,6 +1384,7 @@ function doigtDebut(e){
   DOIGT.id = (t.identifier !== undefined) ? t.identifier : 'souris';
   DOIGT.ox = t.clientX; DOIGT.oy = t.clientY;
   DOIGT.dx = 0; DOIGT.dy = 0;
+  DOIGT.t0 = Date.now(); DOIGT.glisse = false;
   flottant.style.left = t.clientX + 'px';
   flottant.style.top  = t.clientY + 'px';
   flottant.classList.add('on');
@@ -1292,11 +1406,16 @@ function doigtBouge(e){
   flottantKnob.style.transform =
     'translate(calc(-50% + ' + (dx*k).toFixed(1) + 'px), calc(-50% + ' + (dy*k).toFixed(1) + 'px))';
   var m = Math.min(1, d/lim);
+  if (d > 14) DOIGT.glisse = true;
   if (m < 0.12){ DOIGT.dx = 0; DOIGT.dy = 0; }
-  else { DOIGT.dx = (dx/(d||1))*m; DOIGT.dy = (dy/(d||1))*m; }
+  else { DOIGT.dx = (dx/(d||1))*m; DOIGT.dy = (dy/(d||1))*m; stopperAuto(); }
   if (e.cancelable) e.preventDefault();
 }
 function doigtFin(){
+  // appui bref sans glissement : c'est une destination, pas une direction
+  if (DOIGT.actif && !DOIGT.glisse && (Date.now() - DOIGT.t0) < 450 && S && S.enCours){
+    allerLaBas(DOIGT.ox, DOIGT.oy);
+  }
   DOIGT.actif = false; DOIGT.dx = 0; DOIGT.dy = 0; DOIGT.id = null;
   flottant.classList.remove('on');
 }
@@ -1308,6 +1427,33 @@ laScene.addEventListener('touchcancel',doigtFin);
 laScene.addEventListener('mousedown',  doigtDebut);
 window.addEventListener('mousemove', function(e){ if (DOIGT.id === 'souris') doigtBouge(e); });
 window.addEventListener('mouseup',   function(){ if (DOIGT.id === 'souris') doigtFin(); });
+
+/* ---------- TOUCHER UN ENDROIT : MODOU S'Y REND ---------- */
+function ecranVersPlateau(sx, sy){
+  if (!BW || !CAM.zx) return null;
+  var bx = (sx - CAM.Tx) / CAM.zx;
+  var by = (sy - CAM.Ty) / CAM.zy;
+  return { x: bx / BW * 100, y: by / BH * 100 };
+}
+function allerLaBas(sx, sy){
+  var p = ecranVersPlateau(sx, sy);
+  if (!p) return;
+  var route = trajetVers(p.x, p.y);
+  if (!route || route.length < 2){ return; }
+  S.auto = { pts: route, i: 1 };
+  var m = document.getElementById('cible');
+  var fin = route[route.length - 1];
+  m.style.left = fin.x + '%';
+  m.style.top  = fin.y + '%';
+  m.classList.add('on');
+  sonEntree();
+}
+function stopperAuto(){
+  if (!S || !S.auto) return;
+  S.auto = null;
+  var m = document.getElementById('cible');
+  if (m) m.classList.remove('on');
+}
 
 var TOUCHES = {};
 window.addEventListener('keydown', function(e){ TOUCHES[e.key] = true; });
@@ -1354,6 +1500,7 @@ function appliquerCamera(){
   if (lh <= VH) Ty = (VH - lh)/2;
   else { Ty = VH/2 - (CAM.y/100)*BH*zy; Ty = Math.min(0, Math.max(VH - lh, Ty)); }
   Ty += TOP_PAD;
+  CAM.Tx = Tx; CAM.Ty = Ty; CAM.zx = z; CAM.zy = zy;
   board.style.transform = 'translate(' + Tx.toFixed(2) + 'px,' + Ty.toFixed(2) + 'px) ' +
                           'scale(' + z.toFixed(4) + ',' + zy.toFixed(4) + ')';
 }
@@ -1559,6 +1706,8 @@ function majExode(dt){
     if (!but){
       if (E.retour){                      // rentrée au lit
         S.exode[i] = null;
+        damesEl[i].style.left = DAMES[i].bed.x + '%';
+        damesEl[i].style.top  = DAMES[i].bed.y + '%';
         var b3 = damesEl[i].querySelector('.cri');
         if (b3) b3.textContent = DAMES[i].cri;
       } else {
@@ -1567,8 +1716,9 @@ function majExode(dt){
       continue;
     }
 
+    var allure = E.vit || CFG.VIT_DAME;
     var dx = but.x - E.x, dy = but.y - E.y;
-    var vx = CFG.VIT_DAME * dt, vy = CFG.VIT_DAME * RATIO * dt;
+    var vx = allure * dt, vy = allure * RATIO * dt;
     if (Math.abs(dx) <= vx) E.x = but.x; else E.x += (dx > 0 ? vx : -vx);
     if (Math.abs(dy) <= vy) E.y = but.y; else E.y += (dy > 0 ? vy : -vy);
     if (E.x === but.x && E.y === but.y) E.etape++;
@@ -1576,6 +1726,54 @@ function majExode(dt){
     damesEl[i].style.left = E.x + '%';
     damesEl[i].style.top  = E.y + '%';
   }
+}
+
+function rouvrirLeFoyer(i){
+  var cle = DAMES[i].lieu;
+  if (badgesEl[cle]){
+    badgesEl[cle].classList.remove('ferme');
+    badgesEl[cle].innerHTML =
+      '<span class="pic" style="background:var(' + LIEUX[cle].col + ')">' + LIEUX[cle].icone + '</span>' +
+      '<span class="txt">' + LIEUX[cle].nom + '</span>' +
+      '<span class="prix">0</span>';
+  }
+  if (zonesEl[cle]) zonesEl[cle].classList.remove('ferme');
+  if (jaugeEl[i]) jaugeEl[i].box.classList.remove('retiree');
+  if (voletsEl[cle] && voletsEl[cle].parentNode){
+    voletsEl[cle].parentNode.removeChild(voletsEl[cle]);
+    delete voletsEl[cle];
+  }
+}
+
+function faireRevenir(i){
+  var D = DAMES[i];
+  S.argent -= CFG.PRIX_RETOUR;
+  S.parties[i] = false;
+  S.sorties = Math.max(0, S.sorties - 1);
+  S.jauges[i] = CFG.JAUGE_RETOUR;
+  S.crise[i] = 0;
+  var pos = S.ordreDepart.indexOf(i);
+  if (pos >= 0) S.ordreDepart.splice(pos, 1);
+
+  rouvrirLeFoyer(i);
+
+  // elle rentre par où elle est sortie, mais d'un pas décidé
+  var el = damesEl[i];
+  el.className = 'dame pos ' + (D.bed.x > 50 ? 'droite' : 'gauche');
+  el.style.left = CFG.SORTIE_X + '%';
+  el.style.top  = '51.9%';
+  var bulle = el.querySelector('.cri');
+  if (bulle) bulle.textContent = 'Je reviens.';
+
+  S.exode[i] = {
+    x: CFG.SORTIE_X, y: 51.9, etape: 0, retour: true, vit: CFG.VIT_RETOUR,
+    route: [ {x:90.7, y:51.9}, {x:50, y:51.9}, {x:50, y:D.bed.y}, {x:D.bed.x, y:D.bed.y} ]
+  };
+  S.sortieVue = 2.4;
+  sonFoyer();
+  volant('-' + CFG.PRIX_RETOUR + ' F', '#FFC53D');
+  flash(D.nom + ' revient au foyer. Sa maison rouvre.', 3200);
+  noter(S.jour, D.nom + ' est revenue \u2014 ' + CFG.PRIX_RETOUR + ' F.');
 }
 
 function faitPartir(i){
@@ -1588,6 +1786,7 @@ function faitPartir(i){
   el.style.left = '50%';
   el.style.top = '104%';           // elle sort par l'allée du bas
   fermerLeFoyer(i);
+  S.ordreDepart.push(i);
   noter(S.jour, DAMES[i].nom + ' a quitt\u00e9 le cercle.', true);
   S.sortieVue = 1.6;
   if (S.sorties >= CFG.SORTIES_FATALES){
@@ -1637,6 +1836,12 @@ function rendre(){
 
   elSous.textContent = Math.floor(S.argent);
   boxSous.classList.toggle('serie', S.serie > 2);
+  boxSous.classList.toggle('rachat', S.sorties > 0);
+  if (S.sorties > 0 && !S.viseRetour){
+    S.viseRetour = true;
+    flash('Atteins ' + CFG.PRIX_RETOUR + ' F et elle revient.', 3000);
+  }
+  if (S.sorties === 0) S.viseRetour = false;
   var nuitPleine = S.nuit > 0.5;
   badgesEl.CHANTIER.classList.toggle('nuit', nuitPleine);
   var bc2 = badgesEl.CHANTIER.querySelector('.prix');
@@ -1746,9 +1951,25 @@ function boucle(ts){
   // déplacement
   var kb = clavier();
   var vx, vy;
-  if (kb){ vx = kb.x; vy = kb.y; }
+  if (kb){ vx = kb.x; vy = kb.y; stopperAuto(); }
   else if (DOIGT.actif && (DOIGT.dx || DOIGT.dy)){ vx = DOIGT.dx; vy = DOIGT.dy; }
-  else { vx = JOY.dx; vy = JOY.dy; }
+  else if (JOY.dx || JOY.dy){ vx = JOY.dx; vy = JOY.dy; }
+  else if (S.auto){
+    // il rejoint tout seul le point touché
+    var but = S.auto.pts[S.auto.i];
+    if (!but){ stopperAuto(); vx = 0; vy = 0; }
+    else {
+      var ex = but.x - S.modou.x, ey = (but.y - S.modou.y) / RATIO;
+      var dd = Math.sqrt(ex*ex + ey*ey);
+      if (dd < 0.45){
+        S.modou.x = but.x; S.modou.y = but.y;
+        S.auto.i++;
+        if (S.auto.i >= S.auto.pts.length) stopperAuto();
+        vx = 0; vy = 0;
+      } else { vx = ex/dd; vy = ey/dd; }
+    }
+  }
+  else { vx = 0; vy = 0; }
   var bouge = (Math.abs(vx) + Math.abs(vy)) > 0.02;
   if (bouge){
     var mult = vitesseDeModou();
@@ -1759,7 +1980,8 @@ function boucle(ts){
 
     // Modou ne quitte jamais les allées : on tente le mouvement complet,
     // puis on le fait glisser sur un seul axe s'il bute.
-    if (marchable(nx, ny)){ S.modou.x = nx; S.modou.y = ny; }
+    if (S.auto){ S.modou.x = nx; S.modou.y = ny; }
+    else if (marchable(nx, ny)){ S.modou.x = nx; S.modou.y = ny; }
     else if (marchable(nx, S.modou.y)){ S.modou.x = nx; }
     else if (marchable(S.modou.x, ny)){ S.modou.y = ny; }
     else bouge = false;
@@ -1866,6 +2088,13 @@ function boucle(ts){
   MUS.tension = Math.max(0, Math.min(1, (45 - plusBasse) / 45));
   musique();
 
+  // assez d'argent pour aller rechercher une Dame partie
+  if (S.sorties > 0 && S.argent >= CFG.PRIX_RETOUR){
+    var enChemin = false;
+    for (var q=0;q<DAMES.length;q++){ if (S.exode[q] && S.exode[q].retour) enChemin = true; }
+    if (!enChemin && S.ordreDepart.length) faireRevenir(S.ordreDepart[0]);
+  }
+
   majExode(dt);
   animerJambes(S.temps, bouge);
   majCrises();
@@ -1886,7 +2115,7 @@ function finir(cause){
   S.enCours = false;
   document.body.classList.remove('playing');
   joyFin();
-  doigtFin();
+  stopperAuto();
   rentrerTousLesVendeurs();
   majRecord();
   monter(BUS_MUS, 0, 1.2);
