@@ -254,6 +254,16 @@ html,body{height:100%;overflow:hidden;background:#1B2A1B;font-family:var(--ui);c
   border-radius:50%;background:var(--blanc);border:3px solid var(--trait);
   box-shadow:0 3px 0 rgba(43,33,24,.45);will-change:transform}
 
+/* joystick flottant : il apparaît sous le doigt, n'importe où sur le plateau */
+#flottant{position:fixed;left:0;top:0;width:124px;height:124px;margin:-62px 0 0 -62px;
+  border-radius:50%;z-index:44;pointer-events:none;opacity:0;
+  background:rgba(255,255,255,.12);border:4px solid rgba(255,255,255,.5);
+  transition:opacity .16s}
+#flottant.on{opacity:1}
+#flottantKnob{position:absolute;left:50%;top:50%;width:48px;height:48px;
+  border-radius:50%;background:rgba(255,255,255,.92);border:3px solid var(--trait);
+  box-shadow:0 3px 0 rgba(43,33,24,.4);transform:translate(-50%,-50%)}
+
 #flash{position:fixed;top:calc(52px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);
   z-index:46;background:var(--blanc);border:3px solid var(--trait);box-shadow:var(--ombre);
   padding:6px 14px;border-radius:18px;font-size:11.5px;font-weight:900;
@@ -347,6 +357,7 @@ button.cta{touch-action:manipulation;position:relative;z-index:2}
 <button id="camBtn">⊕</button>
 <button id="sonBtn">♪</button>
 <div id="stick"><div id="knob"></div></div>
+<div id="flottant"><div id="flottantKnob"></div></div>
 
 <div class="screen" id="scrIntro">
   <div class="eyebrow">KHALAM</div>
@@ -531,7 +542,7 @@ function carteSVG(){
    ========================================================= */
 'use strict';
 
-var BUILD_TAG = 'LQD-v3.3';
+var BUILD_TAG = 'LQD-v3.4';
 document.getElementById('build').textContent = BUILD_TAG;
 
 /* ---------- affichage des erreurs, pour pouvoir diagnostiquer ---------- */
@@ -1236,6 +1247,68 @@ stick.addEventListener('mousedown',  joyDebut);
 window.addEventListener('mousemove', function(e){ if (JOY.id === 'souris') joyBouge(e); });
 window.addEventListener('mouseup',   function(){ if (JOY.id === 'souris') joyFin(); });
 
+/* ---------- DEUXIÈME COMMANDE : le doigt libre sur le plateau ----------
+   On peut poser le doigt n'importe où et tirer dans une direction.
+   Un joystick flottant apparaît sous le doigt. Le joystick fixe reste actif. */
+var DOIGT = { actif:false, id:null, ox:0, oy:0, dx:0, dy:0, r:56 };
+var flottant = document.getElementById('flottant');
+var flottantKnob = document.getElementById('flottantKnob');
+
+function surLesCommandes(cible){
+  var n = cible;
+  while (n && n !== document.body){
+    if (n.id === 'stick' || n.id === 'knob' || n.id === 'camBtn' ||
+        n.id === 'sonBtn' || n.tagName === 'BUTTON') return true;
+    n = n.parentNode;
+  }
+  return false;
+}
+function doigtDebut(e){
+  if (!S || !S.enCours) return;
+  var t = e.changedTouches ? e.changedTouches[0] : e;
+  if (surLesCommandes(e.target)) return;
+  DOIGT.actif = true;
+  DOIGT.id = (t.identifier !== undefined) ? t.identifier : 'souris';
+  DOIGT.ox = t.clientX; DOIGT.oy = t.clientY;
+  DOIGT.dx = 0; DOIGT.dy = 0;
+  flottant.style.left = t.clientX + 'px';
+  flottant.style.top  = t.clientY + 'px';
+  flottant.classList.add('on');
+  flottantKnob.style.transform = 'translate(-50%,-50%)';
+  if (e.cancelable) e.preventDefault();
+}
+function doigtBouge(e){
+  if (!DOIGT.actif) return;
+  var t = null;
+  if (e.changedTouches){
+    for (var i=0;i<e.changedTouches.length;i++){
+      if (e.changedTouches[i].identifier === DOIGT.id) t = e.changedTouches[i];
+    }
+    if (!t) return;
+  } else { t = e; }
+  var dx = t.clientX - DOIGT.ox, dy = t.clientY - DOIGT.oy;
+  var d = Math.sqrt(dx*dx + dy*dy), lim = DOIGT.r;
+  var k = d > lim ? lim/d : 1;
+  flottantKnob.style.transform =
+    'translate(calc(-50% + ' + (dx*k).toFixed(1) + 'px), calc(-50% + ' + (dy*k).toFixed(1) + 'px))';
+  var m = Math.min(1, d/lim);
+  if (m < 0.12){ DOIGT.dx = 0; DOIGT.dy = 0; }
+  else { DOIGT.dx = (dx/(d||1))*m; DOIGT.dy = (dy/(d||1))*m; }
+  if (e.cancelable) e.preventDefault();
+}
+function doigtFin(){
+  DOIGT.actif = false; DOIGT.dx = 0; DOIGT.dy = 0; DOIGT.id = null;
+  flottant.classList.remove('on');
+}
+var laScene = document.getElementById('scene');
+laScene.addEventListener('touchstart', doigtDebut, {passive:false});
+laScene.addEventListener('touchmove',  doigtBouge, {passive:false});
+laScene.addEventListener('touchend',   doigtFin);
+laScene.addEventListener('touchcancel',doigtFin);
+laScene.addEventListener('mousedown',  doigtDebut);
+window.addEventListener('mousemove', function(e){ if (DOIGT.id === 'souris') doigtBouge(e); });
+window.addEventListener('mouseup',   function(){ if (DOIGT.id === 'souris') doigtFin(); });
+
 var TOUCHES = {};
 window.addEventListener('keydown', function(e){ TOUCHES[e.key] = true; });
 window.addEventListener('keyup',   function(e){ TOUCHES[e.key] = false; });
@@ -1672,7 +1745,10 @@ function boucle(ts){
 
   // déplacement
   var kb = clavier();
-  var vx = kb ? kb.x : JOY.dx, vy = kb ? kb.y : JOY.dy;
+  var vx, vy;
+  if (kb){ vx = kb.x; vy = kb.y; }
+  else if (DOIGT.actif && (DOIGT.dx || DOIGT.dy)){ vx = DOIGT.dx; vy = DOIGT.dy; }
+  else { vx = JOY.dx; vy = JOY.dy; }
   var bouge = (Math.abs(vx) + Math.abs(vy)) > 0.02;
   if (bouge){
     var mult = vitesseDeModou();
@@ -1810,6 +1886,7 @@ function finir(cause){
   S.enCours = false;
   document.body.classList.remove('playing');
   joyFin();
+  doigtFin();
   rentrerTousLesVendeurs();
   majRecord();
   monter(BUS_MUS, 0, 1.2);
