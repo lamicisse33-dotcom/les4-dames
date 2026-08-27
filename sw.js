@@ -2,7 +2,7 @@
    Règle d'or : le HTML passe TOUJOURS par le réseau d'abord.
    Sinon une mise à jour du jeu ne remonte jamais sur l'appareil. */
 
-var CACHE = 'lqd-v3.8';
+var CACHE = 'lqd-v3.9';
 var FICHIERS = [
   './',
   './index.html',
@@ -32,12 +32,12 @@ self.addEventListener('activate', function (e) {
       }));
     }).then(function () {
       return self.clients.claim();
-    }).then(function () {
-      return self.clients.matchAll({ type: 'window' });
-    }).then(function (fenetres) {
-      fenetres.forEach(function (f) { f.navigate(f.url); });
     }).catch(function () {})
   );
+});
+
+self.addEventListener('message', function (e) {
+  if (e.data === 'PRENDS_LA_MAIN') self.skipWaiting();
 });
 
 self.addEventListener('fetch', function (e) {

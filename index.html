@@ -401,11 +401,47 @@ document.addEventListener('click', function(e){
 });
 </script>
 <script>
-if ('serviceWorker' in navigator){
-  window.addEventListener('load', function(){
-    navigator.serviceWorker.register('sw.js').catch(function(){});
+/* ---------- MISE À JOUR FORCÉE ----------
+   Trois verrous, parce qu'un seul ne suffit jamais :
+   1. le fichier sw.js n'est jamais pris dans le cache du navigateur
+   2. on demande une vérification au chargement puis toutes les minutes
+   3. dès qu'une nouvelle version prend la main, la page se recharge seule */
+(function(){
+  if (!('serviceWorker' in navigator)) return;
+  var avaitControleur = !!navigator.serviceWorker.controller;
+  var rechargeEnCours = false;
+
+  navigator.serviceWorker.addEventListener('controllerchange', function(){
+    if (!avaitControleur || rechargeEnCours) return;   // première installation : pas de boucle
+    rechargeEnCours = true;
+    location.reload();
   });
-}
+
+  window.addEventListener('load', function(){
+    navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' })
+      .then(function(reg){
+        function verifier(){
+          reg.update().catch(function(){});
+          if (reg.waiting) reg.waiting.postMessage('PRENDS_LA_MAIN');
+        }
+        verifier();
+        setInterval(verifier, 60000);
+        document.addEventListener('visibilitychange', function(){
+          if (!document.hidden) verifier();
+        });
+        reg.addEventListener('updatefound', function(){
+          var neuf = reg.installing;
+          if (!neuf) return;
+          neuf.addEventListener('statechange', function(){
+            if (neuf.state === 'installed' && navigator.serviceWorker.controller){
+              neuf.postMessage('PRENDS_LA_MAIN');
+            }
+          });
+        });
+      })
+      .catch(function(){});
+  });
+})();
 </script>
 
 <script>
@@ -559,7 +595,7 @@ function carteSVG(){
    ========================================================= */
 'use strict';
 
-var BUILD_TAG = 'LQD-v3.8';
+var BUILD_TAG = 'LQD-v3.9';
 document.getElementById('build').textContent = BUILD_TAG;
 
 /* ---------- affichage des erreurs, pour pouvoir diagnostiquer ---------- */
