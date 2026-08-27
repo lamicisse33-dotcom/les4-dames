@@ -275,6 +275,8 @@ button.cta{margin-top:4px;background:var(--or);color:var(--trait);border:3px sol
   border-radius:22px;padding:12px 28px;font-size:12px;font-weight:900;letter-spacing:.14em;
   text-transform:uppercase;font-family:var(--ui);cursor:pointer;box-shadow:0 4px 0 var(--trait)}
 button.cta:active{transform:translateY(3px);box-shadow:0 1px 0 var(--trait)}
+button.cta{touch-action:manipulation;position:relative;z-index:2}
+.screen{touch-action:manipulation}
 #portrait{width:min(34vh,210px);height:min(40vh,248px);flex:0 0 auto;
   filter:drop-shadow(0 8px 14px rgba(0,0,0,.5))}
 #portrait.hide{display:none}
@@ -321,6 +323,9 @@ button.cta:active{transform:translateY(3px);box-shadow:0 1px 0 var(--trait)}
 @media (prefers-reduced-motion:reduce){*{animation:none!important}}
 #build{position:fixed;left:6px;bottom:2px;z-index:99;font-size:8px;font-weight:900;
   color:rgba(255,255,255,.28);pointer-events:none}
+#erreur{display:none;position:fixed;left:0;right:0;top:0;z-index:200;
+  background:#B3243B;color:#fff;font-size:11px;font-weight:700;line-height:1.4;
+  padding:10px 12px;font-family:var(--ui);word-break:break-word}
 </style>
 </head>
 <body>
@@ -526,8 +531,49 @@ function carteSVG(){
    ========================================================= */
 'use strict';
 
-var BUILD_TAG = 'LQD-v3.2';
+var BUILD_TAG = 'LQD-v3.3';
 document.getElementById('build').textContent = BUILD_TAG;
+
+/* ---------- affichage des erreurs, pour pouvoir diagnostiquer ---------- */
+function montrerErreur(txt){
+  var d = document.getElementById('erreur');
+  if (!d){
+    d = document.createElement('div');
+    d.id = 'erreur';
+    document.body.appendChild(d);
+  }
+  d.textContent = 'BUG ' + BUILD_TAG + ' : ' + txt;
+  d.style.display = 'block';
+}
+window.addEventListener('error', function(e){
+  montrerErreur((e.message || 'erreur') + ' — ' + (e.filename || '') + ':' + (e.lineno || '?'));
+});
+window.addEventListener('unhandledrejection', function(e){
+  montrerErreur('promesse : ' + (e.reason && e.reason.message ? e.reason.message : e.reason));
+});
+
+/* ---------- les boutons sont branchés TOUT DE SUITE, par délégation.
+   Ainsi ils marchent même si une erreur survient plus bas dans le script. ---------- */
+function surAppui(e){
+  var n = e.target;
+  while (n && n !== document.body){
+    if (n.id === 'btnStart' || n.id === 'btnRejouer'){
+      if (e.cancelable) e.preventDefault();
+      try {
+        if (typeof audioInit === 'function') audioInit();
+        if (typeof sonBouton === 'function') sonBouton();
+        demarrer();
+      } catch (err) {
+        montrerErreur('démarrage : ' + (err && err.message ? err.message : err));
+      }
+      return;
+    }
+    if (n.id === 'sonBtn'){ try { basculerSon(); } catch (err) {} return; }
+    n = n.parentNode;
+  }
+}
+document.addEventListener('click', surAppui, false);
+document.addEventListener('touchend', surAppui, {passive:false});
 
 /* ---------- RÉGLAGES ---------- */
 var CFG = {
@@ -1927,9 +1973,7 @@ function demarrer(){
   flash('Tiens le plus longtemps possible. Trois d\u00e9parts et tout s\u2019arr\u00eate.', 3200);
   majRecord();
 }
-document.getElementById('btnStart').addEventListener('click', function(){ audioInit(); sonBouton(); demarrer(); });
-document.getElementById('btnRejouer').addEventListener('click', function(){ sonBouton(); demarrer(); });
-document.getElementById('sonBtn').addEventListener('click', basculerSon);
+/* les boutons sont déjà branchés par délégation en haut du script */
 requestAnimationFrame(boucle);
 
 </script>
