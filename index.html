@@ -345,12 +345,14 @@ button.cta{touch-action:manipulation;position:relative;z-index:2}
   color:rgba(255,255,255,.28);pointer-events:none}
 #erreur{display:none;position:fixed;left:0;right:0;top:0;z-index:200;
   background:#B3243B;color:#fff;font-size:11px;font-weight:700;line-height:1.4;
-  padding:10px 12px;font-family:var(--ui);word-break:break-word}
+  padding:10px 34px 10px 12px;font-family:var(--ui);word-break:break-word;
+  -webkit-user-select:text;user-select:text}
+#erreur::after{content:"\2715";position:absolute;right:10px;top:9px;font-size:14px;opacity:.7}
 </style>
 </head>
 <body>
 
-<div id="scene"><div id="board"><div id="layer"></div><div id="cible"></div></div></div>
+<div id="scene"><div id="board"><div id="layer"></div></div></div>
 <div id="flash"></div>
 
 <div id="top">
@@ -393,6 +395,11 @@ button.cta{touch-action:manipulation;position:relative;z-index:2}
 
 <div id="rot"><p class="lede">Tourne ton téléphone.<br>Le domaine se regarde du ciel.</p></div>
 <div id="build"></div>
+<script>
+document.addEventListener('click', function(e){
+  if (e.target && e.target.id === 'erreur') e.target.style.display = 'none';
+});
+</script>
 <script>
 if ('serviceWorker' in navigator){
   window.addEventListener('load', function(){
@@ -552,11 +559,14 @@ function carteSVG(){
    ========================================================= */
 'use strict';
 
-var BUILD_TAG = 'LQD-v3.6';
+var BUILD_TAG = 'LQD-v3.8';
 document.getElementById('build').textContent = BUILD_TAG;
 
 /* ---------- affichage des erreurs, pour pouvoir diagnostiquer ---------- */
+var dejaSignale = false;
 function montrerErreur(txt){
+  if (dejaSignale) return;      // on garde la première erreur : c'est la cause
+  dejaSignale = true;
   var d = document.getElementById('erreur');
   if (!d){
     d = document.createElement('div');
@@ -861,7 +871,7 @@ var elSous = document.getElementById('sousVal');
 var boxSous = document.getElementById('sous');
 var elJauges = document.getElementById('jauges');
 var damesEl = [], zonesEl = {}, badgesEl = {}, vendeursEl = {}, vignettes = {}, voletsEl = {}, jaugeEl = [];
-var modouEl = null, voileNuit = null, voileCrep = null;
+var modouEl = null, voileNuit = null, voileCrep = null, cibleEl = null;
 
 /* ---------- LE CYCLE JOUR / NUIT ---------- */
 function lissage(x){ x = Math.max(0, Math.min(1, x)); return x*x*(3 - 2*x); }
@@ -887,8 +897,9 @@ function prixDuJour(cle){
 function construire(){
   board.innerHTML = carteSVG() +
     '<div id="nuit"></div><div id="crepuscule"></div><div id="lampes"></div>' +
-    '<div id="layer"></div>';
+    '<div id="layer"></div><div id="cible"></div>';
   layer = document.getElementById('layer');
+  cibleEl = document.getElementById('cible');
   voileNuit = document.getElementById('nuit');
   voileCrep = document.getElementById('crepuscule');
   var lp = document.getElementById('lampes');
@@ -1436,23 +1447,27 @@ function ecranVersPlateau(sx, sy){
   return { x: bx / BW * 100, y: by / BH * 100 };
 }
 function allerLaBas(sx, sy){
+  try { return allerLaBasInterne(sx, sy); }
+  catch (err){ montrerErreur('destination : ' + (err && err.message ? err.message : err)); }
+}
+function allerLaBasInterne(sx, sy){
   var p = ecranVersPlateau(sx, sy);
   if (!p) return;
   var route = trajetVers(p.x, p.y);
   if (!route || route.length < 2){ return; }
   S.auto = { pts: route, i: 1 };
-  var m = document.getElementById('cible');
   var fin = route[route.length - 1];
-  m.style.left = fin.x + '%';
-  m.style.top  = fin.y + '%';
-  m.classList.add('on');
+  if (cibleEl){
+    cibleEl.style.left = fin.x + '%';
+    cibleEl.style.top  = fin.y + '%';
+    cibleEl.classList.add('on');
+  }
   sonEntree();
 }
 function stopperAuto(){
   if (!S || !S.auto) return;
   S.auto = null;
-  var m = document.getElementById('cible');
-  if (m) m.classList.remove('on');
+  if (cibleEl) cibleEl.classList.remove('on');
 }
 
 var TOUCHES = {};
@@ -1907,6 +1922,14 @@ function tailleZones(){
 var last = 0, tickPiece = 0, tickSouffle = 0, tickSerie = 0;
 function boucle(ts){
   requestAnimationFrame(boucle);
+  try { tourDeBoucle(ts); }
+  catch (err){
+    montrerErreur('boucle : ' + (err && err.message ? err.message : err) +
+                  (err && err.stack ? ' | ' + String(err.stack).split('\n')[1] : ''));
+    if (S) S.enCours = false;   // on arrête au lieu de planter soixante fois par seconde
+  }
+}
+function tourDeBoucle(ts){
   if (!S || !S.enCours) return;
   if (!last) last = ts;
   var dt = Math.min(0.05, (ts - last)/1000);
