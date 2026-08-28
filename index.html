@@ -403,6 +403,40 @@ button.cta{touch-action:manipulation;position:relative;z-index:2}
 #score{font-size:58px;font-weight:900;line-height:1;color:var(--blanc);text-shadow:0 4px 0 var(--trait)}
 #titre{font-size:13px;font-weight:900;letter-spacing:.18em;text-transform:uppercase;color:var(--or)}
 
+/* ---- TABLEAU DE BORD ---- */
+#scrBord{z-index:140;justify-content:flex-start;padding-top:22px}
+#bordCorps{width:min(520px,94vw);display:flex;flex-direction:column;gap:12px}
+.bgrille{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+.bcase{background:rgba(255,255,255,.07);border:2px solid rgba(255,246,228,.16);
+  border-radius:13px;padding:8px 4px;text-align:center}
+.bval{font-size:24px;font-weight:900;color:var(--or);line-height:1}
+.blab{font-size:8px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;
+  color:rgba(255,246,228,.55);margin-top:3px}
+.btitre{font-size:8.5px;font-weight:900;letter-spacing:.2em;text-transform:uppercase;
+  color:rgba(255,246,228,.45);text-align:left;margin-top:4px}
+.bbarres{display:flex;align-items:flex-end;gap:4px;height:88px;
+  background:rgba(255,255,255,.05);border-radius:11px;padding:7px}
+.bcol{flex:1;height:100%;display:flex;align-items:flex-end}
+.bbar{width:100%;background:var(--spirit);border-radius:5px 5px 2px 2px;position:relative;
+  min-height:6px}
+.bbar.record{background:var(--or)}
+.bbar span{position:absolute;left:50%;top:-13px;transform:translateX(-50%);
+  font-size:8.5px;font-weight:900;color:rgba(255,246,228,.75)}
+.bdames{display:flex;flex-direction:column;gap:5px}
+.bdame{display:flex;align-items:center;gap:8px}
+.bpast{width:21px;height:21px;border-radius:50%;border:2.5px solid var(--trait);
+  display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;
+  color:var(--trait);flex:0 0 auto}
+.bjauge{flex:1;height:8px;border-radius:5px;background:rgba(255,255,255,.12);overflow:hidden}
+.bjauge i{display:block;height:100%;border-radius:5px}
+.bnb{width:22px;text-align:right;font-size:11px;font-weight:900;color:rgba(255,246,228,.8)}
+.bliste{display:flex;flex-direction:column;gap:3px;font-size:11px}
+.bliste div{display:flex;justify-content:space-between;gap:10px;
+  padding:4px 8px;background:rgba(255,255,255,.05);border-radius:8px}
+.bliste span{color:rgba(255,246,228,.6)}
+.bliste b{color:var(--creme)}
+.bpied{font-size:10px;font-weight:700;color:rgba(255,246,228,.5);text-align:center}
+
 #rot{position:fixed;inset:0;z-index:95;background:#1B2A1B;display:none;
   flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px;text-align:center}
 @media (orientation:portrait) and (max-width:820px){body.playing #rot{display:flex}}
@@ -461,6 +495,16 @@ button.cta{touch-action:manipulation;position:relative;z-index:2}
   <div id="verdictList"></div>
   <p class="lede" id="finTexte"></p>
   <button class="cta" id="btnRejouer">Recommencer</button>
+</div>
+
+<div class="screen hide" id="scrBord">
+  <div class="eyebrow">KHALAM — privé</div>
+  <h1 style="font-size:clamp(18px,4.4vw,30px)">TABLEAU DE BORD</h1>
+  <div id="bordCorps"></div>
+  <div style="display:flex;gap:9px;flex-wrap:wrap;justify-content:center">
+    <button class="cta ghost" id="bordVider">Vider</button>
+    <button class="cta" id="bordFermer">Fermer</button>
+  </div>
 </div>
 
 <div id="rot"><p class="lede">Tourne ton téléphone.<br>Le domaine se regarde du ciel.</p></div>
@@ -665,7 +709,7 @@ function carteSVG(){
    ========================================================= */
 'use strict';
 
-var BUILD_TAG = 'LQD-v5.0';
+var BUILD_TAG = 'LQD-v5.3';
 document.getElementById('build').textContent = BUILD_TAG;
 
 /* ---------- affichage des erreurs, pour pouvoir diagnostiquer ---------- */
@@ -694,6 +738,11 @@ window.addEventListener('unhandledrejection', function(e){
 function surAppui(e){
   var n = e.target;
   while (n && n !== document.body){
+    if (n.id === 'bordFermer'){ fermerLeBord(); return; }
+    if (n.id === 'bordVider'){
+      if (confirm('Effacer tout l\u2019historique des parties ?')){ effacerStats(); construireTableau(); }
+      return;
+    }
     if (n.id === 'btnReprendre'){
       if (e.cancelable) e.preventDefault();
       try {
@@ -979,7 +1028,7 @@ function nouvelEtat(){
     ordreDepart:[],
     viseRetour:false,
     vu:{}, rappels:{},
-    fete:null, derniereFete:0, fetes:0, prochainJalon:1,
+    fete:null, derniereFete:0, fetes:0, prochainJalon:1, rachats:0,
     auto:null,
     nuit:0, etaitNuit:false,
     journal:[],
@@ -2120,6 +2169,7 @@ function rouvrirLeFoyer(i){
 function faireRevenir(i){
   var D = DAMES[i];
   S.argent -= CFG.PRIX_RETOUR;
+  S.rachats++;
   S.parties[i] = false;
   S.sorties = Math.max(0, S.sorties - 1);
   S.jauges[i] = CFG.JAUGE_RETOUR;
@@ -2536,6 +2586,8 @@ var TITRES = [
 ];
 function finir(cause){
   S.enCours = false;
+  enregistrerPartie();
+  envoyerAudience();
   effacerPartie();
   couperLeDialogue();
   document.body.classList.remove('playing');
@@ -2845,6 +2897,346 @@ function sonPleurs(){
 }
 
 /* =========================================================
+   MESURE D'AUDIENCE — pour la bêta
+   Aucun GPS : le pays vient du fuseau horaire du téléphone.
+   ========================================================= */
+var SUPA = {
+  url: 'https://mguiuamwggokbirxbyqc.supabase.co',
+  cle: 'sb_publishable_OLw3XAyqiw_cur1ATMUWqA_9H9O3BVX',   // clé publiable, jamais la secrète
+  table: 'dames_audience'
+};
+var CLE_VISITEUR = 'lqd_visiteur_v1';
+
+function fiche(){
+  var d;
+  try { d = JSON.parse(localStorage.getItem(CLE_VISITEUR) || 'null'); } catch (e) { d = null; }
+  if (!d){
+    d = {
+      id: 'v' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8),
+      premier: new Date().toISOString(),
+      sessions: 0,
+      secondes: 0
+    };
+  }
+  return d;
+}
+function ecrireFiche(d){
+  try { localStorage.setItem(CLE_VISITEUR, JSON.stringify(d)); } catch (e) {}
+}
+function paysDuFuseau(){
+  try {
+    var z = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+    return z || 'inconnu';
+  } catch (e) { return 'inconnu'; }
+}
+function typeAppareil(){
+  var u = navigator.userAgent || '';
+  if (/iPad|Tablet/i.test(u)) return 'tablette';
+  if (/iPhone|Android.*Mobile|Mobile/i.test(u)) return 'téléphone';
+  if (/Android/i.test(u)) return 'tablette';
+  return 'ordinateur';
+}
+function estInstalle(){
+  try {
+    return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
+           window.navigator.standalone === true;
+  } catch (e) { return false; }
+}
+
+var debutSession = Date.now();
+function ouvrirSession(){
+  var d = fiche();
+  d.sessions++;
+  ecrireFiche(d);
+}
+function fermerSession(){
+  var d = fiche();
+  d.secondes += Math.round((Date.now() - debutSession) / 1000);
+  debutSession = Date.now();
+  ecrireFiche(d);
+  envoyerAudience();
+}
+function enTetesSupa(extra){
+  var h = {
+    'Content-Type': 'application/json',
+    'apikey': SUPA.cle,
+    'Authorization': 'Bearer ' + SUPA.cle
+  };
+  if (extra) for (var k in extra) h[k] = extra[k];
+  return h;
+}
+function envoyerAudience(){
+  if (!SUPA.url || !SUPA.cle) return;
+  var d = fiche();
+  var st = lireStats().parties;
+  var joursCum = 0, fetesCum = 0, rachatsCum = 0, gagneCum = 0;
+  for (var i=0;i<st.length;i++){
+    joursCum += st[i].jours || 0;
+    fetesCum += st[i].fetes || 0;
+    rachatsCum += st[i].rachats || 0;
+    gagneCum += st[i].gagne || 0;
+  }
+  var corps = {
+    appareil: d.id,
+    meilleur: MEILLEUR,
+    parties: st.length,
+    jours_cum: joursCum,
+    fetes: fetesCum,
+    rachats: rachatsCum,
+    gagne: gagneCum,
+    sessions: d.sessions,
+    secondes: d.secondes,
+    installee: estInstalle(),
+    appareil_type: typeAppareil(),
+    pays: paysDuFuseau(),
+    langue: navigator.language || '',
+    premiere: d.premier,
+    version: BUILD_TAG,
+    maj: new Date().toISOString()
+  };
+  try {
+    fetch(SUPA.url + '/rest/v1/' + SUPA.table, {
+      method: 'POST',
+      headers: enTetesSupa({ 'Prefer': 'resolution=merge-duplicates,return=minimal' }),
+      body: JSON.stringify(corps),
+      keepalive: true
+    }).catch(function(){});
+  } catch (e) {}
+}
+
+/* lecture de l'audience, pour le tableau de bord */
+function lireAudience(rappel){
+  if (!SUPA.url || !SUPA.cle){ rappel(null); return; }
+  try {
+    fetch(SUPA.url + '/rest/v1/' + SUPA.table + '?select=*&order=maj.desc&limit=1000',
+          { headers: enTetesSupa() })
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(j){ rappel(j); })
+      .catch(function(){ rappel(null); });
+  } catch (e) { rappel(null); }
+}
+
+/* =========================================================
+   TABLEAU DE BORD — l'historique de toutes tes parties
+   ========================================================= */
+var CLE_STATS = 'lqd_stats_v1';
+
+function lireStats(){
+  try {
+    var t = localStorage.getItem(CLE_STATS);
+    var d = t ? JSON.parse(t) : null;
+    return (d && d.parties) ? d : { parties: [] };
+  } catch (e) { return { parties: [] }; }
+}
+function enregistrerPartie(){
+  try {
+    var d = lireStats();
+    d.parties.push({
+      q: Date.now(),
+      jours: S.jour,
+      sorties: S.sorties,
+      premiere: S.ordreDepart.length ? S.ordreDepart[0] : (S.premierDepart !== undefined ? S.premierDepart : -1),
+      gagne: Math.round(S.gagne),
+      fetes: S.fetes,
+      rachats: S.rachats,
+      duree: Math.round(S.temps)
+    });
+    if (d.parties.length > 200) d.parties = d.parties.slice(-200);
+    localStorage.setItem(CLE_STATS, JSON.stringify(d));
+  } catch (e) {}
+}
+function effacerStats(){
+  try { localStorage.removeItem(CLE_STATS); } catch (e) {}
+}
+
+function construireTableau(){
+  var d = lireStats(), P = d.parties;
+  var box = document.getElementById('bordCorps');
+  if (!box) return;
+
+  if (!P.length){
+    box.innerHTML = '<p class="lede">Aucune partie termin\u00e9e pour l\u2019instant.<br>' +
+                    'Le tableau se remplit tout seul.</p>';
+    return;
+  }
+
+  var n = P.length, total = 0, best = 0, jrs = [], gagneTotal = 0;
+  var fetesTotal = 0, rachatsTotal = 0, tempsTotal = 0;
+  var parDame = [0,0,0,0];
+  for (var i=0;i<n;i++){
+    var p = P[i];
+    total += p.jours; jrs.push(p.jours);
+    if (p.jours > best) best = p.jours;
+    gagneTotal += p.gagne || 0;
+    fetesTotal += p.fetes || 0;
+    rachatsTotal += p.rachats || 0;
+    tempsTotal += p.duree || 0;
+    if (p.premiere >= 0 && p.premiere < 4) parDame[p.premiere]++;
+  }
+  var moyenne = Math.round(total / n);
+  var derniere = P[n-1].jours;
+  var dix = P.slice(-12);
+  var maxi = Math.max.apply(null, dix.map(function(x){ return x.jours; }));
+
+  function chiffre(v, l){
+    return '<div class="bcase"><div class="bval">' + v + '</div><div class="blab">' + l + '</div></div>';
+  }
+  var html = '<div class="bgrille">' +
+    chiffre(best, 'meilleur') + chiffre(moyenne, 'moyenne') +
+    chiffre(n, 'parties') + chiffre(derniere, 'derni\u00e8re') +
+    chiffre(fetesTotal, 'f\u00eates') + chiffre(rachatsTotal, 'rachats') +
+  '</div>';
+
+  html += '<div class="btitre">Les douze derni\u00e8res parties</div><div class="bbarres">';
+  for (var b=0;b<dix.length;b++){
+    var h = Math.max(6, Math.round(100 * dix[b].jours / (maxi || 1)));
+    var mieux = dix[b].jours === best;
+    html += '<div class="bcol"><div class="bbar' + (mieux ? ' record' : '') +
+            '" style="height:' + h + '%"><span>' + dix[b].jours + '</span></div></div>';
+  }
+  html += '</div>';
+
+  html += '<div class="btitre">Qui craque en premier</div><div class="bdames">';
+  var maxD = Math.max.apply(null, parDame) || 1;
+  var cols = ['--sante','--amour','--spirit','--argent'];
+  for (var k=0;k<4;k++){
+    var pc = Math.round(100 * parDame[k] / (maxD));
+    html += '<div class="bdame">' +
+      '<span class="bpast" style="background:var(' + cols[k] + ')">' + (k+1) + '</span>' +
+      '<span class="bjauge"><i style="width:' + pc + '%;background:var(' + cols[k] + ')"></i></span>' +
+      '<span class="bnb">' + parDame[k] + '</span></div>';
+  }
+  html += '</div>';
+
+  var mm = Math.floor(tempsTotal / 60);
+  html += '<div class="bpied">' + gagneTotal.toLocaleString('fr-FR') +
+          ' F gagn\u00e9s en tout \u00b7 ' + mm + ' min de jeu</div>';
+
+  var f = fiche();
+  var depuis = new Date(f.premier);
+  html += '<div class="btitre">Cet appareil</div><div class="bliste">' +
+    '<div><span>Sessions</span><b>' + f.sessions + '</b></div>' +
+    '<div><span>Temps d\u2019\u00e9cran</span><b>' + Math.round(f.secondes / 60) + ' min</b></div>' +
+    '<div><span>Premi\u00e8re ouverture</span><b>' + depuis.toLocaleDateString('fr-FR') + '</b></div>' +
+    '<div><span>Appareil</span><b>' + typeAppareil() + '</b></div>' +
+    '<div><span>Install\u00e9e</span><b>' + (estInstalle() ? 'oui' : 'non') + '</b></div>' +
+    '<div><span>Fuseau</span><b>' + paysDuFuseau() + '</b></div>' +
+    '<div><span>Version</span><b>' + BUILD_TAG + '</b></div>' +
+    '<div><span>Audience distante</span><b>' +
+      (SUPA.url && SUPA.cle ? 'branch\u00e9e' : 'non configur\u00e9e') + '</b></div>' +
+  '</div>';
+
+  html += '<div class="btitre">Tous les joueurs</div>' +
+          '<div id="bordAudience" class="bliste">' +
+          '<div><span>Lecture en cours\u2026</span><b>\u2026</b></div></div>';
+
+  box.innerHTML = html;
+  chargerAudience();
+}
+
+function chargerAudience(){
+  lireAudience(function(lignes){
+    var z = document.getElementById('bordAudience');
+    if (!z) return;
+    if (!lignes){
+      z.innerHTML = '<div><span>Base injoignable</span><b>hors ligne ?</b></div>';
+      return;
+    }
+    if (!lignes.length){
+      z.innerHTML = '<div><span>Aucun joueur enregistr\u00e9</span><b>0</b></div>';
+      return;
+    }
+    var joueurs = lignes.length, sess = 0, secs = 0, inst = 0, best = 0, parties = 0;
+    var pays = {}, app = {};
+    for (var i=0;i<lignes.length;i++){
+      var L = lignes[i];
+      sess += L.sessions || 0;
+      secs += L.secondes || 0;
+      parties += L.parties || 0;
+      if (L.installee) inst++;
+      if ((L.meilleur || 0) > best) best = L.meilleur;
+      var p = (L.pays || 'inconnu').split('/').pop();
+      pays[p] = (pays[p] || 0) + 1;
+      var a = L.appareil_type || 'inconnu';
+      app[a] = (app[a] || 0) + 1;
+    }
+    function classer(o){
+      var t = [];
+      for (var k in o) t.push([k, o[k]]);
+      t.sort(function(a,b){ return b[1] - a[1]; });
+      return t.slice(0, 4).map(function(e){ return e[0] + ' ' + e[1]; }).join(' \u00b7 ');
+    }
+    z.innerHTML =
+      '<div><span>Joueurs</span><b>' + joueurs + '</b></div>' +
+      '<div><span>Sessions</span><b>' + sess + '</b></div>' +
+      '<div><span>Temps cumul\u00e9</span><b>' + Math.round(secs/60) + ' min</b></div>' +
+      '<div><span>Parties jou\u00e9es</span><b>' + parties + '</b></div>' +
+      '<div><span>Applications install\u00e9es</span><b>' + inst + ' / ' + joueurs + '</b></div>' +
+      '<div><span>Meilleur score mondial</span><b>' + best + ' jours</b></div>' +
+      '<div><span>Villes</span><b>' + classer(pays) + '</b></div>' +
+      '<div><span>Appareils</span><b>' + classer(app) + '</b></div>';
+  });
+}
+
+/* =========================================================
+   L'ACCÈS PRIVÉ
+   ⚠️ Ce code part dans le navigateur de chaque joueur et le dépôt est public.
+   Quelqu'un de motivé PEUT retrouver ce mot de passe. Il écarte les curieux,
+   il ne protège pas un secret. N'utilise jamais ici un mot de passe
+   dont tu te sers ailleurs. Seule l'empreinte est stockée, pas le mot lui-même.
+   ========================================================= */
+var EMPREINTE_ATTENDUE = 0;      // ← à remplir : empreinte du mot de passe
+
+function empreinte(txt){
+  var h = 5381;
+  for (var i=0;i<txt.length;i++) h = ((h * 33) ^ txt.charCodeAt(i)) >>> 0;
+  return h;
+}
+var CLE_ACCES = 'lqd_acces_v1';
+function accesOuvert(){
+  if (!EMPREINTE_ATTENDUE) return true;          // tant que rien n'est réglé, c'est ouvert
+  try { return localStorage.getItem(CLE_ACCES) === String(EMPREINTE_ATTENDUE); }
+  catch (e) { return false; }
+}
+function demanderLeMot(){
+  var m = window.prompt('Mot de passe du tableau de bord');
+  if (m === null) return false;
+  if (empreinte(m) === EMPREINTE_ATTENDUE){
+    try { localStorage.setItem(CLE_ACCES, String(EMPREINTE_ATTENDUE)); } catch (e) {}
+    return true;
+  }
+  alert('Mot de passe incorrect.');
+  return false;
+}
+function ouvrirLeBord(){
+  if (!accesOuvert() && !demanderLeMot()) return;
+  construireTableau();
+  document.getElementById('scrBord').classList.remove('hide');
+}
+function fermerLeBord(){
+  document.getElementById('scrBord').classList.add('hide');
+  majBoutonReprendre();
+}
+
+/* la porte : appui long sur le numéro de version, en bas à gauche */
+(function(){
+  var cible = document.getElementById('build');
+  if (!cible) return;
+  var minuteur = null;
+  function debut(e){
+    minuteur = setTimeout(function(){ ouvrirLeBord(); }, 900);
+  }
+  function fin(){ if (minuteur){ clearTimeout(minuteur); minuteur = null; } }
+  cible.style.pointerEvents = 'auto';
+  cible.addEventListener('touchstart', debut, {passive:true});
+  cible.addEventListener('touchend', fin);
+  cible.addEventListener('touchcancel', fin);
+  cible.addEventListener('mousedown', debut);
+  cible.addEventListener('mouseup', fin);
+  cible.addEventListener('mouseleave', fin);
+})();
+
+/* =========================================================
    SAUVEGARDE — un appel, l'écran qui s'éteint, l'app fermée :
    la partie reprend exactement où elle était.
    ========================================================= */
@@ -2925,13 +3317,15 @@ function reprendreLaPartie(){
 /* on sauvegarde à chaque interruption possible */
 function armerLaSauvegarde(){
   document.addEventListener('visibilitychange', function(){
-    if (document.hidden){ sauvegarder(); couperLaParole(); }
+    if (document.hidden){ sauvegarder(); couperLaParole(); fermerSession(); }
+    else { debutSession = Date.now(); }
   });
-  window.addEventListener('pagehide', sauvegarder);
+  window.addEventListener('pagehide', function(){ sauvegarder(); fermerSession(); });
   window.addEventListener('blur', sauvegarder);
   window.addEventListener('beforeunload', sauvegarder);
 }
 armerLaSauvegarde();
+ouvrirSession();
 
 /* et le bouton Reprendre n'apparaît que s'il y a quelque chose à reprendre */
 function majBoutonReprendre(){
