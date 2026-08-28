@@ -662,7 +662,7 @@ function carteSVG(){
    ========================================================= */
 'use strict';
 
-var BUILD_TAG = 'LQD-v4.6';
+var BUILD_TAG = 'LQD-v4.9';
 document.getElementById('build').textContent = BUILD_TAG;
 
 /* ---------- affichage des erreurs, pour pouvoir diagnostiquer ---------- */
@@ -1317,10 +1317,16 @@ function souffleBruit(dur, vol, coupe, quand, bus){
 function bip(f, d, type, v){ note(f, d, type, v); }
 
 /* ---------- MUSIQUE : boucle pentatonique ---------- */
-var MUS = { depart:0, pas:0, temps:0.155, tension:0 };
+var MUS = { depart:0, pas:0, temps:0.155, tension:0, fete:0 };
 var GAMME = [0, 3, 5, 7, 10, 12, 15, 17, 19];
 function hauteur(n){ return 174.61 * Math.pow(2, n / 12); }
 
+var MOTIFS_FETE = [
+  [0, 2, 4, 5, 7, 5, 4, 2,  0, 4, 7, 8, 7, 5, 4, 2],
+  [4, 5, 7, 8, 7, 8, 7, 5,  4, 2, 4, 5, 7, 5, 4, 0],
+  [7, 8, 7, 5, 4, 5, 7, 8,  7, 5, 4, 2, 0, 2, 4, 5],
+  [0, 4, 2, 5, 4, 7, 5, 8,  7, 4, 5, 2, 4, 0, 2, 4]
+];
 var MOTIFS = [
   [0, 4, 2, 5, 1, 4, 3, 5,  0, 5, 2, 6, 1, 4, 2, 3],
   [2, 5, 3, 6, 2, 5, 4, 6,  1, 4, 2, 5, 0, 3, 1, 2],
@@ -1331,35 +1337,58 @@ var MOTIFS = [
 function musique(){
   if (!AC || !SON_ON) return;
   var horizon = AC.currentTime + 0.28;
+  var enFete = MUS.fete > 0;
+
   while (MUS.depart < horizon){
     var t = MUS.depart;
     var p = MUS.pas % 16;
     var mesure = Math.floor(MUS.pas / 16);
-    var motif = MOTIFS[mesure % MOTIFS.length];
     var tendu = MUS.tension;
 
-    // djembé grave
+    if (enFete){
+      /* ---- la fête : sabar rapide, kora haute, tout est dense ---- */
+      var motif = MOTIFS_FETE[mesure % MOTIFS_FETE.length];
+      var n = GAMME[motif[p] % GAMME.length];
+
+      // grosse frappe sur les temps
+      if (p % 4 === 0) note(92, 0.26, 'sine', 0.85, t, BUS_MUS, 44);
+      if (p === 6 || p === 14) note(120, 0.2, 'sine', 0.6, t, BUS_MUS, 60);
+      // tambour médium
+      if (p % 4 === 2){
+        note(210, 0.13, 'triangle', 0.5, t, BUS_MUS, 130);
+        souffleBruit(0.06, 0.2, 1300, t, BUS_MUS);
+      }
+      // claps
+      if (p === 4 || p === 12) souffleBruit(0.1, 0.3, 1900, t, BUS_MUS);
+      // shaker sur chaque pas
+      souffleBruit(0.03, 0.12, 5400, t, BUS_MUS);
+      // kora en continu, deux octaves
+      note(hauteur(n + 24), 0.26, 'triangle', 0.34, t, BUS_MUS);
+      if (p % 2 === 0) note(hauteur(n + 36), 0.18, 'sine', 0.18, t, BUS_MUS);
+      // basse
+      if (p % 8 === 0) note(hauteur(GAMME[motif[0] % GAMME.length]) / 2, 0.55, 'sine', 0.5, t, BUS_MUS);
+
+      MUS.pas++;
+      MUS.depart += 0.112;                 // nettement plus rapide
+      continue;
+    }
+
+    /* ---- l'ambiance ordinaire ---- */
+    var motif2 = MOTIFS[mesure % MOTIFS.length];
     if (p === 0 || p === 6 || p === 10 || (tendu > 0.5 && p === 13)){
       note(96, 0.22, 'sine', 0.5, t, BUS_MUS, 48);
     }
-    // frappe médium
     if (p === 4 || p === 12){
       note(196, 0.13, 'triangle', 0.34, t, BUS_MUS, 120);
       souffleBruit(0.05, 0.13, 1400, t, BUS_MUS);
     }
-    // shaker
     if (p % 2 === 1) souffleBruit(0.035, 0.075 + tendu * 0.05, 5200, t, BUS_MUS);
-
-    // kora
     if (p % 2 === 0){
-      var n1 = GAMME[motif[p] % GAMME.length];
+      var n1 = GAMME[motif2[p] % GAMME.length];
       note(hauteur(n1 + 24), 0.34, 'triangle', 0.2, t, BUS_MUS);
       if (p % 8 === 0) note(hauteur(n1 + 12), 0.5, 'sine', 0.16, t, BUS_MUS);
     }
-    // basse
-    if (p === 0 || p === 8) note(hauteur(GAMME[motif[p] % GAMME.length]) / 2, 0.6, 'sine', 0.3, t, BUS_MUS);
-
-    // couche de tension quand le foyer va mal
+    if (p === 0 || p === 8) note(hauteur(GAMME[motif2[p] % GAMME.length]) / 2, 0.6, 'sine', 0.3, t, BUS_MUS);
     if (tendu > 0.5 && p === 14) note(hauteur(1 + 12), 0.5, 'sawtooth', 0.09 * tendu, t, BUS_MUS);
 
     MUS.pas++;
@@ -1407,7 +1436,8 @@ function basculerSon(){
   var b = document.getElementById('sonBtn');
   if (b){ b.textContent = SON_ON ? '\u266A' : '\u2715'; b.classList.toggle('coupe', !SON_ON); }
   if (AC){
-    monter(BUS_MUS, SON_ON ? 0.085 : 0, 0.3);
+    var cible = (S && S.fete) ? 0.26 : 0.085;
+    monter(BUS_MUS, SON_ON ? cible : 0, 0.3);
     monter(BUS_EFF, SON_ON ? 0.26 : 0, 0.2);
   }
   if (SON_ON) sonBouton();
@@ -2005,12 +2035,18 @@ function majExode(dt){
       continue;
     }
 
+    // elle suit une allée à la fois, comme Modou
     var allure = E.vit || CFG.VIT_DAME;
     var dx = but.x - E.x, dy = but.y - E.y;
-    var vx = allure * dt, vy = allure * RATIO * dt;
-    if (Math.abs(dx) <= vx) E.x = but.x; else E.x += (dx > 0 ? vx : -vx);
-    if (Math.abs(dy) <= vy) E.y = but.y; else E.y += (dy > 0 ? vy : -vy);
-    if (E.x === but.x && E.y === but.y) E.etape++;
+    var pasX = allure * dt, pasY = allure * RATIO * dt;
+    if (Math.abs(dx) > 0.05){
+      E.x = (Math.abs(dx) <= pasX) ? but.x : E.x + (dx > 0 ? pasX : -pasX);
+    } else if (Math.abs(dy) > 0.05){
+      E.y = (Math.abs(dy) <= pasY) ? but.y : E.y + (dy > 0 ? pasY : -pasY);
+    }
+    if (Math.abs(but.x - E.x) <= 0.05 && Math.abs(but.y - E.y) <= 0.05){
+      E.x = but.x; E.y = but.y; E.etape++;
+    }
 
     damesEl[i].style.left = E.x + '%';
     damesEl[i].style.top  = E.y + '%';
@@ -2258,23 +2294,27 @@ function tourDeBoucle(ts){
 
   // déplacement
   var kb = clavier();
-  var vx, vy;
+  var vx, vy, butAuto = null;
   if (kb){ vx = kb.x; vy = kb.y; stopperAuto(); }
   else if (DOIGT.actif && (DOIGT.dx || DOIGT.dy)){ vx = DOIGT.dx; vy = DOIGT.dy; }
   else if (JOY.dx || JOY.dy){ vx = JOY.dx; vy = JOY.dy; }
   else if (S.auto){
-    // il rejoint tout seul le point touché
-    var but = S.auto.pts[S.auto.i];
-    if (!but){ stopperAuto(); vx = 0; vy = 0; }
+    // il rejoint le point touché en suivant UNE allée à la fois,
+    // jamais deux à la fois : d'abord l'axe horizontal, puis le vertical.
+    butAuto = S.auto.pts[S.auto.i];
+    if (!butAuto){ stopperAuto(); vx = 0; vy = 0; }
     else {
-      var ex = but.x - S.modou.x, ey = (but.y - S.modou.y) / RATIO;
-      var dd = Math.sqrt(ex*ex + ey*ey);
-      if (dd < 0.45){
-        S.modou.x = but.x; S.modou.y = but.y;
+      var ex = butAuto.x - S.modou.x;
+      var ey = butAuto.y - S.modou.y;
+      var seuilX = 0.18, seuilY = 0.18 * RATIO;
+      if (Math.abs(ex) > seuilX){ vx = ex > 0 ? 1 : -1; vy = 0; }
+      else if (Math.abs(ey) > seuilY){ vx = 0; vy = ey > 0 ? 1 : -1; }
+      else {
+        S.modou.x = butAuto.x; S.modou.y = butAuto.y;   // arrivé au carrefour
         S.auto.i++;
         if (S.auto.i >= S.auto.pts.length) stopperAuto();
-        vx = 0; vy = 0;
-      } else { vx = ex/dd; vy = ey/dd; }
+        vx = 0; vy = 0; butAuto = null;
+      }
     }
   }
   else { vx = 0; vy = 0; }
@@ -2288,7 +2328,15 @@ function tourDeBoucle(ts){
 
     // Modou ne quitte jamais les allées : on tente le mouvement complet,
     // puis on le fait glisser sur un seul axe s'il bute.
-    if (S.auto){ S.modou.x = nx; S.modou.y = ny; }
+    if (S.auto){
+      if (butAuto){
+        if (vx > 0) nx = Math.min(nx, butAuto.x);
+        if (vx < 0) nx = Math.max(nx, butAuto.x);
+        if (vy > 0) ny = Math.min(ny, butAuto.y);
+        if (vy < 0) ny = Math.max(ny, butAuto.y);
+      }
+      S.modou.x = nx; S.modou.y = ny;
+    }
     else if (marchable(nx, ny)){ S.modou.x = nx; S.modou.y = ny; }
     else if (marchable(nx, S.modou.y)){ S.modou.x = nx; }
     else if (marchable(S.modou.x, ny)){ S.modou.y = ny; }
@@ -2442,6 +2490,7 @@ function finir(cause){
   document.body.classList.remove('playing');
   joyFin();
   stopperAuto();
+  finirLaFete();
   couperLaParole();
   rentrerTousLesVendeurs();
   majRecord();
@@ -2537,7 +2586,9 @@ function lancerLaFete(){
   S.derniereFete = S.jour;
   S.fetes++;
   var niveau = Math.min(TITRES_FETE.length - 1, S.fetes - 1);
-  S.fete = { t:0, niveau:niveau, duree: CFG.FETE_DUREE + niveau * 0.8, prochain:0, salve:0 };
+  var duree = CFG.FETE_DUREE + niveau * 0.8;
+  S.fete = { t:0, niveau:niveau, duree:duree, prochain:0, salve:0 };
+  filetDeSecurite(duree);
 
   // Modou se plante au milieu du foyer et danse
   S.modou.x = CENTRE.x; S.modou.y = CENTRE.y;
@@ -2554,6 +2605,7 @@ function lancerLaFete(){
                   jalonFete(S.prochainJalon) + '</div>';
   b.className = 'on niv' + niveau;
 
+  ouvrirLaMusiqueDeFete();
   fanfare(niveau);
   parler('Les quatre sont l\u00e0 ! On tient !', VOIX_MODOU);
   noter(S.jour, 'F\u00eate de l\u2019\u00e9quilibre \u2014 ' + T.t + '.');
@@ -2561,8 +2613,9 @@ function lancerLaFete(){
 
 function lancerFeteRetour(i){
   var D = DAMES[i];
-  S.fete = { t:0, niveau:1, duree:4.0, prochain:0, salve:0,
+  S.fete = { t:0, niveau:1, duree:5.0, prochain:0, salve:0,
              type:'retour', couleur:teinte(D.col) };
+  filetDeSecurite(5.0);
 
   S.modou.x = CENTRE.x; S.modou.y = CENTRE.y;
   stopperAuto(); joyFin(); doigtFin();
@@ -2577,6 +2630,7 @@ function lancerFeteRetour(i){
     '<div class="prochfete">Le cercle est complet \u2014 les quatre sont l\u00e0</div>';
   b.className = 'on retour';
 
+  ouvrirLaMusiqueDeFete();
   fanfare(2);
   parleDame(i, 'Je suis \u00e0 la maison.');
   setTimeout(function(){ parler('Elle est revenue ! On est au complet !', VOIX_MODOU); }, 1500);
@@ -2604,13 +2658,41 @@ function majFete(dt){
     if (F.salve % 2 === 0) bipFeu(F.niveau);
   }
 
-  if (F.t >= F.duree){
-    modouEl.classList.remove('danse');
-    for (var i=0;i<DAMES.length;i++) damesEl[i].classList.remove('danse');
-    document.getElementById('fete').className = '';
-    S.fete = null;
-  }
+  if (F.t >= F.duree) finirLaFete();
   return false;   // pendant la fête, le temps du jeu est suspendu
+}
+
+function ouvrirLaMusiqueDeFete(){
+  MUS.fete = 1;
+  MUS.pas = 0;
+  if (AC) MUS.depart = AC.currentTime + 0.05;
+  monter(BUS_MUS, SON_ON ? 0.26 : 0, 0.35);      // trois fois plus fort qu'en jeu
+}
+function fermerLaMusiqueDeFete(){
+  MUS.fete = 0;
+  monter(BUS_MUS, SON_ON ? 0.085 : 0, 1.1);
+}
+
+/* remise à l'état normal — appelée par la fin de fête ET par un filet de sécurité */
+function finirLaFete(){
+  if (minuteurFete){ clearTimeout(minuteurFete); minuteurFete = null; }
+  fermerLaMusiqueDeFete();
+  if (modouEl) modouEl.classList.remove('danse');
+  for (var i=0;i<damesEl.length;i++){
+    if (damesEl[i]) damesEl[i].classList.remove('danse');
+  }
+  var b = document.getElementById('fete');
+  if (b){ b.className = ''; }
+  var fx = document.getElementById('feux');
+  if (fx) setTimeout(function(){ if (fx) fx.innerHTML = ''; }, 1400);
+  if (S) S.fete = null;
+}
+var minuteurFete = null;
+function filetDeSecurite(duree){
+  if (minuteurFete) clearTimeout(minuteurFete);
+  minuteurFete = setTimeout(function(){
+    if (S && S.fete) finirLaFete();     // si quoi que ce soit a bloqué, on rend la main
+  }, (duree + 1.5) * 1000);
 }
 
 function uneSalve(niveau, couleurImposee){
@@ -2760,10 +2842,11 @@ function demarrer(){
   CAM.x = 50; CAM.y = 40; CAM.z = CFG.Z_LIBRE;
   CAM.tx = 50; CAM.ty = 40; CAM.tz = CFG.Z_LIBRE;
   construire();
+  finirLaFete();
   redimensionner();
   S.enCours = true;
   last = 0;
-  if (AC){ MUS.depart = AC.currentTime + 0.2; MUS.pas = 0; MUS.tension = 0;
+  if (AC){ MUS.depart = AC.currentTime + 0.2; MUS.pas = 0; MUS.tension = 0; MUS.fete = 0;
            monter(BUS_MUS, SON_ON ? 0.085 : 0, 2.0); }
   document.body.classList.add('playing');
   document.getElementById('scrIntro').classList.add('hide');
