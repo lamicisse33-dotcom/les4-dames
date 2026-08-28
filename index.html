@@ -544,10 +544,30 @@ html,body{height:100%;overflow:hidden;background:#1B2A1B;font-family:var(--ui);c
   0%,100%{transform:scaleY(1.4286) rotate(-14deg)}
   50%{transform:scaleY(1.4286) translateY(-7px) rotate(14deg)}}
 
-/* ---- L'ÂNE ---- */
+/* ---- LE MANDAT ET LA DETTE ---- */
+#mandat,#dette{position:fixed;left:50%;transform:translateX(-50%);z-index:44;
+  display:none;align-items:center;gap:7px;border:3px solid var(--trait);
+  box-shadow:var(--ombre);padding:4px 12px 4px 5px;border-radius:20px;pointer-events:none}
+#mandat{top:calc(52px + env(safe-area-inset-top));background:#DFF3FF}
+#dette{top:calc(90px + env(safe-area-inset-top));background:#FFE9CC}
+#mandat.on,#dette.on{display:flex}
+#mandat.urgent{background:#FFE2E8;animation:fuitePulse 1s ease-in-out infinite}
+@keyframes fuitePulse{0%,100%{box-shadow:0 3px 0 var(--trait)}
+  50%{box-shadow:0 3px 0 var(--trait),0 0 0 5px rgba(255,92,122,.4)}}
+.mpic{font-size:15px}
+.mtxt{font-size:11px;font-weight:900;color:var(--trait)}
+.mbar{width:56px;height:8px;border-radius:5px;background:#E3DACB;
+  border:2px solid var(--trait);overflow:hidden}
+.mbar i{display:block;height:100%;background:#FF8A3D}
+
+/* ---- L'ÂNE ET LA MOTO ---- */
 #modou .monture{position:absolute;left:50%;bottom:-6%;width:118%;height:62%;
   transform:translateX(-50%);opacity:0;transition:opacity .3s;pointer-events:none}
-#modou.surLane .monture{opacity:1}
+#modou.surLane .mAne{opacity:1}
+#modou.surLaMoto .mMoto{opacity:1;width:132%;bottom:-9%}
+#modou.surLaMoto.marche .mMoto{animation:vibre .12s linear infinite}
+@keyframes vibre{0%,100%{transform:translateX(-50%) translateY(0)}
+  50%{transform:translateX(-50%) translateY(-1.4px)}}
 #modou.surLane #mBody{transform-origin:50% 100%}
 #modou.surLane.marche .monture .apatte.ag{animation:patte .32s ease-in-out infinite}
 #modou.surLane.marche .monture .apatte.ad{animation:patte .32s ease-in-out infinite reverse}
@@ -714,6 +734,9 @@ button.cta{touch-action:manipulation;position:relative;z-index:2}
   </div>
 </div>
 
+<div id="mandat"></div>
+<div id="dette"></div>
+
 <div id="force"><span class="pic">&#128170;</span><span class="bar"><i id="forceFill"></i></span></div>
 
 <button id="camBtn">⊕</button>
@@ -844,7 +867,7 @@ function carteSVG(){
   // ---------- PLACE CENTRALE ----------
   s += '<rect x="552" y="417" width="296" height="246" rx="26" fill="#CBB88C"/>';
   s += '<rect x="562" y="427" width="276" height="226" rx="20" fill="#DCD3C4"/>';
-  var lits = [[640,480],[760,480],[640,600],[760,600]];
+  var lits = [[609,464],[791,464],[609,616],[791,616]];
   for (var L=0;L<lits.length;L++){
     s += '<g transform="translate('+lits[L][0]+','+lits[L][1]+')">';
     s += '<rect x="-38" y="-30" width="76" height="60" rx="10" fill="#8C6A4A" stroke="#5B4430" stroke-width="4"/>';
@@ -1050,7 +1073,7 @@ function dameSVG(i){
    ========================================================= */
 'use strict';
 
-var BUILD_TAG = 'LQD-v7.5';
+var BUILD_TAG = 'LQD-v7.7';
 document.getElementById('build').textContent = BUILD_TAG;
 
 /* ---------- affichage des erreurs, pour pouvoir diagnostiquer ---------- */
@@ -1166,6 +1189,16 @@ var CFG = {
   SEUIL_PARTIR: 0,        // à zéro, la Dame quitte le cercle
   SORTIES_FATALES: 3,     // trois départs et la partie est perdue
 
+  MANDAT_JOURS: 7,        // le fils attend son argent chaque semaine
+  MANDAT_BASE: 260,
+  MANDAT_DELAI: 3,        // il a trois jours pour l'envoyer
+  MANDAT_PEINE: 22,       // ce que lui coûte un mandat oublié
+
+  MOTO_JOUR: 91,
+  MOTO_PRIX: 3000,
+  MOTO_RETENUE: 0.35,     // le patron retient ce tiers sur chaque paye
+  MOTO_VITESSE: 2.7,
+
   ANE_JOUR: 61,           // troisième mois : le gardien du temple le propose
   PRIX_ANE: 800,
   ANE_VITESSE: 2.0,       // Modou monte dessus, les trajets sont deux fois plus courts
@@ -1205,28 +1238,28 @@ var DAMES = [
     dernier:'Modou ! Mes m\u00e9dicaments, ou je m\u2019en vais.',
     replique:'Tant que tu ne m\u2019apportes pas mes m\u00e9dicaments, tu ne me verras plus.',
     voix:{ hauteur:0.92, vitesse:0.84 },
-    usure:0.58, muette:false, bed:{x:45.7,y:60.0}, col:'--sante'  },
+    usure:0.58, muette:false, bed:{x:43.5,y:58.0}, col:'--sante'  },
   { id:2, nom:'Deuxième Dame',  lieu:'AMOUR',  cri:'Tu ne me vois plus.',
     demande:'Modou, am\u00e8ne-moi des fleurs.',
     suite:'Am\u00e8ne-moi des fleurs.',
     dernier:'Modou ! Mes fleurs, ou je m\u2019en vais.',
     replique:'Tant que tu ne m\u2019apportes pas mes fleurs, tu ne me verras plus.',
     voix:{ hauteur:1.22, vitesse:0.98 },
-    usure:0.68, muette:false, bed:{x:54.3,y:60.0}, col:'--amour'  },
+    usure:0.68, muette:false, bed:{x:56.5,y:58.0}, col:'--amour'  },
   { id:3, nom:'Troisième Dame', lieu:'TEMPLE', cri:'…',
     demande:'Modou, j\u2019ai besoin de pri\u00e8res.',
     suite:'J\u2019ai besoin de pri\u00e8res.',
     dernier:'Modou\u2026 mes pri\u00e8res. Je ne demanderai plus.',
     replique:'Tant que tu ne pries pas pour moi, tu ne me verras plus.',
     voix:{ hauteur:1.08, vitesse:0.76 },
-    usure:0.48, muette:true,  bed:{x:45.7,y:75.0}, col:'--spirit' },
+    usure:0.48, muette:true,  bed:{x:43.5,y:77.0}, col:'--spirit' },
   { id:4, nom:'Quatrième Dame', lieu:'BANQUE', cri:'Il me faut ça demain.',
     demande:'Modou, j\u2019ai besoin d\u2019argent.',
     suite:'J\u2019ai besoin d\u2019argent.',
     dernier:'Modou ! Mon argent, ou je m\u2019en vais !',
     replique:'Tant que tu ne me donnes pas mon argent, tu ne me verras plus.',
     voix:{ hauteur:1.42, vitesse:1.12 },
-    usure:0.84, muette:false, bed:{x:54.3,y:75.0}, col:'--argent' }
+    usure:0.84, muette:false, bed:{x:56.5,y:77.0}, col:'--argent' }
 ];
 
 /* ---------- LES CINQ LIEUX ---------- */
@@ -1284,7 +1317,7 @@ var VOISINS = {};
     VOISINS[ARETES[i][1]].push(ARETES[i][0]);
   }
 })();
-var PLACE = { x0:552, y0:417, x1:848, y1:663 };
+var PLACE = { x0:540, y0:404, x1:860, y1:676 };
 var DEMI = 30;
 
 function distSeg(px, py, x1, y1, x2, y2){
@@ -1408,6 +1441,8 @@ function nouvelEtat(){
     recordBattu:false, recordVu:false, moisSalue:false,
     enfant:null, coursesEnfant:0,
     ane:false, aneOffert:false,
+    filsParti:false, mandat:null, mandatsEnvoyes:0, mandatsRates:0,
+    moto:false, motoOfferte:false, dette:0,
     auto:null,
     nuit:0, etaitNuit:false,
     journal:[],
@@ -1518,7 +1553,8 @@ function construire(){
   // Modou
   modouEl = document.createElement('div');
   modouEl.className = 'pos'; modouEl.id = 'modou';
-  modouEl.innerHTML = '<div class="monture">' + aneSVG() + '</div>' +
+  modouEl.innerHTML = '<div class="monture mAne">' + aneSVG() + '</div>' +
+                      '<div class="monture mMoto">' + motoSVG() + '</div>' +
                       bonhommeSVG() + '<div class="dit"></div>';
   layer.appendChild(modouEl);
 
@@ -2792,6 +2828,140 @@ function acheterLAne(){
   return true;
 }
 
+/* =========================================================
+   LE FILS PARTI ÉTUDIER — troisième mois
+   Chaque semaine, Modou doit lui envoyer de l'argent depuis la banque.
+   ========================================================= */
+function montantDuMandat(){
+  return Math.round(CFG.MANDAT_BASE * Math.pow(1 + CFG.PALIER_HAUSSE, palierActuel()));
+}
+
+function leFilsPart(){
+  if (S.filsParti) return;
+  S.filsParti = true;
+  if (S.enfant && enfantEl && enfantEl.parentNode){
+    enfantEl.parentNode.removeChild(enfantEl);
+    enfantEl = null;
+  }
+  S.enfant = null;
+  majBoutonEnfant();
+  flash('Ton fils part \u00e9tudier en ville. Il ne fera plus les courses.', 4000);
+  parler('Mon fils s\u2019en va \u00e9tudier. Qu\u2019Allah le garde.', VOIX_MODOU);
+  noter(S.jour, 'Le fils part \u00e9tudier.');
+  ouvrirUnMandat(true);
+}
+
+function ouvrirUnMandat(premier){
+  var m = montantDuMandat();
+  if (S.mandat) m += S.mandat.montant;          // le mandat oublié s'ajoute au suivant
+  S.mandat = { montant:m, echeance:S.jour + CFG.MANDAT_DELAI };
+  flash((premier ? 'Premier mandat : ' : 'Mandat de la semaine : ') + m +
+        ' F \u00e0 envoyer depuis la banque.', 3600);
+  if (!premier) parler('Il faut envoyer l\u2019argent \u00e0 mon fils.', VOIX_MODOU);
+  noter(S.jour, 'Mandat de ' + m + ' F \u00e0 envoyer.');
+  majBandeauMandat();
+}
+
+function envoyerLeMandat(){
+  if (!S.mandat) return false;
+  if (S.argent < S.mandat.montant){
+    if (S.cool <= 0){
+      flash('Il te manque ' + (S.mandat.montant - Math.floor(S.argent)) +
+            ' F pour le mandat.', 2600);
+      S.cool = 3;
+    }
+    return false;
+  }
+  S.argent -= S.mandat.montant;
+  volant('-' + S.mandat.montant + ' F', '#7FE0A8');
+  sonCaisse();
+  S.mandatsEnvoyes++;
+  noter(S.jour, 'Mandat envoy\u00e9 : ' + S.mandat.montant + ' F.');
+  S.mandat = null;
+  majBandeauMandat();
+  flash('Mandat envoy\u00e9. Ton fils pourra manger.', 2800);
+  parler('Mon fils aura de quoi vivre.', VOIX_MODOU);
+  return true;
+}
+
+function majMandat(){
+  if (!S.filsParti || !S.mandat) return;
+  if (S.jour > S.mandat.echeance){
+    S.mandatsRates++;
+    S.force = Math.max(0, S.force - CFG.MANDAT_PEINE);
+    flash('Mandat en retard. Ton fils a manqu\u2019\u00e9cole.', 3400);
+    parler('Pardonne-moi mon fils\u2026', VOIX_MODOU);
+    noter(S.jour, 'Mandat en retard : ' + S.mandat.montant + ' F report\u00e9s.');
+    ouvrirUnMandat(false);
+  }
+}
+
+function majBandeauMandat(){
+  var z = document.getElementById('mandat');
+  if (!z) return;
+  if (!S || !S.mandat){ z.className = ''; return; }
+  var reste = Math.max(0, S.mandat.echeance - S.jour);
+  z.className = 'on' + (reste <= 1 ? ' urgent' : '');
+  z.innerHTML = '<span class="mpic">\uD83C\uDF93</span>' +
+                '<span class="mtxt">' + S.mandat.montant + ' F \u2014 ' +
+                (reste > 0 ? reste + ' j' : 'aujourd\u2019hui') + '</span>';
+}
+
+/* =========================================================
+   LA MOTO — quatrième mois, à crédit chez le patron
+   ========================================================= */
+function motoSVG(){
+  return '' +
+  '<svg viewBox="0 0 78 46" width="100%" height="100%">' +
+    '<ellipse cx="39" cy="43" rx="26" ry="4" fill="rgba(0,0,0,.3)"/>' +
+    '<g stroke="#2B2118" stroke-width="2.8" stroke-linejoin="round">' +
+      '<circle cx="17" cy="33" r="11" fill="#3B332C"/><circle cx="17" cy="33" r="4" fill="#9A9184"/>' +
+      '<circle cx="61" cy="33" r="11" fill="#3B332C"/><circle cx="61" cy="33" r="4" fill="#9A9184"/>' +
+      '<path d="M17 33 L34 22 h20 l7 11 z" fill="#D93B3B"/>' +
+      '<rect x="30" y="14" width="24" height="9" rx="4" fill="#2B2118"/>' +
+      '<path d="M54 22 l9 -9" stroke="#7C7168" stroke-width="4" stroke-linecap="round"/>' +
+      '<rect x="58" y="10" width="14" height="5" rx="2.5" fill="#3B332C"/>' +
+    '</g>' +
+  '</svg>';
+}
+
+function proposerLaMoto(){
+  if (S.motoOfferte) return;
+  S.motoOfferte = true;
+  flash('Le patron te propose une moto \u00e0 ' + CFG.MOTO_PRIX +
+        ' F, \u00e0 cr\u00e9dit. Passe au chantier.', 4200);
+  parler('Une moto\u2026 \u00e0 cr\u00e9dit. Est-ce que j\u2019ose ?', VOIX_MODOU);
+  noter(S.jour, 'Le patron propose une moto \u00e0 cr\u00e9dit.');
+  var b = badgesEl.CHANTIER;
+  if (b) b.classList.add('dernier');
+}
+
+function prendreLaMoto(){
+  if (S.moto || !S.motoOfferte) return false;
+  S.moto = true;
+  S.dette = CFG.MOTO_PRIX;
+  var b = badgesEl.CHANTIER;
+  if (b) b.classList.remove('dernier');
+  if (modouEl){ modouEl.classList.remove('surLane'); modouEl.classList.add('surLaMoto'); }
+  sonCaisse();
+  flash('La moto est \u00e0 toi. Le patron retiendra ' +
+        Math.round(CFG.MOTO_RETENUE * 100) + ' % de chaque paye.', 4200);
+  parler('La moto est \u00e0 moi ! Je vais tout rattraper !', VOIX_MODOU);
+  noter(S.jour, 'Moto prise \u00e0 cr\u00e9dit : ' + CFG.MOTO_PRIX + ' F.');
+  return true;
+}
+
+function majBandeauDette(){
+  var z = document.getElementById('dette');
+  if (!z) return;
+  if (!S || !S.moto || S.dette <= 0){ z.className = ''; return; }
+  var part = Math.max(0, Math.min(1, 1 - S.dette / CFG.MOTO_PRIX));
+  z.className = 'on';
+  z.innerHTML = '<span class="mpic">\uD83C\uDFCD\uFE0F</span>' +
+                '<span class="mbar"><i style="width:' + (part*100).toFixed(0) + '%"></i></span>' +
+                '<span class="mtxt">' + Math.round(S.dette) + ' F</span>';
+}
+
 /* ---------- CRISES ---------- */
 function majCrises(){
   var urgente = -1, plusBas = 101;
@@ -3069,6 +3239,7 @@ function rendre(){
   modouEl.classList.toggle('epuise', niv === 2);
 
   elSous.textContent = Math.floor(S.argent);
+  majBandeauDette();
   boxSous.classList.toggle('serie', S.serie > 2);
   boxSous.classList.toggle('rachat', S.sorties > 0);
   if (S.sorties > 0 && !S.viseRetour){
@@ -3198,6 +3369,14 @@ function tourDeBoucle(ts){
 
     if (jour === CFG.ENFANT_JOUR && !S.enfant) faireVenirLEnfant();
     if (jour >= CFG.ANE_JOUR && !S.aneOffert && !S.ane) proposerLAne();
+    if (jour >= CFG.ANE_JOUR && !S.filsParti) leFilsPart();
+    if (jour >= CFG.MOTO_JOUR && !S.motoOfferte && !S.moto) proposerLaMoto();
+    if (S.filsParti && !S.mandat &&
+        (jour - CFG.ANE_JOUR) % CFG.MANDAT_JOURS === 0 && jour > CFG.ANE_JOUR){
+      ouvrirUnMandat(false);
+    }
+    majMandat();
+    majBandeauMandat();
 
     if (jour === 30 && !S.moisSalue){
       S.moisSalue = true;
@@ -3264,7 +3443,8 @@ function tourDeBoucle(ts){
   var bouge = (Math.abs(vx) + Math.abs(vy)) > 0.02;
   if (bouge){
     var mult = vitesseDeModou();
-    if (S.ane) mult *= CFG.ANE_VITESSE;
+    if (S.moto) mult *= CFG.MOTO_VITESSE;
+    else if (S.ane) mult *= CFG.ANE_VITESSE;
     var px = vx * CFG.VITESSE * mult * dt;
     var py = vy * CFG.VITESSE * RATIO * mult * dt;
     var nx = Math.max(3, Math.min(97, S.modou.x + px));
@@ -3325,6 +3505,7 @@ function tourDeBoucle(ts){
       sonFoyer();
     }
   } else if (S.zone === 'CHANTIER'){
+    if (S.motoOfferte && !S.moto) prendreLaMoto();
     if (estNuit){
       S.serie = 0;
       if (S.cool <= 0){
@@ -3341,8 +3522,20 @@ function tourDeBoucle(ts){
     if (S.force > 0){
       S.serie += dt;
       var bonus = 1 + Math.min(CFG.SERIE_MAX, S.serie * CFG.SERIE_BONUS);
-      S.argent += CFG.GAIN_CHANTIER * rendT * bonus * dt;
-      S.gagne += CFG.GAIN_CHANTIER * rendT * bonus * dt;
+      var paye = CFG.GAIN_CHANTIER * rendT * bonus * dt;
+      if (S.moto && S.dette > 0){
+        var retenue = Math.min(S.dette, paye * CFG.MOTO_RETENUE);
+        S.dette -= retenue;
+        paye -= retenue;
+        if (S.dette <= 0){
+          S.dette = 0;
+          flash('La moto est pay\u00e9e. Elle est \u00e0 toi pour de bon.', 3600);
+          parler('La moto est pay\u00e9e ! Elle est \u00e0 moi !', VOIX_MODOU);
+          noter(S.jour, 'Moto rembours\u00e9e.');
+        }
+      }
+      S.argent += paye;
+      S.gagne += paye;
       S.force = Math.max(0, S.force - CFG.COUT_CHANTIER * dt);
       tickPiece += dt;
       if (tickPiece > 0.5){ tickPiece = 0; sonPiece(); }
@@ -3373,6 +3566,8 @@ function tourDeBoucle(ts){
         if (n2) sonRefus();
         S.cool = n2 ? 3.2 : 5;
       }
+    } else if (S.zone === 'BANQUE' && S.mandat && envoyerLeMandat()){
+      S.cool = 2;
     } else if (S.zone === 'TEMPLE' && S.aneOffert && !S.ane && acheterLAne()){
       S.cool = 2;
     } else if (iZ >= 0 && S.exode[iZ] && S.exode[iZ].retour){
@@ -3575,7 +3770,8 @@ function ouvrirLeChapitre(){
     '<div class="chScene">' +
       '<div class="chModou">' + bonhommeSVG() + '</div>' +
       (niveau >= 2 ? '<div class="chEnfant">' + enfantSVG() + '</div>' : '') +
-      (niveau >= 3 ? '<div class="chAne">' + aneSVG() + '</div>' : '') +
+      (niveau >= 4 ? '<div class="chAne">' + motoSVG() + '</div>' :
+       (niveau >= 3 ? '<div class="chAne">' + aneSVG() + '</div>' : '')) +
     '</div>' +
     '<div class="chTexte">' +
       '<div class="chPartie">PARTIE ' + niveau + ' TERMIN\u00c9E \u2014 JOUR ' + S.jour + '</div>' +
@@ -3622,6 +3818,13 @@ function fermerLeChapitre(continuer){
   } else {
     finir('abandon');
   }
+}
+
+/* la fin de mois ouvre l'écran de chapitre */
+function lancerLaFete(){
+  S.derniereFete = S.jour;
+  S.fetes++;
+  ouvrirLeChapitre();
 }
 
 function majFete(dt){
@@ -4338,7 +4541,10 @@ function demarrer(){
   CAM.tx = 50; CAM.ty = 40; CAM.tz = CFG.Z_LIBRE;
   construire();
   finirLaFete();
-  if (S.ane && modouEl) modouEl.classList.add('surLane');
+  if (modouEl){
+    if (S.moto) modouEl.classList.add('surLaMoto');
+    else if (S.ane) modouEl.classList.add('surLane');
+  }
   redimensionner();
   S.enCours = true;
   last = 0;
