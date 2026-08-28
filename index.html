@@ -176,6 +176,37 @@ html,body{height:100%;overflow:hidden;background:#1B2A1B;font-family:var(--ui);c
 .dame.droite .cri{left:calc(100% + 4px)}
 .dame.parle .cri{opacity:1}
 
+/* ---- L'ENFANT ---- */
+.enfant{width:44px;height:60px;z-index:29;pointer-events:none;
+  transform:translate(-50%,-80%) scaleY(1.4286);
+  filter:drop-shadow(0 3px 4px rgba(0,0,0,.4))}
+.enfant.marche .ebuste{animation:enfMarche .4s ease-in-out infinite}
+@keyframes enfMarche{0%,100%{transform:translateY(0) rotate(-4deg)}
+  50%{transform:translateY(-2.5px) rotate(4deg)}}
+.enfant.marche .ejambe.eg{animation:enfJambe .4s ease-in-out infinite}
+.enfant.marche .ejambe.ed{animation:enfJambe .4s ease-in-out infinite reverse}
+.enfant .ejambe{transform-origin:20px 38px}
+.enfant .ebras{transform-origin:20px 26px}
+@keyframes enfJambe{0%,100%{transform:rotate(-20deg)}50%{transform:rotate(20deg)}}
+.enfant.donne .ebuste{animation:enfDonne .5s ease-in-out infinite}
+@keyframes enfDonne{0%,100%{transform:scale(1)}50%{transform:scale(1.09)}}
+.enfant .edit{position:absolute;left:50%;top:-16px;transform:translateX(-50%);
+  font-size:17px;pointer-events:none}
+
+#enfantBtn{position:fixed;right:44px;bottom:calc(270px + env(safe-area-inset-bottom));
+  z-index:42;display:none;align-items:center;justify-content:center;
+  width:48px;height:48px;border-radius:50%;background:#5FD98A;overflow:visible;
+  border:3px solid var(--trait);box-shadow:var(--ombre);cursor:pointer;padding:3px}
+#enfantBtn.on{display:flex}
+#enfantBtn svg{width:100%;height:100%}
+#enfantBtn .epuce{position:absolute;right:-3px;top:-3px;font-size:13px;font-weight:900;
+  color:var(--trait);font-style:normal;line-height:1}
+#enfantBtn.occupe{background:#D8D2C6;opacity:.75}
+#enfantBtn.pret{animation:enfPret 1.6s ease-in-out infinite}
+@keyframes enfPret{0%,100%{box-shadow:0 3px 0 var(--trait)}
+  50%{box-shadow:0 3px 0 var(--trait),0 0 0 5px rgba(95,217,138,.45)}}
+#enfantBtn:active{transform:translateY(2px);box-shadow:0 1px 0 var(--trait)}
+
 /* ---- MODOU ---- */
 #modou{width:94px;height:122px;z-index:30;transform:translate(-50%,-80%) scaleY(1.4286);
   filter:drop-shadow(0 5px 6px rgba(0,0,0,.4));transition:opacity .3s}
@@ -647,6 +678,7 @@ button.cta{touch-action:manipulation;position:relative;z-index:2}
 <button id="camBtn">⊕</button>
 <button id="sonBtn">♪</button>
 <button id="voixBtn">🗣</button>
+<button id="enfantBtn"></button>
 
 <div id="stick"><div id="knob"></div></div>
 <div id="flottant"><div id="flottantKnob"></div></div>
@@ -975,7 +1007,7 @@ function dameSVG(i){
    ========================================================= */
 'use strict';
 
-var BUILD_TAG = 'LQD-v6.8';
+var BUILD_TAG = 'LQD-v7.2';
 document.getElementById('build').textContent = BUILD_TAG;
 
 /* ---------- affichage des erreurs, pour pouvoir diagnostiquer ---------- */
@@ -1004,7 +1036,7 @@ window.addEventListener('unhandledrejection', function(e){
 function surAppui(e){
   var n = e.target;
   while (n && n !== document.body){
-    if (n.id === 'bordFermer'){ fermerLeBord(); return; }
+    if (n.id === 'bordFermer'){ sonBouton(); fermerLeBord(); return; }
     if (n.id === 'bordVerrou'){
       try { localStorage.removeItem(CLE_ACCES); } catch (e) {}
       fermerLeBord();
@@ -1083,6 +1115,11 @@ var CFG = {
   SEUIL_DERNIER: 12,      // en dessous, elle réclame une dernière fois
   SEUIL_PARTIR: 0,        // à zéro, la Dame quitte le cercle
   SORTIES_FATALES: 3,     // trois départs et la partie est perdue
+
+  ENFANT_JOUR: 31,        // il arrive au deuxième mois
+  ENFANT_VITESSE: 0.52,   // il marche à la moitié du pas de Modou
+  ENFANT_RENDEMENT: 0.75, // un enfant s'y prend moins bien que son père
+  ENFANT_PAUSE: 2.0,      // il souffle avant de repartir
 
   PRIX_RETOUR: 1000,      // avec cette somme, Modou fait revenir une Dame partie
   JAUGE_RETOUR: 55,       // dans quel état elle revient
@@ -1314,7 +1351,8 @@ function nouvelEtat(){
     viseRetour:false,
     vu:{}, rappels:{},
     fete:null, derniereFete:0, fetes:0, prochainJalon:1, rachats:0,
-    recordBattu:false, recordVu:false,
+    recordBattu:false, recordVu:false, moisSalue:false,
+    enfant:null, coursesEnfant:0,
     auto:null,
     nuit:0, etaitNuit:false,
     journal:[],
@@ -1336,7 +1374,7 @@ var elSous = document.getElementById('sousVal');
 var boxSous = document.getElementById('sous');
 var elJauges = document.getElementById('jauges');
 var damesEl = [], zonesEl = {}, badgesEl = {}, vendeursEl = {}, vignettes = {}, voletsEl = {}, jaugeEl = [];
-var modouEl = null, voileNuit = null, voileCrep = null, cibleEl = null;
+var modouEl = null, voileNuit = null, voileCrep = null, cibleEl = null, enfantEl = null;
 
 /* ---------- LE CYCLE JOUR / NUIT ---------- */
 function lissage(x){ x = Math.max(0, Math.min(1, x)); return x*x*(3 - 2*x); }
@@ -1370,6 +1408,7 @@ function construire(){
   cibleEl = document.getElementById('cible');
   var fx = document.getElementById('feux');
   if (fx) fx.innerHTML = '';
+  enfantEl = null;
   voileNuit = document.getElementById('nuit');
   voileCrep = document.getElementById('crepuscule');
   var lp = document.getElementById('lampes');
@@ -1614,7 +1653,7 @@ function audioInit(){
     if (!Ctx) return;
     AC = new Ctx();
 
-    BUS_EFF = AC.createGain(); BUS_EFF.gain.value = 0.26;
+    BUS_EFF = AC.createGain(); BUS_EFF.gain.value = 0.34;
     BUS_MUS = AC.createGain(); BUS_MUS.gain.value = 0.00;
     BUS_EFF.connect(AC.destination);
     BUS_MUS.connect(AC.destination);          // chaque bus va au destination, jamais sur lui-même
@@ -1626,7 +1665,7 @@ function audioInit(){
     for (var i=0;i<n;i++) d[i] = Math.random()*2 - 1;
 
     MUS.depart = AC.currentTime + 0.25;
-    monter(BUS_MUS, 0.085, 2.5);
+    monter(BUS_MUS, 0.15, 2.5);
   } catch (e) { AC = null; }
 }
 function monter(bus, cible, duree){
@@ -1637,6 +1676,20 @@ function monter(bus, cible, duree){
     bus.gain.linearRampToValueAtTime(cible, AC.currentTime + duree);
   } catch (e) {}
 }
+
+/* le contexte s'endort dès qu'on quitte l'app : on le réveille au moindre contact */
+function reveillerLeSon(){
+  try {
+    if (!AC) { audioInit(); return; }
+    if (AC.state === 'suspended') AC.resume();
+  } catch (e) {}
+}
+['touchstart','touchend','pointerdown','mousedown','click','keydown'].forEach(function(ev){
+  document.addEventListener(ev, reveillerLeSon, true);
+});
+document.addEventListener('visibilitychange', function(){
+  if (!document.hidden) setTimeout(reveillerLeSon, 60);
+});
 
 /* ---------- brique de base ---------- */
 function note(f, dur, type, vol, quand, bus, glide){
@@ -1690,6 +1743,9 @@ var MOTIFS = [
 
 function musique(){
   if (!AC || !SON_ON) return;
+  if (AC.state === 'suspended'){ reveillerLeSon(); return; }
+  // après une pause de l'application, on repart du présent au lieu de rattraper
+  if (MUS.depart < AC.currentTime - 0.6) MUS.depart = AC.currentTime + 0.05;
   var horizon = AC.currentTime + 0.28;
   var enFete = MUS.fete > 0;
 
@@ -1777,6 +1833,12 @@ function sonDepart(){ var t=AC?AC.currentTime:0;
   note(392,0.3,'sine',0.24,t); note(311,0.34,'sine',0.22,t+0.24);
   note(233,0.7,'sine',0.22,t+0.5); souffleBruit(0.5,0.05,500,t+0.5); }
 function sonJour(){ note(659,0.1,'sine',0.14); }
+function sonPasEnfant(){ souffleBruit(0.035,0.055,1600); note(150,0.05,'sine',0.09,0,BUS_EFF,110); }
+function sonPasDame(){ souffleBruit(0.04,0.05,1100); note(120,0.06,'sine',0.08,0,BUS_EFF,90); }
+function sonManette(){ note(520,0.05,'sine',0.14); }
+function sonCible(){ note(760,0.06,'triangle',0.2); note(1140,0.09,'triangle',0.15, AC?AC.currentTime+0.05:0); }
+function sonEnvoi(){ var t=AC?AC.currentTime:0;
+  note(660,0.09,'triangle',0.26,t); note(880,0.11,'triangle',0.22,t+0.07); }
 function sonBouton(){ note(660,0.06,'square',0.2); note(990,0.09,'square',0.16, AC?AC.currentTime+0.05:0); }
 function sonFin(ok){
   var t = AC ? AC.currentTime : 0;
@@ -1790,9 +1852,9 @@ function basculerSon(){
   var b = document.getElementById('sonBtn');
   if (b){ b.textContent = SON_ON ? '\u266A' : '\u2715'; b.classList.toggle('coupe', !SON_ON); }
   if (AC){
-    var cible = (S && S.fete) ? 0.26 : 0.085;
+    var cible = (S && S.fete) ? 0.30 : 0.15;
     monter(BUS_MUS, SON_ON ? cible : 0, 0.3);
-    monter(BUS_EFF, SON_ON ? 0.26 : 0, 0.2);
+    monter(BUS_EFF, SON_ON ? 0.34 : 0, 0.2);
   }
   if (SON_ON) sonBouton();
 }
@@ -1874,39 +1936,80 @@ if ('speechSynthesis' in window){
   window.speechSynthesis.onvoiceschanged = chargerLesVoix;
 }
 
-var derniereParole = 0;
-function parler(texte, profil){
-  if (!VOIX_ON || !texte) return;
-  if (!('speechSynthesis' in window)) return;
-  var maintenant = Date.now();
-  if (maintenant - derniereParole < 250) return;   // on n'empile pas les phrases
-  derniereParole = maintenant;
+/* =========================================================
+   LA FILE DE PAROLE — personne ne coupe personne.
+   Chaque phrase attend la fin de la précédente.
+   ========================================================= */
+var FILE_VOIX = [], enTrainDeParler = false, finDeParole = 0, minuteurParole = null;
+
+function dureeEstimee(txt){
+  return Math.max(1.1, txt.length / 11 + 0.55);   // secondes, à la louche
+}
+
+/* avant : ce qui doit s'afficher au moment où la phrase commence */
+function parler(texte, profil, avant){
+  if (!texte) return;
+  FILE_VOIX.push({ t:texte, p:profil, f:avant });
+  if (FILE_VOIX.length > 6) FILE_VOIX.splice(0, FILE_VOIX.length - 6);
+  pomperLaFile();
+}
+
+function pomperLaFile(){
+  if (enTrainDeParler || !FILE_VOIX.length) return;
+  var item = FILE_VOIX.shift();
+  enTrainDeParler = true;
+  if (item.f){ try { item.f(); } catch (e) {} }
+
+  var duree = dureeEstimee(item.t);
+  function suivant(){
+    if (!enTrainDeParler) return;
+    enTrainDeParler = false;
+    finDeParole = Date.now();
+    if (minuteurParole){ clearTimeout(minuteurParole); minuteurParole = null; }
+    pomperLaFile();
+  }
+
+  if (!VOIX_ON || !('speechSynthesis' in window)){
+    minuteurParole = setTimeout(suivant, duree * 1000);   // muet : on garde le rythme
+    return;
+  }
   try {
     if (!VOIX.prete) chargerLesVoix();
-    window.speechSynthesis.cancel();
-    var u = new SpeechSynthesisUtterance(texte);
+    var u = new SpeechSynthesisUtterance(item.t);
     u.lang = 'fr-FR';
-    if (profil && profil.homme){
+    var pr = item.p;
+    if (pr && pr.homme){
       if (VOIX.homme) u.voice = VOIX.homme;
-      u.pitch = profil.hauteur !== undefined ? profil.hauteur : 0.62;
-      u.rate  = profil.vitesse !== undefined ? profil.vitesse : 0.95;
+      u.pitch = pr.hauteur !== undefined ? pr.hauteur : 0.62;
+      u.rate  = pr.vitesse !== undefined ? pr.vitesse : 0.95;
     } else {
       if (VOIX.femme) u.voice = VOIX.femme;
-      u.pitch = profil && profil.hauteur !== undefined ? profil.hauteur : 1.2;
-      u.rate  = profil && profil.vitesse !== undefined ? profil.vitesse : 1.0;
+      u.pitch = pr && pr.hauteur !== undefined ? pr.hauteur : 1.2;
+      u.rate  = pr && pr.vitesse !== undefined ? pr.vitesse : 1.0;
     }
     u.volume = 1;
+    u.onend = suivant;
+    u.onerror = suivant;
     window.speechSynthesis.speak(u);
-  } catch (e) {}
+    // filet : certains navigateurs oublient onend
+    minuteurParole = setTimeout(suivant, (duree + 2.5) * 1000);
+  } catch (e) {
+    minuteurParole = setTimeout(suivant, duree * 1000);
+  }
 }
+
 function couperLaParole(){
+  FILE_VOIX.length = 0;
+  enTrainDeParler = false;
+  if (minuteurParole){ clearTimeout(minuteurParole); minuteurParole = null; }
   try { if ('speechSynthesis' in window) window.speechSynthesis.cancel(); } catch (e) {}
 }
+
 var VOIX_MODOU = { homme:true, hauteur:0.62, vitesse:0.96 };
 var VOIX_MODOU_DROLE = { homme:true, hauteur:1.38, vitesse:1.26 };   // quand il panique
-function parleDame(i, texte){
+function parleDame(i, texte, avant){
   if (i < 0 || i >= DAMES.length) return;
-  parler(texte, DAMES[i].voix);
+  parler(texte, DAMES[i].voix, avant);
 }
 function basculerVoix(){
   VOIX_ON = !VOIX_ON;
@@ -1917,11 +2020,7 @@ function basculerVoix(){
 }
 
 /* ---------- LE DIALOGUE : elle appelle, il râle, elle demande ---------- */
-var minuteursDialogue = [];
-function couperLeDialogue(){
-  for (var i=0;i<minuteursDialogue.length;i++) clearTimeout(minuteursDialogue[i]);
-  minuteursDialogue = [];
-}
+function couperLeDialogue(){ couperLaParole(); }
 /* la dernière réclamation : elle dit son besoin et annonce qu'elle partira */
 function dernierAppel(i){
   var D = DAMES[i];
@@ -1943,28 +2042,55 @@ function dernierAppel(i){
 }
 
 function lancerLeDialogue(i){
-  couperLeDialogue();
   var D = DAMES[i];
   if (damesEl[i]){
     damesEl[i].classList.add('appel');
-    setTimeout(function(){ if (damesEl[i]) damesEl[i].classList.remove('appel'); }, 2200);
+    setTimeout(function(){ if (damesEl[i]) damesEl[i].classList.remove('appel'); }, 2400);
   }
 
-  parleDame(i, 'Modou !');
-  flash(D.nom + ' appelle Modou\u2026', 1400);
+  // 1 — elle l'appelle
+  parleDame(i, 'Modou !', function(){
+    flash(D.nom + ' appelle Modou\u2026', 1600);
+  });
 
-  minuteursDialogue.push(setTimeout(function(){
-    if (!S || !S.enCours || S.parties[i]) return;
-    parler('Qu\u2019est-ce qu\u2019il y a encore, oh oh oh !', VOIX_MODOU);
-    modouDit('Qu\u2019est-ce qu\u2019il y a encore, oh oh oh !', 2200, true);
-  }, 1150));
+  // 2 — il râle, seulement quand elle a fini
+  parler('Qu\u2019est-ce qu\u2019il y a encore, oh oh oh !', VOIX_MODOU, function(){
+    modouDit('Qu\u2019est-ce qu\u2019il y a encore, oh oh oh !', 2400, true);
+  });
 
-  minuteursDialogue.push(setTimeout(function(){
-    if (!S || !S.enCours || S.parties[i]) return;
-    if (S.jauges[i] >= CFG.SEUIL_RASSASIE) return;   // il l'a déjà servie entre-temps
-    parleDame(i, D.suite);
+  // 3 — elle termine sa phrase
+  parleDame(i, D.suite, function(){
+    if (!S || !S.enCours) return;
     flash(D.nom + ' : « ' + D.suite + ' »', 2800);
-  }, 3100));
+  });
+
+  // 4 — il repart en soufflant
+  parler('Encore un autre probl\u00e8me\u2026', VOIX_MODOU, function(){
+    modouDit('Encore un autre probl\u00e8me\u2026', 2200, true);
+  });
+}
+
+/* ---------- CE QUE MODOU SE DIT QUAND PERSONNE NE PARLE ---------- */
+var PENSEES = [
+  'C\u2019est quel genre de vie \u00e7a\u2026 oh Allah.',
+  'Quatre femmes\u2026 et un seul dos.',
+  'Je cours, je cours, et l\u2019argent ne suit pas.',
+  'Un jour je dormirai. Un jour.',
+  'Mon p\u00e8re ne m\u2019avait pas pr\u00e9venu.',
+  'Chacune veut sa part. Et moi ?',
+  'Oh Allah\u2026 donne-moi la force.',
+  'Le chantier, la maison, le chantier\u2026'
+];
+var prochainePensee = 26 + Math.random() * 18;
+
+function majPensees(dt){
+  if (!S || !S.enCours || S.fete) return;
+  if (enTrainDeParler || FILE_VOIX.length){ return; }
+  prochainePensee -= dt;
+  if (prochainePensee > 0) return;
+  prochainePensee = 28 + Math.random() * 22;
+  var p = PENSEES[Math.floor(Math.random() * PENSEES.length)];
+  modouDit(p, 3000);
 }
 
 /* ---------- LE GUIDAGE : chaque règle une seule fois, au bon moment ---------- */
@@ -1992,8 +2118,7 @@ function guider(cle, texte, ms){
 
 /* ---------- CE QUE MODOU DIT ---------- */
 var ditT = null;
-function modouDit(txt, ms, muet){
-  if (!muet) parler(txt, VOIX_MODOU);
+function afficherBulleModou(txt, ms){
   if (!modouEl) return;
   var b = modouEl.querySelector('.dit');
   if (!b) return;
@@ -2001,6 +2126,10 @@ function modouDit(txt, ms, muet){
   b.classList.add('on');
   clearTimeout(ditT);
   ditT = setTimeout(function(){ b.classList.remove('on'); }, ms || 2200);
+}
+function modouDit(txt, ms, muet){
+  if (muet){ afficherBulleModou(txt, ms); return; }
+  parler(txt, VOIX_MODOU, function(){ afficherBulleModou(txt, ms); });
 }
 
 /* ---------- FLASH ---------- */
@@ -2033,6 +2162,7 @@ function joyDebut(e){
   JOY.id = (t.identifier !== undefined) ? t.identifier : 'souris';
   JOY.cx = r.left + r.width/2; JOY.cy = r.top + r.height/2;
   JOY.r = r.width/2 - 12;
+  sonManette();
   audioInit();
   if (AC && AC.state === 'suspended') AC.resume();
   joyBouge(e);
@@ -2094,6 +2224,7 @@ function doigtDebut(e){
   flottant.style.top  = t.clientY + 'px';
   flottant.classList.add('on');
   flottantKnob.style.transform = 'translate(-50%,-50%)';
+  sonManette();
   if (e.cancelable) e.preventDefault();
 }
 function doigtBouge(e){
@@ -2147,6 +2278,7 @@ function allerLaBas(sx, sy){
 function allerLaBasInterne(sx, sy){
   var p = ecranVersPlateau(sx, sy);
   if (!p) return;
+  if (!p) return;
   var route = trajetVers(p.x, p.y);
   if (!route || route.length < 2){ return; }
   S.auto = { pts: route, i: 1 };
@@ -2156,7 +2288,7 @@ function allerLaBasInterne(sx, sy){
     cibleEl.style.top  = fin.y + '%';
     cibleEl.classList.add('on');
   }
-  sonEntree();
+  sonCible();
 }
 function marquerHausse(){
   Object.keys(badgesEl).forEach(function(k){
@@ -2355,6 +2487,166 @@ function rentrerTousLesVendeurs(){
   });
 }
 
+/* =========================================================
+   L'ENFANT — deuxième mois. Modou peut l'envoyer à sa place.
+   ========================================================= */
+function enfantSVG(){
+  return '' +
+  '<svg viewBox="0 0 40 56" width="100%" height="100%">' +
+    '<ellipse cx="20" cy="53" rx="10" ry="3.4" fill="rgba(0,0,0,.3)"/>' +
+    '<g class="ebuste" stroke="#2B2118" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round">' +
+      '<line class="ejambe eg" x1="17" y1="38" x2="17" y2="51" stroke="#3B2E24" stroke-width="5"/>' +
+      '<line class="ejambe ed" x1="23" y1="38" x2="23" y2="51" stroke="#4A3A2C" stroke-width="5"/>' +
+      '<line class="ebras eg" x1="20" y1="26" x2="12" y2="37" stroke="#3FA96C" stroke-width="4.5"/>' +
+      '<path d="M12 24 h16 l2 15 h-20 z" fill="#5FD98A"/>' +
+      '<line class="ebras ed" x1="20" y1="26" x2="28" y2="37" stroke="#3FA96C" stroke-width="4.5"/>' +
+      '<circle cx="20" cy="15" r="9" fill="#7A4A2B"/>' +
+      '<path d="M11.5 13 q1 -9 8.5 -9 q7.5 0 8.5 9 q-4 -4 -8.5 -4 q-4.5 0 -8.5 4 z" fill="#241A14"/>' +
+      '<circle cx="17" cy="16" r="1.7" fill="#2B2118" stroke="none"/>' +
+      '<circle cx="23" cy="16" r="1.7" fill="#2B2118" stroke="none"/>' +
+      '<path d="M17 21 q3 2 6 0" fill="none" stroke="#2B2118" stroke-width="1.8"/>' +
+    '</g>' +
+  '</svg>';
+}
+
+function faireVenirLEnfant(){
+  if (S.enfant) return;
+  S.enfant = { x:CENTRE.x, y:CENTRE.y, phase:'libre', route:null, etape:0,
+               cible:null, pause:0, objet:'' };
+  var e = document.createElement('div');
+  e.className = 'enfant pos';
+  e.id = 'enfant';
+  e.innerHTML = enfantSVG() + '<div class="edit"></div>';
+  e.style.left = CENTRE.x + '%';
+  e.style.top  = CENTRE.y + '%';
+  layer.appendChild(e);
+  enfantEl = e;
+  dimensionnerEnfant();
+  flash('Ton fils est assez grand. Il peut faire une course.', 3600);
+  parler('Mon fils peut m\u2019aider maintenant.', VOIX_MODOU);
+  noter(S.jour, 'L\u2019enfant arrive au foyer.');
+  majBoutonEnfant();
+}
+
+function dimensionnerEnfant(){
+  if (!enfantEl || !BW) return;
+  var s2 = Math.max(0.6, Math.min(1.1, BW / 900));
+  enfantEl.style.width  = (44*s2) + 'px';
+  enfantEl.style.height = (60*s2) + 'px';
+}
+
+/* un seul appui : il part de lui-même vers la Dame la plus basse */
+function courseUrgente(){
+  var iv = -1, mn = 1e9;
+  for (var i=0;i<DAMES.length;i++){
+    if (S.parties[i]) continue;
+    if (S.jauges[i] >= CFG.SEUIL_RASSASIE) continue;
+    if (S.jauges[i] < mn){ mn = S.jauges[i]; iv = i; }
+  }
+  return iv;
+}
+
+function envoyerLEnfantSeul(){
+  if (!S || !S.enfant) return;
+  if (S.enfant.phase !== 'libre'){
+    flash('Il est d\u00e9j\u00e0 en course.', 1600);
+    sonRefus();
+    return;
+  }
+  var iv = courseUrgente();
+  if (iv < 0){
+    flash('Personne n\u2019a besoin de rien pour l\u2019instant.', 2000);
+    sonRefus();
+    return;
+  }
+  var cle = DAMES[iv].lieu;
+  var prix = prixDuJour(cle);
+  if (S.argent < prix){
+    flash('Il te manque ' + (prix - Math.floor(S.argent)) + ' F pour l\u2019envoyer.', 2400);
+    sonRefus();
+    return;
+  }
+  envoyerLEnfant(cle);
+}
+
+/* même calcul de trajet, mais depuis un point quelconque */
+function trajetVers2(dx, dy, ax, ay){
+  var garde = S.modou;
+  S.modou = { x:dx, y:dy };
+  var r = trajetVers(ax, ay);
+  S.modou = garde;
+  return r;
+}
+
+function majEnfant(dt){
+  if (!S.enfant || !enfantEl) return;
+  var E = S.enfant;
+
+  if (E.pause > 0){ E.pause -= dt; if (E.pause <= 0 && E.phase === 'achat') finirCourse(); }
+
+  if (E.phase === 'aller' || E.phase === 'retour'){
+    var but = E.route ? E.route[E.etape] : null;
+    if (!but){
+      if (E.phase === 'aller'){ E.phase = 'achat'; E.pause = 1.2; enfantEl.classList.add('donne'); }
+      else { E.phase = 'libre'; E.route = null; majBoutonEnfant(); }
+    } else {
+      var ex = but.x - E.x, ey = but.y - E.y;
+      var pas = CFG.VITESSE * CFG.ENFANT_VITESSE * dt;
+      if (Math.abs(ex) > 0.18){ E.x += (ex > 0 ? pas : -pas);
+        if ((ex > 0 && E.x > but.x) || (ex < 0 && E.x < but.x)) E.x = but.x; }
+      else if (Math.abs(ey) > 0.18 * RATIO){ E.y += (ey > 0 ? pas*RATIO : -pas*RATIO);
+        if ((ey > 0 && E.y > but.y) || (ey < 0 && E.y < but.y)) E.y = but.y; }
+      else { E.x = but.x; E.y = but.y; E.etape++; }
+      enfantEl.classList.add('marche');
+      tickPasEnfant += dt;
+      if (tickPasEnfant > 0.4){ tickPasEnfant = 0; sonPasEnfant(); }
+    }
+  } else {
+    enfantEl.classList.remove('marche');
+  }
+
+  enfantEl.style.left = E.x + '%';
+  enfantEl.style.top  = E.y + '%';
+  var bulle = enfantEl.querySelector('.edit');
+  if (bulle) bulle.textContent = (E.phase === 'achat') ? E.objet : '';
+}
+
+function finirCourse(){
+  var E = S.enfant;
+  enfantEl.classList.remove('donne');
+  if (E.iD >= 0 && !S.parties[E.iD]){
+    S.jauges[E.iD] = Math.min(CFG.MAX_JAUGE, S.jauges[E.iD] + CFG.GAIN_ACHAT * CFG.ENFANT_RENDEMENT);
+    sonCaisse();
+    parleDame(E.iD, 'Merci mon enfant.');
+  }
+  S.coursesEnfant++;
+  E.phase = 'retour';
+  E.route = trajetVers2(E.x, E.y, CENTRE.x, CENTRE.y);
+  E.etape = 1;
+  majBoutonEnfant();
+}
+
+function teteEnfantSVG(){
+  return '<svg viewBox="0 0 40 40" width="100%" height="100%">' +
+    '<circle cx="20" cy="21" r="15" fill="#7A4A2B" stroke="#2B2118" stroke-width="3"/>' +
+    '<path d="M6 19 q1 -14 14 -14 q13 0 14 14 q-6 -6 -14 -6 q-8 0 -14 6 z" ' +
+      'fill="#241A14" stroke="#2B2118" stroke-width="3" stroke-linejoin="round"/>' +
+    '<circle cx="15" cy="22" r="2.6" fill="#2B2118"/>' +
+    '<circle cx="25" cy="22" r="2.6" fill="#2B2118"/>' +
+    '<path d="M15 29 q5 4 10 0" fill="none" stroke="#2B2118" stroke-width="2.6" stroke-linecap="round"/>' +
+  '</svg>';
+}
+function majBoutonEnfant(){
+  var b = document.getElementById('enfantBtn');
+  if (!b) return;
+  if (!S || !S.enfant){ b.className = ''; return; }
+  var libre = S.enfant.phase === 'libre';
+  b.className = 'on' + (libre ? ' pret' : ' occupe');
+  if (!b.querySelector('svg')) b.innerHTML = teteEnfantSVG() + '<i class="epuce"></i>';
+  var puce = b.querySelector('.epuce');
+  if (puce) puce.textContent = libre ? '' : '\u2026';
+}
+
 /* ---------- CRISES ---------- */
 function majCrises(){
   var urgente = -1, plusBas = 101;
@@ -2436,25 +2728,21 @@ function commencerExode(i){
   if (bulle) bulle.textContent = 'Je m\u2019en vais…';
   sonDebout();
   couperLeDialogue();
-  parleDame(i, 'Modou, je m\u2019en vais.');
-  setTimeout(function(){
-    if (!S || !S.enCours) return;
-    parler('Ne t\u2019en va pas ! Ne t\u2019en va pas !', VOIX_MODOU);
+  parleDame(i, 'Modou, je m\u2019en vais.', function(){
+    flash(D.nom + ' s\u2019en va. Rattrape-la avant la sortie !', 3000);
+  });
+  parler('Ne t\u2019en va pas ! Ne t\u2019en va pas !', VOIX_MODOU, function(){
     modouDit('Ne t\u2019en va pas !', 2400, true);
-  }, 1500);
-  // et elle lui répond
-  setTimeout(function(){
-    if (!S || !S.enCours || S.parties[i] || !S.exode[i] || S.exode[i].retour) return;
-    parleDame(i, D.replique);
+  });
+  parleDame(i, D.replique, function(){
     var b = damesEl[i] ? damesEl[i].querySelector('.cri') : null;
     if (b) b.textContent = D.replique;
-    damesEl[i].classList.add('parle');
+    if (damesEl[i]) damesEl[i].classList.add('parle');
     flash(D.nom + ' : « ' + D.replique + ' »', 3600);
     setTimeout(function(){
       if (b && S && S.exode[i]) b.textContent = 'Je m\u2019en vais\u2026';
-    }, 4200);
-  }, 3400);
-  flash(D.nom + ' s\u2019en va. Rattrape-la avant la sortie !', 3000);
+    }, 4600);
+  });
   noter(S.jour, D.nom + ' s\u2019est lev\u00e9e pour partir.');
   S.sortieVue = 2.2;
 }
@@ -2516,6 +2804,8 @@ function majExode(dt){
     }
 
     damesEl[i].classList.add('marche');
+    tickPasDame += dt;
+    if (tickPasDame > 0.5){ tickPasDame = 0; sonPasDame(); }
     damesEl[i].style.left = E.x + '%';
     damesEl[i].style.top  = E.y + '%';
   }
@@ -2705,6 +2995,7 @@ function tailleZones(){
 
 /* ---------- BOUCLE ---------- */
 var last = 0, tickPiece = 0, tickSouffle = 0, tickSerie = 0, tickSauve = 0;
+var tickPasEnfant = 0, tickPasDame = 0;
 function boucle(ts){
   requestAnimationFrame(boucle);
   try { tourDeBoucle(ts); }
@@ -2748,6 +3039,19 @@ function tourDeBoucle(ts){
       marquerHausse();
     }
     veillerLeRecord(jour);
+
+    if (jour === CFG.ENFANT_JOUR && !S.enfant) faireVenirLEnfant();
+
+    if (jour === 30 && !S.moisSalue){
+      S.moisSalue = true;
+      noter(30, 'Un mois tenu.');
+      var complet = true;
+      for (var w3=0;w3<DAMES.length;w3++){ if (S.parties[w3]) complet = false; }
+      if (!complet){
+        flash('Un mois tenu, malgr\u00e9 tout. Continue.', 3200);
+        modouDit('Un mois. Je tiens encore.', 3000);
+      }
+    }
   }
 
   // cycle jour / nuit
@@ -2951,6 +3255,8 @@ function tourDeBoucle(ts){
   }
 
   majExode(dt);
+  majEnfant(dt);
+  majPensees(dt);
   animerJambes(S.temps, bouge);
   majCrises();
   rendre();
@@ -3095,6 +3401,10 @@ function lancerLaFete(){
   if (niveau >= 2) for (var i=0;i<DAMES.length;i++) damesEl[i].classList.add('danse');
 
   var T = TITRES_FETE[niveau];
+  if (S.jour >= 30 && S.jour < 40){
+    T = { t:'BRAVO \u2014 UN MOIS',
+          s:'Tu as tenu la maison de Modou pendant un mois entier.' };
+  }
   var b = document.getElementById('fete');
   b.innerHTML = '<div class="jourfete">JOUR ' + S.jour + '</div>' +
                 '<div class="titrefete">' + T.t + '</div>' +
@@ -3138,11 +3448,11 @@ function ouvrirLaMusiqueDeFete(){
   MUS.fete = 1;
   MUS.pas = 0;
   if (AC) MUS.depart = AC.currentTime + 0.05;
-  monter(BUS_MUS, SON_ON ? 0.26 : 0, 0.35);      // trois fois plus fort qu'en jeu
+  monter(BUS_MUS, SON_ON ? 0.30 : 0, 0.35);      // trois fois plus fort qu'en jeu
 }
 function fermerLaMusiqueDeFete(){
   MUS.fete = 0;
-  monter(BUS_MUS, SON_ON ? 0.085 : 0, 1.1);
+  monter(BUS_MUS, SON_ON ? 0.15 : 0, 1.1);
 }
 
 /* remise à l'état normal — appelée par la fin de fête ET par un filet de sécurité */
@@ -3661,6 +3971,7 @@ function sauvegarder(){
     copie.fete = null;          // on ne reprend jamais au milieu d'une fête
     copie.auto = null;          // ni au milieu d'un trajet automatique
     copie.sortieVue = 0;
+    if (copie.enfant){ copie.enfant.route = null; copie.enfant.phase = 'libre'; }
     copie.cool = 0;
     copie.version = BUILD_TAG;
     localStorage.setItem(CLE_PARTIE, JSON.stringify(copie));
@@ -3710,6 +4021,14 @@ function reprendreLaPartie(){
   construire();
   finirLaFete();
   restaurerLeDecor();
+  if (S.enfant){
+    var sauve = S.enfant;
+    S.enfant = null;
+    faireVenirLEnfant();
+    S.enfant.x = sauve.x; S.enfant.y = sauve.y;
+    S.enfant.phase = 'libre';          // on ne reprend pas une course en cours
+    majBoutonEnfant();
+  }
   redimensionner();
 
   CAM.x = S.modou.x; CAM.y = S.modou.y; CAM.z = CFG.Z_LIBRE;
@@ -3721,7 +4040,7 @@ function reprendreLaPartie(){
   document.getElementById('scrIntro').classList.add('hide');
   document.getElementById('scrFin').classList.add('hide');
   if (AC){ MUS.depart = AC.currentTime + 0.2; MUS.pas = 0; MUS.fete = 0;
-           monter(BUS_MUS, SON_ON ? 0.085 : 0, 2.0); }
+           monter(BUS_MUS, SON_ON ? 0.15 : 0, 2.0); }
   majRecord();
   flash('Jour ' + S.jour + ' \u2014 on reprend o\u00f9 tu t\u2019\u00e9tais arr\u00eat\u00e9.', 2600);
 }
@@ -3803,6 +4122,7 @@ function redimensionner(){
     modouEl.style.height = (96*s) + 'px';
   }
   tailleZones();
+  dimensionnerEnfant();
   appliquerCamera();
 }
 window.addEventListener('resize', redimensionner);
@@ -3823,7 +4143,7 @@ function demarrer(){
   S.enCours = true;
   last = 0;
   if (AC){ MUS.depart = AC.currentTime + 0.2; MUS.pas = 0; MUS.tension = 0; MUS.fete = 0;
-           monter(BUS_MUS, SON_ON ? 0.085 : 0, 2.0); }
+           monter(BUS_MUS, SON_ON ? 0.15 : 0, 2.0); }
   document.body.classList.add('playing');
   document.getElementById('scrIntro').classList.add('hide');
   document.getElementById('scrFin').classList.add('hide');
