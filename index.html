@@ -92,6 +92,11 @@ html,body{height:100%;overflow:hidden;background:#1B2A1B;font-family:var(--ui);c
 .badge .prix.cher{background:#FF5C7A}
 .badge .prix.servie{background:#4CC97A;padding:1px 8px}
 .badge .prix.monte{background:#FF5C7A;animation:monte .4s ease-in-out 6}
+.badge.dernier{opacity:1;background:#FFE2E8;border-color:#C2405A;
+  animation:badgeDernier .55s ease-in-out infinite}
+.badge.dernier .txt{max-width:110px;opacity:1;margin:0}
+@keyframes badgeDernier{0%,100%{box-shadow:0 3px 0 var(--trait)}
+  50%{box-shadow:0 3px 0 var(--trait),0 0 0 6px rgba(255,92,122,.4)}}
 @keyframes monte{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
 
 /* ---- LES QUATRE DAMES ---- */
@@ -144,6 +149,12 @@ html,body{height:100%;overflow:hidden;background:#1B2A1B;font-family:var(--ui);c
 @keyframes critique{0%,100%{transform:translateY(0) rotate(-3.5deg);opacity:1}
   50%{transform:translateY(2px) rotate(3.5deg);opacity:.78}}
 .dame.d3.critique .buste{animation:critiqueSilence 3s ease-in-out infinite}
+/* la dernière réclamation : elle est au bord du départ */
+.dame.dernier .corps{filter:drop-shadow(0 0 7px rgba(255,92,122,.9)) drop-shadow(0 2px 3px rgba(0,0,0,.35))}
+.dame.dernier .num{background:#FF5C7A!important;animation:dernierBat .5s ease-in-out infinite}
+@keyframes dernierBat{0%,100%{transform:translateX(-50%) scale(1)}
+  50%{transform:translateX(-50%) scale(1.25)}}
+.dame.dernier .cri{opacity:1;background:#FFE2E8;border-color:#C2405A;color:#8E2337}
 @keyframes critiqueSilence{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}
 
 /* elle s'en va, elle revient */
@@ -964,7 +975,7 @@ function dameSVG(i){
    ========================================================= */
 'use strict';
 
-var BUILD_TAG = 'LQD-v6.6';
+var BUILD_TAG = 'LQD-v6.8';
 document.getElementById('build').textContent = BUILD_TAG;
 
 /* ---------- affichage des erreurs, pour pouvoir diagnostiquer ---------- */
@@ -1068,7 +1079,8 @@ var CFG = {
   MAX_JAUGE: 90,          // la barre des Dames plafonne 10 % plus bas
   SEUIL_RASSASIE: 90,     // à ce niveau, la Dame n'a plus besoin de rien
   SEUIL_MURMURE: 52,
-  SEUIL_APPELLE: 26,
+  SEUIL_APPELLE: 27,      // 30 % de la barre : elle formule sa demande
+  SEUIL_DERNIER: 12,      // en dessous, elle réclame une dernière fois
   SEUIL_PARTIR: 0,        // à zéro, la Dame quitte le cercle
   SORTIES_FATALES: 3,     // trois départs et la partie est perdue
 
@@ -1098,19 +1110,31 @@ var CFG = {
 var DAMES = [
   { id:1, nom:'Première Dame',  lieu:'SANTE',  cri:'Je tousse encore…',
     demande:'Modou, ach\u00e8te-moi mes m\u00e9dicaments.',
-    suite:'Ach\u00e8te-moi mes m\u00e9dicaments.', voix:{ hauteur:0.92, vitesse:0.84 },
+    suite:'Ach\u00e8te-moi mes m\u00e9dicaments.',
+    dernier:'Modou ! Mes m\u00e9dicaments, ou je m\u2019en vais.',
+    replique:'Tant que tu ne m\u2019apportes pas mes m\u00e9dicaments, tu ne me verras plus.',
+    voix:{ hauteur:0.92, vitesse:0.84 },
     usure:0.58, muette:false, bed:{x:45.7,y:60.0}, col:'--sante'  },
   { id:2, nom:'Deuxième Dame',  lieu:'AMOUR',  cri:'Tu ne me vois plus.',
     demande:'Modou, am\u00e8ne-moi des fleurs.',
-    suite:'Am\u00e8ne-moi des fleurs.', voix:{ hauteur:1.22, vitesse:0.98 },
+    suite:'Am\u00e8ne-moi des fleurs.',
+    dernier:'Modou ! Mes fleurs, ou je m\u2019en vais.',
+    replique:'Tant que tu ne m\u2019apportes pas mes fleurs, tu ne me verras plus.',
+    voix:{ hauteur:1.22, vitesse:0.98 },
     usure:0.68, muette:false, bed:{x:54.3,y:60.0}, col:'--amour'  },
   { id:3, nom:'Troisième Dame', lieu:'TEMPLE', cri:'…',
     demande:'Modou, j\u2019ai besoin de pri\u00e8res.',
-    suite:'J\u2019ai besoin de pri\u00e8res.', voix:{ hauteur:1.08, vitesse:0.76 },
+    suite:'J\u2019ai besoin de pri\u00e8res.',
+    dernier:'Modou\u2026 mes pri\u00e8res. Je ne demanderai plus.',
+    replique:'Tant que tu ne pries pas pour moi, tu ne me verras plus.',
+    voix:{ hauteur:1.08, vitesse:0.76 },
     usure:0.48, muette:true,  bed:{x:45.7,y:75.0}, col:'--spirit' },
   { id:4, nom:'Quatrième Dame', lieu:'BANQUE', cri:'Il me faut ça demain.',
     demande:'Modou, j\u2019ai besoin d\u2019argent.',
-    suite:'J\u2019ai besoin d\u2019argent.', voix:{ hauteur:1.42, vitesse:1.12 },
+    suite:'J\u2019ai besoin d\u2019argent.',
+    dernier:'Modou ! Mon argent, ou je m\u2019en vais !',
+    replique:'Tant que tu ne me donnes pas mon argent, tu ne me verras plus.',
+    voix:{ hauteur:1.42, vitesse:1.12 },
     usure:0.84, muette:false, bed:{x:54.3,y:75.0}, col:'--argent' }
 ];
 
@@ -1277,6 +1301,7 @@ function nouvelEtat(){
     argent:CFG.ARGENT_DEPART,
     crise:[0,0,0,0],
     parties:[false,false,false,false],
+    derniersAppels:[0,0,0,0],
     sorties:0,
     modou:{ x:50, y:51.9, dir:1, marche:false },
     zone:null,
@@ -1897,6 +1922,26 @@ function couperLeDialogue(){
   for (var i=0;i<minuteursDialogue.length;i++) clearTimeout(minuteursDialogue[i]);
   minuteursDialogue = [];
 }
+/* la dernière réclamation : elle dit son besoin et annonce qu'elle partira */
+function dernierAppel(i){
+  var D = DAMES[i];
+  couperLeDialogue();
+  parleDame(i, D.dernier);
+  flash(D.nom + ' : « ' + D.dernier + ' »', 3200);
+  sonAppel();
+  if (damesEl[i]){
+    damesEl[i].classList.add('appel');
+    setTimeout(function(){ if (damesEl[i]) damesEl[i].classList.remove('appel'); }, 2200);
+  }
+  // sa maison clignote pour montrer où aller
+  var cle = D.lieu;
+  if (badgesEl[cle]) {
+    badgesEl[cle].classList.add('dernier');
+    setTimeout(function(){ if (badgesEl[cle]) badgesEl[cle].classList.remove('dernier'); }, 4000);
+  }
+  noter(S.jour, D.nom + ' r\u00e9clame une derni\u00e8re fois.');
+}
+
 function lancerLeDialogue(i){
   couperLeDialogue();
   var D = DAMES[i];
@@ -2326,8 +2371,18 @@ function majCrises(){
     if (S.exode[i]) continue;
 
     var v = S.jauges[i], n = 0;
-    if (v < CFG.SEUIL_APPELLE) n = DAMES[i].muette ? 1 : 2;
+    if (v < CFG.SEUIL_DERNIER) n = 3;
+    else if (v < CFG.SEUIL_APPELLE) n = DAMES[i].muette ? 1 : 2;
     else if (v < CFG.SEUIL_MURMURE) n = 1;
+
+    // elle réclame son besoin avant de partir, puis insiste
+    if (n === 3){
+      var maintenant = S.temps;
+      if (S.crise[i] < 3 || maintenant - S.derniersAppels[i] > 8){
+        S.derniersAppels[i] = maintenant;
+        dernierAppel(i);
+      }
+    }
 
     if (n !== S.crise[i]){
       if (n === 2 && S.crise[i] < 2){
@@ -2338,6 +2393,7 @@ function majCrises(){
     }
     damesEl[i].className = 'dame pos d' + (i+1) +
       (n === 1 ? ' urgence basse' : '') + (n === 2 ? ' critique basse' : '') +
+      (n === 3 ? ' critique dernier basse' : '') +
       (i === urgente && n >= 2 ? ' parle' : '') +
       (S.exode[i] ? ' sen-va parle' : '') +
       (DAMES[i].bed.x > 50 ? ' droite' : ' gauche');
@@ -2386,6 +2442,18 @@ function commencerExode(i){
     parler('Ne t\u2019en va pas ! Ne t\u2019en va pas !', VOIX_MODOU);
     modouDit('Ne t\u2019en va pas !', 2400, true);
   }, 1500);
+  // et elle lui répond
+  setTimeout(function(){
+    if (!S || !S.enCours || S.parties[i] || !S.exode[i] || S.exode[i].retour) return;
+    parleDame(i, D.replique);
+    var b = damesEl[i] ? damesEl[i].querySelector('.cri') : null;
+    if (b) b.textContent = D.replique;
+    damesEl[i].classList.add('parle');
+    flash(D.nom + ' : « ' + D.replique + ' »', 3600);
+    setTimeout(function(){
+      if (b && S && S.exode[i]) b.textContent = 'Je m\u2019en vais\u2026';
+    }, 4200);
+  }, 3400);
   flash(D.nom + ' s\u2019en va. Rattrape-la avant la sortie !', 3000);
   noter(S.jour, D.nom + ' s\u2019est lev\u00e9e pour partir.');
   S.sortieVue = 2.2;
