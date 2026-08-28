@@ -702,7 +702,7 @@ function carteSVG(){
    ========================================================= */
 'use strict';
 
-var BUILD_TAG = 'LQD-v5.6';
+var BUILD_TAG = 'LQD-v5.7';
 document.getElementById('build').textContent = BUILD_TAG;
 
 /* ---------- affichage des erreurs, pour pouvoir diagnostiquer ---------- */
@@ -2348,6 +2348,19 @@ function tourDeBoucle(ts){
   if (!last) last = ts;
   var dt = Math.min(0.05, (ts - last)/1000);
   last = ts;
+
+  // pendant la fête, tout est suspendu : aucune jauge ne descend
+  if (S.fete){
+    majFete(dt);
+    musique();
+    animerJambes(performance.now() / 1000, false);
+    majCrises();
+    rendre();
+    majCamera(dt);
+    return;
+  }
+  if (peutFeter()){ lancerLaFete(); return; }
+
   S.temps += dt;
 
   var jour = Math.floor(S.temps / CFG.SEC_PAR_JOUR) + 1;
