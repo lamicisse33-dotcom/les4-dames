@@ -320,14 +320,6 @@ html,body{height:100%;overflow:hidden;background:#1B2A1B;font-family:var(--ui);c
   text-shadow:0 2px 0 var(--trait)}
 #fete .prochfete{margin-top:9px;font-size:9.5px;font-weight:900;letter-spacing:.16em;
   color:rgba(255,246,228,.6);text-shadow:0 2px 0 var(--trait)}
-#fete .numfete{width:66px;height:66px;margin:0 auto 8px;border-radius:50%;
-  border:5px solid var(--trait);box-shadow:0 5px 0 var(--trait);
-  display:flex;align-items:center;justify-content:center;
-  font-size:34px;font-weight:900;color:var(--trait);
-  animation:numBat .6s ease-in-out infinite}
-@keyframes numBat{0%,100%{transform:scale(1) rotate(-6deg)}
-  50%{transform:scale(1.14) rotate(6deg)}}
-#fete.retour .titrefete{font-size:clamp(20px,5vw,38px)}
 #fete.niv2 .titrefete,#fete.niv3 .titrefete{animation:bat .55s ease-in-out infinite}
 #fete.niv4 .titrefete,#fete.niv5 .titrefete{animation:bat .38s ease-in-out infinite}
 @keyframes bat{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}
@@ -502,6 +494,7 @@ button.cta{touch-action:manipulation;position:relative;z-index:2}
   <h1 style="font-size:clamp(18px,4.4vw,30px)">TABLEAU DE BORD</h1>
   <div id="bordCorps"></div>
   <div style="display:flex;gap:9px;flex-wrap:wrap;justify-content:center">
+    <button class="cta ghost" id="bordVerrou">Verrouiller</button>
     <button class="cta ghost" id="bordVider">Vider</button>
     <button class="cta" id="bordFermer">Fermer</button>
   </div>
@@ -709,7 +702,7 @@ function carteSVG(){
    ========================================================= */
 'use strict';
 
-var BUILD_TAG = 'LQD-v5.3';
+var BUILD_TAG = 'LQD-v5.6';
 document.getElementById('build').textContent = BUILD_TAG;
 
 /* ---------- affichage des erreurs, pour pouvoir diagnostiquer ---------- */
@@ -739,6 +732,11 @@ function surAppui(e){
   var n = e.target;
   while (n && n !== document.body){
     if (n.id === 'bordFermer'){ fermerLeBord(); return; }
+    if (n.id === 'bordVerrou'){
+      try { localStorage.removeItem(CLE_ACCES); } catch (e) {}
+      fermerLeBord();
+      return;
+    }
     if (n.id === 'bordVider'){
       if (confirm('Effacer tout l\u2019historique des parties ?')){ effacerStats(); construireTableau(); }
       return;
@@ -2123,7 +2121,10 @@ function majExode(dt){
         if (revenait){
           var complet = true;
           for (var w2=0;w2<DAMES.length;w2++){ if (S.parties[w2]) complet = false; }
-          if (complet && !S.fete) lancerFeteRetour(i);
+          flash(DAMES[i].nom + ' a retrouv\u00e9 son lit.' +
+                (complet ? ' Le cercle est complet.' : ''), 2400);
+          parleDame(i, 'Je suis \u00e0 la maison.');
+          sonFoyer();
         }
       } else {
         faitPartir(i);                    // sortie franchie : c'est définitif
@@ -2193,7 +2194,7 @@ function faireRevenir(i){
   };
   S.sortieVue = 2.4;
   sonFoyer();
-  parleDame(i, 'Je reviens \u00e0 la maison.');
+  parleDame(i, 'Je reviens.');
   volant('-' + CFG.PRIX_RETOUR + ' F', '#FFC53D');
   flash(D.nom + ' revient au foyer. Sa maison rouvre.', 3200);
   noter(S.jour, D.nom + ' est revenue \u2014 ' + CFG.PRIX_RETOUR + ' F.');
@@ -2714,32 +2715,6 @@ function lancerLaFete(){
   noter(S.jour, 'F\u00eate de l\u2019\u00e9quilibre \u2014 ' + T.t + '.');
 }
 
-function lancerFeteRetour(i){
-  var D = DAMES[i];
-  S.fete = { t:0, niveau:1, duree:5.0, prochain:0, salve:0,
-             type:'retour', couleur:teinte(D.col) };
-  filetDeSecurite(5.0);
-
-  S.modou.x = CENTRE.x; S.modou.y = CENTRE.y;
-  stopperAuto(); joyFin(); doigtFin();
-  modouEl.classList.add('danse');
-  damesEl[i].classList.add('danse');
-
-  var b = document.getElementById('fete');
-  b.innerHTML =
-    '<div class="numfete" style="background:var(' + D.col + ')">' + D.id + '</div>' +
-    '<div class="titrefete">ELLE EST REVENUE</div>' +
-    '<div class="sousfete">' + D.nom + ' a retrouv\u00e9 son lit.</div>' +
-    '<div class="prochfete">Le cercle est complet \u2014 les quatre sont l\u00e0</div>';
-  b.className = 'on retour';
-
-  ouvrirLaMusiqueDeFete();
-  fanfare(2);
-  parleDame(i, 'Je suis \u00e0 la maison.');
-  setTimeout(function(){ parler('Elle est revenue ! On est au complet !', VOIX_MODOU); }, 1500);
-  noter(S.jour, D.nom + ' est de retour : le cercle est complet.');
-}
-
 function teinte(varCss){
   var v = { '--sante':'#4CC97A', '--amour':'#FF7FB0',
             '--spirit':'#8B9BFF', '--argent':'#FFC53D' };
@@ -3185,7 +3160,7 @@ function chargerAudience(){
    il ne protège pas un secret. N'utilise jamais ici un mot de passe
    dont tu te sers ailleurs. Seule l'empreinte est stockée, pas le mot lui-même.
    ========================================================= */
-var EMPREINTE_ATTENDUE = 0;      // ← à remplir : empreinte du mot de passe
+var EMPREINTE_ATTENDUE = 223692748;   // empreinte du mot de passe, pas le mot lui-même
 
 function empreinte(txt){
   var h = 5381;
@@ -3198,14 +3173,28 @@ function accesOuvert(){
   try { return localStorage.getItem(CLE_ACCES) === String(EMPREINTE_ATTENDUE); }
   catch (e) { return false; }
 }
+var essaisRates = 0, blocageJusqua = 0;
 function demanderLeMot(){
-  var m = window.prompt('Mot de passe du tableau de bord');
+  if (Date.now() < blocageJusqua){
+    alert('Trop d\u2019essais. R\u00e9essaie dans ' +
+          Math.ceil((blocageJusqua - Date.now()) / 1000) + ' s.');
+    return false;
+  }
+  var m = window.prompt('Mot de passe');
   if (m === null) return false;
   if (empreinte(m) === EMPREINTE_ATTENDUE){
+    essaisRates = 0;
     try { localStorage.setItem(CLE_ACCES, String(EMPREINTE_ATTENDUE)); } catch (e) {}
     return true;
   }
-  alert('Mot de passe incorrect.');
+  essaisRates++;
+  if (essaisRates >= 3){
+    essaisRates = 0;
+    blocageJusqua = Date.now() + 30000;
+    alert('Trop d\u2019essais. Attends 30 secondes.');
+  } else {
+    alert('Mot de passe incorrect.');
+  }
   return false;
 }
 function ouvrirLeBord(){
@@ -3218,22 +3207,51 @@ function fermerLeBord(){
   majBoutonReprendre();
 }
 
-/* la porte : appui long sur le numéro de version, en bas à gauche */
+/* la porte : appui long de 10 secondes sur le numéro de version, en bas à gauche.
+   Rien ne se voit pendant les 4 premières secondes : un curieux qui appuie
+   par hasard n'apprend rien. Ensuite une jauge discrète confirme le décompte. */
+var DUREE_PORTE = 10000, DELAI_INDICE = 4000;
 (function(){
   var cible = document.getElementById('build');
   if (!cible) return;
-  var minuteur = null;
-  function debut(e){
-    minuteur = setTimeout(function(){ ouvrirLeBord(); }, 900);
+  var minuteur = null, indice = null, animation = null, debutAppui = 0;
+
+  function jauge(){
+    var passe = Date.now() - debutAppui;
+    var part = Math.max(0, Math.min(1, (passe - DELAI_INDICE) / (DUREE_PORTE - DELAI_INDICE)));
+    cible.style.background = 'linear-gradient(90deg,rgba(255,197,61,.85) ' +
+                             (part * 100).toFixed(1) + '%,transparent ' +
+                             (part * 100).toFixed(1) + '%)';
+    cible.style.color = 'rgba(255,255,255,' + (0.28 + part * 0.7).toFixed(2) + ')';
+    animation = requestAnimationFrame(jauge);
   }
-  function fin(){ if (minuteur){ clearTimeout(minuteur); minuteur = null; } }
+  function nettoyer(){
+    if (minuteur){ clearTimeout(minuteur); minuteur = null; }
+    if (indice){ clearTimeout(indice); indice = null; }
+    if (animation){ cancelAnimationFrame(animation); animation = null; }
+    cible.style.background = 'transparent';
+    cible.style.color = 'rgba(255,255,255,.28)';
+  }
+  function debut(){
+    nettoyer();
+    debutAppui = Date.now();
+    indice = setTimeout(function(){ animation = requestAnimationFrame(jauge); }, DELAI_INDICE);
+    minuteur = setTimeout(function(){
+      nettoyer();
+      if (typeof sonBouton === 'function') sonBouton();
+      ouvrirLeBord();
+    }, DUREE_PORTE);
+  }
   cible.style.pointerEvents = 'auto';
+  cible.style.padding = '2px 5px';
+  cible.style.borderRadius = '4px';
   cible.addEventListener('touchstart', debut, {passive:true});
-  cible.addEventListener('touchend', fin);
-  cible.addEventListener('touchcancel', fin);
+  cible.addEventListener('touchend', nettoyer);
+  cible.addEventListener('touchcancel', nettoyer);
+  cible.addEventListener('touchmove', nettoyer);
   cible.addEventListener('mousedown', debut);
-  cible.addEventListener('mouseup', fin);
-  cible.addEventListener('mouseleave', fin);
+  cible.addEventListener('mouseup', nettoyer);
+  cible.addEventListener('mouseleave', nettoyer);
 })();
 
 /* =========================================================
