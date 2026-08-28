@@ -177,7 +177,7 @@ html,body{height:100%;overflow:hidden;background:#1B2A1B;font-family:var(--ui);c
 .dame.parle .cri{opacity:1}
 
 /* ---- L'ENFANT ---- */
-.enfant{width:44px;height:60px;z-index:29;pointer-events:none;
+.enfant{width:44px;height:60px;pointer-events:none;
   transform:translate(-50%,-80%) scaleY(1.4286);
   filter:drop-shadow(0 3px 4px rgba(0,0,0,.4))}
 .enfant.marche .ebuste{animation:enfMarche .4s ease-in-out infinite}
@@ -208,7 +208,7 @@ html,body{height:100%;overflow:hidden;background:#1B2A1B;font-family:var(--ui);c
 #enfantBtn:active{transform:translateY(2px);box-shadow:0 1px 0 var(--trait)}
 
 /* ---- MODOU ---- */
-#modou{width:94px;height:122px;z-index:30;transform:translate(-50%,-80%) scaleY(1.4286);
+#modou{width:94px;height:122px;transform:translate(-50%,-80%) scaleY(1.4286);
   filter:drop-shadow(0 5px 6px rgba(0,0,0,.4));transition:opacity .3s}
 #modou .jambe{transform-origin:32px 56px}
 #modou .bras{transform-origin:32px 40px}
@@ -1007,7 +1007,7 @@ function dameSVG(i){
    ========================================================= */
 'use strict';
 
-var BUILD_TAG = 'LQD-v7.3';
+var BUILD_TAG = 'LQD-v7.4';
 document.getElementById('build').textContent = BUILD_TAG;
 
 /* ---------- affichage des erreurs, pour pouvoir diagnostiquer ---------- */
@@ -2574,6 +2574,39 @@ function envoyerLEnfantSeul(){
   envoyerLEnfant(cle);
 }
 
+/* il part vraiment : l'argent est pris, la route est calculée */
+function envoyerLEnfant(cle){
+  var L = LIEUX[cle];
+  var iD = -1;
+  for (var d=0;d<DAMES.length;d++){ if (DAMES[d].lieu === cle) iD = d; }
+  if (iD < 0 || S.parties[iD]){ flash('Cette maison est ferm\u00e9e.', 1800); return; }
+
+  var prix = prixDuJour(cle);
+  if (S.argent < prix){
+    flash('Il te manque ' + (prix - Math.floor(S.argent)) + ' F pour l\u2019envoyer.', 2400);
+    sonRefus();
+    return;
+  }
+  S.argent -= prix;
+  volant('-' + prix + ' F', '#7FE0A8');
+
+  var E = S.enfant;
+  E.phase  = 'aller';
+  E.cible  = cle;
+  E.iD     = iD;
+  E.objet  = L.objet;
+  E.route  = trajetVers2(E.x, E.y, L.x, L.y);
+  E.etape  = 1;
+  if (!E.route || E.route.length < 2){      // rien à parcourir : il est déjà sur place
+    E.phase = 'achat'; E.pause = 1.2;
+    if (enfantEl) enfantEl.classList.add('donne');
+  }
+  sonEnvoi();
+  parler('Vas-y mon fils.', VOIX_MODOU);
+  flash('L\u2019enfant part vers ' + L.nom + '.', 2400);
+  majBoutonEnfant();
+}
+
 /* même calcul de trajet, mais depuis un point quelconque */
 function trajetVers2(dx, dy, ax, ay){
   var garde = S.modou;
@@ -2977,6 +3010,13 @@ function rendre(){
 
   modouEl.style.left = S.modou.x + '%';
   modouEl.style.top  = S.modou.y + '%';
+  modouEl.style.zIndex = 20 + Math.round(S.modou.y * 2);
+  for (var p2=0;p2<DAMES.length;p2++){
+    if (!damesEl[p2]) continue;
+    var yD = S.exode[p2] ? S.exode[p2].y : DAMES[p2].bed.y;
+    damesEl[p2].style.zIndex = 20 + Math.round(yD * 2);
+  }
+  if (enfantEl && S.enfant) enfantEl.style.zIndex = 20 + Math.round(S.enfant.y * 2);
 
   var cles = Object.keys(zonesEl);
   for (var c=0;c<cles.length;c++){
