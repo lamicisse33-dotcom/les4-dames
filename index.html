@@ -297,6 +297,53 @@ html,body{height:100%;overflow:hidden;background:#1B2A1B;font-family:var(--ui);c
   opacity:0;transition:opacity .22s;pointer-events:none;max-width:86vw;text-align:center}
 #flash.on{opacity:1}
 
+/* ---- LA FÊTE DE L'ÉQUILIBRE ---- */
+#feux{position:fixed;inset:0;z-index:120;pointer-events:none;overflow:hidden}
+.feu{position:absolute;width:0;height:0}
+.etincelle{position:absolute;left:0;top:0;border-radius:50%;
+  box-shadow:0 0 12px currentColor;opacity:0;
+  animation:eclat 1.25s cubic-bezier(.15,.7,.3,1) forwards}
+@keyframes eclat{
+  0%{transform:translate(0,0) scale(.4);opacity:1}
+  70%{opacity:1}
+  100%{transform:translate(var(--dx),var(--dy)) scale(.15);opacity:0}}
+
+#fete{position:fixed;left:0;right:0;top:16%;z-index:130;pointer-events:none;
+  text-align:center;opacity:0;transform:scale(.7);
+  transition:opacity .35s,transform .45s cubic-bezier(.3,1.6,.5,1)}
+#fete.on{opacity:1;transform:scale(1)}
+#fete .jourfete{font-size:11px;font-weight:900;letter-spacing:.34em;color:var(--or);
+  text-shadow:0 2px 0 var(--trait)}
+#fete .titrefete{font-size:clamp(26px,7vw,52px);font-weight:900;letter-spacing:.05em;
+  color:#fff;text-shadow:0 5px 0 var(--trait),0 0 26px rgba(255,197,61,.85);margin:4px 0}
+#fete .sousfete{font-size:12px;font-weight:900;color:var(--creme);
+  text-shadow:0 2px 0 var(--trait)}
+#fete .prochfete{margin-top:9px;font-size:9.5px;font-weight:900;letter-spacing:.16em;
+  color:rgba(255,246,228,.6);text-shadow:0 2px 0 var(--trait)}
+#fete .numfete{width:66px;height:66px;margin:0 auto 8px;border-radius:50%;
+  border:5px solid var(--trait);box-shadow:0 5px 0 var(--trait);
+  display:flex;align-items:center;justify-content:center;
+  font-size:34px;font-weight:900;color:var(--trait);
+  animation:numBat .6s ease-in-out infinite}
+@keyframes numBat{0%,100%{transform:scale(1) rotate(-6deg)}
+  50%{transform:scale(1.14) rotate(6deg)}}
+#fete.retour .titrefete{font-size:clamp(20px,5vw,38px)}
+#fete.niv2 .titrefete,#fete.niv3 .titrefete{animation:bat .55s ease-in-out infinite}
+#fete.niv4 .titrefete,#fete.niv5 .titrefete{animation:bat .38s ease-in-out infinite}
+@keyframes bat{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}
+
+/* Modou danse, et les Dames avec lui à partir du troisième niveau */
+#modou.danse{animation:danse .5s ease-in-out infinite}
+@keyframes danse{
+  0%,100%{transform:translate(-50%,-80%) scaleY(1.4286) rotate(-9deg)}
+  25%{transform:translate(-50%,-92%) scaleY(1.4286) rotate(0deg)}
+  50%{transform:translate(-50%,-80%) scaleY(1.4286) rotate(9deg)}
+  75%{transform:translate(-50%,-92%) scaleY(1.4286) rotate(0deg)}}
+.dame.danse .pastille{animation:dansePastille .45s ease-in-out infinite}
+@keyframes dansePastille{
+  0%,100%{transform:scaleY(1.4286) rotate(-14deg)}
+  50%{transform:scaleY(1.4286) translateY(-7px) rotate(14deg)}}
+
 /* ---- ÉCRANS ---- */
 .screen{position:fixed;inset:0;z-index:90;background:#1B2A1B;display:flex;flex-direction:column;
   align-items:center;justify-content:center;text-align:center;padding:18px 20px;gap:9px;color:var(--creme);
@@ -388,6 +435,8 @@ button.cta{touch-action:manipulation;position:relative;z-index:2}
 <button id="voixBtn">🗣</button>
 <div id="stick"><div id="knob"></div></div>
 <div id="flottant"><div id="flottantKnob"></div></div>
+<div id="feux"></div>
+<div id="fete"></div>
 
 <div class="screen" id="scrIntro">
   <div class="eyebrow">KHALAM</div>
@@ -613,7 +662,7 @@ function carteSVG(){
    ========================================================= */
 'use strict';
 
-var BUILD_TAG = 'LQD-v4.2';
+var BUILD_TAG = 'LQD-v4.6';
 document.getElementById('build').textContent = BUILD_TAG;
 
 /* ---------- affichage des erreurs, pour pouvoir diagnostiquer ---------- */
@@ -673,6 +722,9 @@ var CFG = {
   ARGENT_DEPART: 510,
   GAIN_CHANTIER: 51,      // francs par seconde de travail
   COUT_CHANTIER: 9,       // le chantier paie bien, mais il casse le dos
+  FETE_PAS: 10,           // jalons : 10, 30, 60, 100, 150... l'écart grandit à chaque fois
+  FETE_DUREE: 5.0,        // et ça dure plus longtemps à chaque fois
+
   PALIER_JOURS: 15,       // tous les 15 jours...
   PALIER_HAUSSE: 0.30,    // ...tout augmente de 30 %
 
@@ -910,7 +962,8 @@ function nouvelEtat(){
     exode:[null,null,null,null],
     ordreDepart:[],
     viseRetour:false,
-    vu:{},
+    vu:{}, rappels:{},
+    fete:null, derniereFete:0, fetes:0, prochainJalon:1,
     auto:null,
     nuit:0, etaitNuit:false,
     journal:[],
@@ -964,6 +1017,8 @@ function construire(){
     '<div id="layer"></div><div id="cible"></div>';
   layer = document.getElementById('layer');
   cibleEl = document.getElementById('cible');
+  var fx = document.getElementById('feux');
+  if (fx) fx.innerHTML = '';
   voileNuit = document.getElementById('nuit');
   voileCrep = document.getElementById('crepuscule');
   var lp = document.getElementById('lampes');
@@ -1446,6 +1501,22 @@ function basculerVoix(){
 }
 
 /* ---------- LE GUIDAGE : chaque règle une seule fois, au bon moment ---------- */
+function rappel(cle, plein, bref, ms){
+  if (!S) return;
+  if (!S.vu[cle]){                       // la première fois : il explique, à voix haute
+    S.vu[cle] = true;
+    S.rappels[cle] = 0;
+    modouDit(plein, ms || 3000);
+    return 1;
+  }
+  S.rappels[cle] = (S.rappels[cle] || 0) + 1;
+  if (S.rappels[cle] <= 2){              // les deux suivantes : bulle courte, sans voix
+    modouDit(bref, 1500, true);
+    return 2;
+  }
+  return 0;                              // ensuite il se tait : le cercle rose suffit
+}
+
 function guider(cle, texte, ms){
   if (!S || S.vu[cle]) return;
   S.vu[cle] = true;
@@ -1669,7 +1740,11 @@ var BW = 0, BH = 0, VW = 0, VH = 0, RATIO = 1400/800, TOP_PAD = 0;
 var CAM = { x:50, y:50, z:1.45, tx:50, ty:50, tz:1.45, libre:false };
 function majCamera(dt){
   var cx = S.modou.x, cy = S.modou.y, cz = CFG.Z_LIBRE;
-  if (CAM.libre){
+  if (S.fete){                       // plan très rapproché sur le foyer
+    cx = CENTRE.x; cy = CENTRE.y - 2;
+    cz = 2.7 + S.fete.niveau * 0.12;
+  }
+  else if (CAM.libre){
     cx = 50; cy = 50;
     cz = BW ? Math.min(VW / BW, VH / (BH * CFG.APLAT)) : 1;
   }
@@ -1762,8 +1837,10 @@ function tenterEchange(cle){
     if (mot) mot.textContent = L.mot;
     setTimeout(function(){ g.classList.add('donne'); }, 380);
   } else {
-    guider('sansargent', 'Je n\u2019ai pas assez. Je retourne au chantier.', 3000);
     var manque = prix - Math.floor(S.argent);
+    rappel('sansargent',
+      'Je n\u2019ai pas assez. Je retourne au chantier.',
+      'Pas assez.', 3000);
     if (mot) mot.textContent = 'Il te manque ' + manque + ' F.';
     g.classList.add('refus');
     sonRefus();
@@ -1911,11 +1988,17 @@ function majExode(dt){
     var but = E.route[E.etape];
     if (!but){
       if (E.retour){                      // rentrée au lit
+        var revenait = E.rachat;
         S.exode[i] = null;
         damesEl[i].style.left = DAMES[i].bed.x + '%';
         damesEl[i].style.top  = DAMES[i].bed.y + '%';
         var b3 = damesEl[i].querySelector('.cri');
         if (b3) b3.textContent = DAMES[i].cri;
+        if (revenait){
+          var complet = true;
+          for (var w2=0;w2<DAMES.length;w2++){ if (S.parties[w2]) complet = false; }
+          if (complet && !S.fete) lancerFeteRetour(i);
+        }
       } else {
         faitPartir(i);                    // sortie franchie : c'est définitif
       }
@@ -1972,7 +2055,7 @@ function faireRevenir(i){
   if (bulle) bulle.textContent = 'Je reviens.';
 
   S.exode[i] = {
-    x: CFG.SORTIE_X, y: 51.9, etape: 0, retour: true, vit: CFG.VIT_RETOUR,
+    x: CFG.SORTIE_X, y: 51.9, etape: 0, retour: true, rachat: true, vit: CFG.VIT_RETOUR,
     route: [ {x:90.7, y:51.9}, {x:50, y:51.9}, {x:50, y:D.bed.y}, {x:D.bed.x, y:D.bed.y} ]
   };
   S.sortieVue = 2.4;
@@ -2254,8 +2337,10 @@ function tourDeBoucle(ts){
     if (estNuit){
       S.serie = 0;
       if (S.cool <= 0){
-        modouDit('Le chantier est ferm\u00e9 la nuit.', 2400);
-        S.cool = 2.4;
+        var n3 = rappel('regleNuit',
+          'Le chantier ferme la nuit. Je reviendrai au lever du jour.',
+          'Ferm\u00e9 la nuit.', 3000);
+        S.cool = n3 ? 3 : 6;
       }
     } else {
       guider('chantier', 'Ici je gagne ma journ\u00e9e. Je reste et l\u2019argent monte.', 3200);
@@ -2287,11 +2372,15 @@ function tourDeBoucle(ts){
       // maison fermée : rien ne se passe
     } else if (iZ >= 0 && !S.foyer){
       if (S.cool <= 0){
-        modouDit('Je dois d\u2019abord passer au foyer !', 2600);
-        flash('Retourne au foyer, au centre des quatre lits, avant d\u2019entrer ici.', 3000);
-        montrerLaRoute();
-        sonRefus();
-        S.cool = 2.6;
+        var n2 = rappel('regleFoyer',
+          'Je dois d\u2019abord passer au foyer, au centre des quatre lits.',
+          'Au foyer d\u2019abord.', 3200);
+        if (n2 === 1){
+          flash('Retourne au foyer, au centre des quatre lits, avant d\u2019entrer ici.', 3000);
+          montrerLaRoute();
+        }
+        if (n2) sonRefus();
+        S.cool = n2 ? 3.2 : 5;
       }
     } else if (iZ >= 0 && S.exode[iZ] && S.exode[iZ].retour){
       // elle rentre déjà : inutile de repayer
@@ -2408,6 +2497,171 @@ function finir(cause){
     'Modou a gagn\u00e9 <b>' + Math.round(S.gagne) + ' F</b> sur le chantier. ' +
     'Meilleur score : <b>' + MEILLEUR + ' jours</b>.';
   document.getElementById('scrFin').classList.remove('hide');
+}
+
+/* =========================================================
+   LA FÊTE DE L'ÉQUILIBRE — tous les 10 jours, si les quatre sont là
+   ========================================================= */
+var TITRES_FETE = [
+  { t:'L\u2019ÉQUILIBRE',        s:'Les quatre sont l\u00e0.' },
+  { t:'LE DOMAINE TIENT',        s:'Dix jours de plus.' },
+  { t:'MODOU NE PLIE PAS',       s:'Personne n\u2019est parti.' },
+  { t:'LA MAISON EST DEBOUT',    s:'Trente jours de suite.' },
+  { t:'MODOU EST UN ROI',        s:'Le domaine chante.' },
+  { t:'LÉGENDE DU DOMAINE',      s:'Plus personne ne compte les jours.' }
+];
+var COULEURS_FEU = ['#FFC53D','#FF7FB0','#8B9BFF','#4CC97A','#FFFFFF','#FF8A3D','#7BD3F7'];
+
+/* 10, 30, 60, 100, 150, 210... : l'écart s'allonge de 10 jours à chaque fois */
+function jalonFete(n){ return CFG.FETE_PAS * n * (n + 1) / 2; }
+
+function peutFeter(){
+  if (!S || S.fete) return false;
+  if (S.jour < jalonFete(S.prochainJalon)) return false;
+
+  var toutes = true;
+  for (var i=0;i<DAMES.length;i++){ if (S.parties[i]) toutes = false; }
+
+  if (!toutes){                    // jalon manqué : il ne repassera pas
+    var perdu = jalonFete(S.prochainJalon);
+    S.prochainJalon++;
+    flash('Jour ' + perdu + ' \u2014 f\u00eate manqu\u00e9e. Le cercle n\u2019est pas complet.', 3000);
+    noter(S.jour, 'F\u00eate du jour ' + perdu + ' manqu\u00e9e : une Dame n\u2019\u00e9tait plus l\u00e0.');
+    return false;
+  }
+  S.prochainJalon++;
+  return true;
+}
+
+function lancerLaFete(){
+  S.derniereFete = S.jour;
+  S.fetes++;
+  var niveau = Math.min(TITRES_FETE.length - 1, S.fetes - 1);
+  S.fete = { t:0, niveau:niveau, duree: CFG.FETE_DUREE + niveau * 0.8, prochain:0, salve:0 };
+
+  // Modou se plante au milieu du foyer et danse
+  S.modou.x = CENTRE.x; S.modou.y = CENTRE.y;
+  stopperAuto(); joyFin(); doigtFin();
+  modouEl.classList.add('danse');
+  if (niveau >= 2) for (var i=0;i<DAMES.length;i++) damesEl[i].classList.add('danse');
+
+  var T = TITRES_FETE[niveau];
+  var b = document.getElementById('fete');
+  b.innerHTML = '<div class="jourfete">JOUR ' + S.jour + '</div>' +
+                '<div class="titrefete">' + T.t + '</div>' +
+                '<div class="sousfete">' + T.s + '</div>' +
+                '<div class="prochfete">Prochaine f\u00eate : jour ' +
+                  jalonFete(S.prochainJalon) + '</div>';
+  b.className = 'on niv' + niveau;
+
+  fanfare(niveau);
+  parler('Les quatre sont l\u00e0 ! On tient !', VOIX_MODOU);
+  noter(S.jour, 'F\u00eate de l\u2019\u00e9quilibre \u2014 ' + T.t + '.');
+}
+
+function lancerFeteRetour(i){
+  var D = DAMES[i];
+  S.fete = { t:0, niveau:1, duree:4.0, prochain:0, salve:0,
+             type:'retour', couleur:teinte(D.col) };
+
+  S.modou.x = CENTRE.x; S.modou.y = CENTRE.y;
+  stopperAuto(); joyFin(); doigtFin();
+  modouEl.classList.add('danse');
+  damesEl[i].classList.add('danse');
+
+  var b = document.getElementById('fete');
+  b.innerHTML =
+    '<div class="numfete" style="background:var(' + D.col + ')">' + D.id + '</div>' +
+    '<div class="titrefete">ELLE EST REVENUE</div>' +
+    '<div class="sousfete">' + D.nom + ' a retrouv\u00e9 son lit.</div>' +
+    '<div class="prochfete">Le cercle est complet \u2014 les quatre sont l\u00e0</div>';
+  b.className = 'on retour';
+
+  fanfare(2);
+  parleDame(i, 'Je suis \u00e0 la maison.');
+  setTimeout(function(){ parler('Elle est revenue ! On est au complet !', VOIX_MODOU); }, 1500);
+  noter(S.jour, D.nom + ' est de retour : le cercle est complet.');
+}
+
+function teinte(varCss){
+  var v = { '--sante':'#4CC97A', '--amour':'#FF7FB0',
+            '--spirit':'#8B9BFF', '--argent':'#FFC53D' };
+  return v[varCss] || '#FFC53D';
+}
+
+function majFete(dt){
+  if (!S.fete) return true;
+  var F = S.fete;
+  F.t += dt;
+
+  // les salves : de plus en plus denses selon le niveau
+  F.prochain -= dt;
+  if (F.prochain <= 0 && F.t < F.duree - 0.6){
+    var n = 1 + F.niveau;
+    for (var k=0;k<n;k++) uneSalve(F.niveau, F.couleur);
+    F.salve++;
+    F.prochain = Math.max(0.18, 0.55 - F.niveau * 0.07);
+    if (F.salve % 2 === 0) bipFeu(F.niveau);
+  }
+
+  if (F.t >= F.duree){
+    modouEl.classList.remove('danse');
+    for (var i=0;i<DAMES.length;i++) damesEl[i].classList.remove('danse');
+    document.getElementById('fete').className = '';
+    S.fete = null;
+  }
+  return false;   // pendant la fête, le temps du jeu est suspendu
+}
+
+function uneSalve(niveau, couleurImposee){
+  var couche = document.getElementById('feux');
+  if (!couche) return;
+  var x = 10 + Math.random() * 80;
+  var y = 12 + Math.random() * 55;
+  var coul = couleurImposee || COULEURS_FEU[Math.floor(Math.random() * COULEURS_FEU.length)];
+  var n = 14 + niveau * 5;
+  var rayon = 70 + niveau * 22 + Math.random() * 50;
+
+  var feu = document.createElement('div');
+  feu.className = 'feu';
+  feu.style.left = x + '%';
+  feu.style.top  = y + '%';
+  var html = '';
+  for (var i=0;i<n;i++){
+    var a = (Math.PI * 2 * i) / n + Math.random() * 0.3;
+    var r = rayon * (0.65 + Math.random() * 0.35);
+    var c = (!couleurImposee && niveau >= 3 && i % 3 === 0)
+      ? COULEURS_FEU[Math.floor(Math.random() * COULEURS_FEU.length)]
+      : (couleurImposee && i % 4 === 0 ? '#FFFFFF' : coul);
+    var taille = 7 + Math.random() * (5 + niveau * 2);
+    html += '<i class="etincelle" style="' +
+            '--dx:' + (Math.cos(a) * r).toFixed(1) + 'px;' +
+            '--dy:' + (Math.sin(a) * r).toFixed(1) + 'px;' +
+            'width:' + taille.toFixed(1) + 'px;height:' + taille.toFixed(1) + 'px;' +
+            'background:' + c + ';animation-delay:' + (Math.random() * 0.08).toFixed(2) + 's"></i>';
+  }
+  feu.innerHTML = html;
+  couche.appendChild(feu);
+  setTimeout(function(){ if (feu.parentNode) feu.parentNode.removeChild(feu); }, 1500);
+}
+
+function bipFeu(niveau){
+  if (!AC) return;
+  var t = AC.currentTime;
+  souffleBruit(0.06, 0.16, 2200, t);
+  note(140 + Math.random() * 90, 0.28, 'sine', 0.24, t, BUS_EFF, 60);
+  if (niveau >= 2) note(880 + Math.random() * 400, 0.12, 'triangle', 0.14, t + 0.06);
+}
+
+function fanfare(niveau){
+  if (!AC) return;
+  var t = AC.currentTime;
+  var suite = [523, 659, 784, 1046, 1319];
+  for (var i=0;i<Math.min(suite.length, 3 + niveau); i++){
+    note(suite[i % suite.length], 0.4, 'triangle', 0.3, t + i * 0.14, BUS_EFF);
+    note(suite[i % suite.length] / 2, 0.5, 'sine', 0.2, t + i * 0.14, BUS_EFF);
+  }
+  for (var d=0;d<4 + niveau;d++) note(96, 0.2, 'sine', 0.4, t + 0.1 + d * 0.22, BUS_EFF, 48);
 }
 
 /* ---------- LE VISAGE DE MODOU À LA FIN ---------- */
