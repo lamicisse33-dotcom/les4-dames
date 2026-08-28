@@ -544,6 +544,47 @@ html,body{height:100%;overflow:hidden;background:#1B2A1B;font-family:var(--ui);c
   0%,100%{transform:scaleY(1.4286) rotate(-14deg)}
   50%{transform:scaleY(1.4286) translateY(-7px) rotate(14deg)}}
 
+/* ---- L'ÂNE ---- */
+#modou .monture{position:absolute;left:50%;bottom:-6%;width:118%;height:62%;
+  transform:translateX(-50%);opacity:0;transition:opacity .3s;pointer-events:none}
+#modou.surLane .monture{opacity:1}
+#modou.surLane #mBody{transform-origin:50% 100%}
+#modou.surLane.marche .monture .apatte.ag{animation:patte .32s ease-in-out infinite}
+#modou.surLane.marche .monture .apatte.ad{animation:patte .32s ease-in-out infinite reverse}
+.monture .apatte{transform-origin:center 34px}
+@keyframes patte{0%,100%{transform:rotate(-16deg)}50%{transform:rotate(16deg)}}
+
+/* ---- L'ÉCRAN DE FIN DE CHAPITRE ---- */
+#chapitre{position:fixed;inset:0;z-index:150;display:none;flex-direction:column;
+  align-items:center;justify-content:center;gap:14px;padding:22px;text-align:center;
+  overflow:hidden}
+#chapitre.on{display:flex}
+.chFond{position:absolute;inset:0;z-index:-1;
+  background:radial-gradient(circle at 50% 42%,#2C4A2C 0%,#1B2A1B 62%,#101A10 100%)}
+.chScene{position:relative;display:flex;align-items:flex-end;justify-content:center;gap:6px;
+  height:min(30vh,190px)}
+.chModou{width:min(20vh,132px);height:min(28vh,178px);
+  filter:drop-shadow(0 10px 16px rgba(0,0,0,.55));animation:chDanse .5s ease-in-out infinite}
+@keyframes chDanse{0%,100%{transform:translateY(0) rotate(-8deg)}
+  25%{transform:translateY(-11px) rotate(0)}
+  50%{transform:translateY(0) rotate(8deg)}
+  75%{transform:translateY(-11px) rotate(0)}}
+.chEnfant{width:min(12vh,78px);height:min(17vh,108px);
+  filter:drop-shadow(0 8px 12px rgba(0,0,0,.5));animation:chDanse .4s ease-in-out infinite reverse}
+.chAne{width:min(18vh,120px);height:min(14vh,92px);
+  filter:drop-shadow(0 8px 12px rgba(0,0,0,.5));animation:chBond .55s ease-in-out infinite}
+@keyframes chBond{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.chPartie{font-size:9.5px;font-weight:900;letter-spacing:.3em;color:var(--or)}
+.chTitre{font-size:clamp(30px,8.5vw,62px);font-weight:900;letter-spacing:.05em;color:#fff;
+  text-shadow:0 6px 0 var(--trait),0 0 34px rgba(255,197,61,.9);margin:6px 0}
+.chSous{font-size:13px;font-weight:700;color:rgba(255,246,228,.8);max-width:32em}
+.chBoutons{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:6px}
+#chapitre.niv2 .chTitre{animation:bat .6s ease-in-out infinite}
+#chapitre.niv3 .chTitre,#chapitre.niv4 .chTitre,#chapitre.niv5 .chTitre{
+  animation:bat .42s ease-in-out infinite}
+#chapitre.niv3 .chFond,#chapitre.niv4 .chFond,#chapitre.niv5 .chFond{
+  background:radial-gradient(circle at 50% 40%,#3A5A2E 0%,#1B2A1B 60%,#0C140C 100%)}
+
 /* ---- ÉCRANS ---- */
 .screen{position:fixed;inset:0;z-index:90;background:#1B2A1B;display:flex;flex-direction:column;
   align-items:center;justify-content:center;text-align:center;padding:18px 20px;gap:9px;color:var(--creme);
@@ -719,6 +760,8 @@ button.cta{touch-action:manipulation;position:relative;z-index:2}
     <button class="cta" id="bordFermer">Fermer</button>
   </div>
 </div>
+
+<div id="chapitre"></div>
 
 <div id="rot"><p class="lede">Tourne ton téléphone.<br>Le domaine se regarde du ciel.</p></div>
 <div id="build"></div>
@@ -1007,7 +1050,7 @@ function dameSVG(i){
    ========================================================= */
 'use strict';
 
-var BUILD_TAG = 'LQD-v7.4';
+var BUILD_TAG = 'LQD-v7.5';
 document.getElementById('build').textContent = BUILD_TAG;
 
 /* ---------- affichage des erreurs, pour pouvoir diagnostiquer ---------- */
@@ -1068,6 +1111,8 @@ function surAppui(e){
     }
     if (n.id === 'sonBtn'){ try { basculerSon(); } catch (err) {} return; }
     if (n.id === 'voixBtn'){ try { basculerVoix(); } catch (err) {} return; }
+    if (n.id === 'chContinuer'){ try { sonBouton(); fermerLeChapitre(true); } catch (err) {} return; }
+    if (n.id === 'chRejouer'){   try { sonBouton(); fermerLeChapitre(false); } catch (err) {} return; }
     if (n.id === 'enfantBtn'){
       try { sonBouton(); envoyerLEnfantSeul(); }
       catch (err){ montrerErreur('enfant : ' + (err && err.message ? err.message : err)); }
@@ -1091,7 +1136,7 @@ var CFG = {
   ARGENT_DEPART: 510,
   GAIN_CHANTIER: 51,      // francs par seconde de travail
   COUT_CHANTIER: 9,       // le chantier paie bien, mais il casse le dos
-  FETE_PAS: 10,           // jalons : 10, 30, 60, 100, 150... l'écart grandit à chaque fois
+  MOIS: 30,               // une partie dure un mois de jeu
   FETE_DUREE: 5.0,        // et ça dure plus longtemps à chaque fois
 
   PALIER_JOURS: 15,       // tous les 15 jours...
@@ -1120,6 +1165,10 @@ var CFG = {
   SEUIL_DERNIER: 12,      // en dessous, elle réclame une dernière fois
   SEUIL_PARTIR: 0,        // à zéro, la Dame quitte le cercle
   SORTIES_FATALES: 3,     // trois départs et la partie est perdue
+
+  ANE_JOUR: 61,           // troisième mois : le gardien du temple le propose
+  PRIX_ANE: 800,
+  ANE_VITESSE: 2.0,       // Modou monte dessus, les trajets sont deux fois plus courts
 
   ENFANT_JOUR: 31,        // il arrive au deuxième mois
   ENFANT_VITESSE: 0.52,   // il marche à la moitié du pas de Modou
@@ -1355,9 +1404,10 @@ function nouvelEtat(){
     ordreDepart:[],
     viseRetour:false,
     vu:{}, rappels:{},
-    fete:null, derniereFete:0, fetes:0, prochainJalon:1, rachats:0,
+    fete:null, chapitre:null, derniereFete:0, fetes:0, prochainJalon:1, rachats:0,
     recordBattu:false, recordVu:false, moisSalue:false,
     enfant:null, coursesEnfant:0,
+    ane:false, aneOffert:false,
     auto:null,
     nuit:0, etaitNuit:false,
     journal:[],
@@ -1468,7 +1518,8 @@ function construire(){
   // Modou
   modouEl = document.createElement('div');
   modouEl.className = 'pos'; modouEl.id = 'modou';
-  modouEl.innerHTML = bonhommeSVG() + '<div class="dit"></div>';
+  modouEl.innerHTML = '<div class="monture">' + aneSVG() + '</div>' +
+                      bonhommeSVG() + '<div class="dit"></div>';
   layer.appendChild(modouEl);
 
   // jauges du haut
@@ -2685,6 +2736,62 @@ function majBoutonEnfant(){
   if (puce) puce.textContent = libre ? '' : '\u2026';
 }
 
+/* =========================================================
+   L'ÂNE — troisième mois. Le gardien du temple le vend 800 F.
+   Modou monte dessus : les trajets sont deux fois plus courts.
+   ========================================================= */
+function aneSVG(){
+  return '' +
+  '<svg viewBox="0 0 70 56" width="100%" height="100%">' +
+    '<ellipse cx="35" cy="52" rx="22" ry="4.5" fill="rgba(0,0,0,.3)"/>' +
+    '<g stroke="#2B2118" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round">' +
+      '<line class="apatte ag" x1="20" y1="34" x2="20" y2="50" stroke="#7C7168" stroke-width="6"/>' +
+      '<line class="apatte ad" x1="48" y1="34" x2="48" y2="50" stroke="#6B6159" stroke-width="6"/>' +
+      '<rect x="14" y="18" width="42" height="20" rx="10" fill="#9A8F85"/>' +
+      '<rect x="20" y="14" width="26" height="9" rx="4" fill="#C2703A"/>' +
+      '<circle cx="57" cy="17" r="10" fill="#9A8F85"/>' +
+      '<path d="M52 9 q1 -8 4 -8 q3 0 3 8 z" fill="#8A8077"/>' +
+      '<path d="M60 8 q2 -8 5 -7 q2 1 -1 9 z" fill="#8A8077"/>' +
+      '<circle cx="61" cy="16" r="1.8" fill="#2B2118" stroke="none"/>' +
+      '<path d="M14 22 q-6 4 -3 10" fill="none" stroke="#7C7168" stroke-width="4"/>' +
+    '</g>' +
+  '</svg>';
+}
+
+function proposerLAne(){
+  if (S.aneOffert) return;
+  S.aneOffert = true;
+  flash('Le Vieux Serigne te propose son \u00e2ne pour ' + CFG.PRIX_ANE + ' F.', 3600);
+  parler('Un \u00e2ne\u2026 je n\u2019aurais plus mal aux jambes.', VOIX_MODOU);
+  noter(S.jour, 'Le gardien du temple propose son \u00e2ne.');
+  var b = badgesEl.TEMPLE;
+  if (b) b.classList.add('dernier');
+}
+
+function acheterLAne(){
+  if (S.ane || !S.aneOffert) return false;
+  if (S.argent < CFG.PRIX_ANE){
+    if (S.cool <= 0){
+      flash('L\u2019\u00e2ne co\u00fbte ' + CFG.PRIX_ANE + ' F. Il te manque ' +
+            (CFG.PRIX_ANE - Math.floor(S.argent)) + ' F.', 2600);
+      S.cool = 3;
+    }
+    return false;
+  }
+  S.argent -= CFG.PRIX_ANE;
+  S.ane = true;
+  volant('-' + CFG.PRIX_ANE + ' F', '#9A8F85');
+  sonCaisse();
+  var b = badgesEl.TEMPLE;
+  if (b) b.classList.remove('dernier');
+  if (modouEl) modouEl.classList.add('surLane');
+  flash('Modou a son \u00e2ne. Il va deux fois plus vite.', 3600);
+  parleDame(2, 'Que la route te soit douce.');
+  parler('Merci Serigne ! Je vais voler maintenant !', VOIX_MODOU);
+  noter(S.jour, 'Modou ach\u00e8te l\u2019\u00e2ne pour ' + CFG.PRIX_ANE + ' F.');
+  return true;
+}
+
 /* ---------- CRISES ---------- */
 function majCrises(){
   var urgente = -1, plusBas = 101;
@@ -3057,6 +3164,10 @@ function tourDeBoucle(ts){
   last = ts;
 
   // pendant la fête, tout est suspendu : aucune jauge ne descend
+  if (S.chapitre){
+    majChapitre(dt);
+    return;
+  }
   if (S.fete){
     majFete(dt);
     musique();
@@ -3086,6 +3197,7 @@ function tourDeBoucle(ts){
     veillerLeRecord(jour);
 
     if (jour === CFG.ENFANT_JOUR && !S.enfant) faireVenirLEnfant();
+    if (jour >= CFG.ANE_JOUR && !S.aneOffert && !S.ane) proposerLAne();
 
     if (jour === 30 && !S.moisSalue){
       S.moisSalue = true;
@@ -3152,6 +3264,7 @@ function tourDeBoucle(ts){
   var bouge = (Math.abs(vx) + Math.abs(vy)) > 0.02;
   if (bouge){
     var mult = vitesseDeModou();
+    if (S.ane) mult *= CFG.ANE_VITESSE;
     var px = vx * CFG.VITESSE * mult * dt;
     var py = vy * CFG.VITESSE * RATIO * mult * dt;
     var nx = Math.max(3, Math.min(97, S.modou.x + px));
@@ -3260,6 +3373,8 @@ function tourDeBoucle(ts){
         if (n2) sonRefus();
         S.cool = n2 ? 3.2 : 5;
       }
+    } else if (S.zone === 'TEMPLE' && S.aneOffert && !S.ane && acheterLAne()){
+      S.cool = 2;
     } else if (iZ >= 0 && S.exode[iZ] && S.exode[iZ].retour){
       // elle rentre déjà : inutile de repayer
     } else if (iZ >= 0 && S.jauges[iZ] >= CFG.SEUIL_RASSASIE){
@@ -3410,64 +3525,103 @@ var TITRES_FETE = [
 ];
 var COULEURS_FEU = ['#FFC53D','#FF7FB0','#8B9BFF','#4CC97A','#FFFFFF','#FF8A3D','#7BD3F7'];
 
-/* 10, 30, 60, 100, 150, 210... : l'écart s'allonge de 10 jours à chaque fois */
-function jalonFete(n){ return CFG.FETE_PAS * n * (n + 1) / 2; }
+/* fin de chaque mois : 30, 60, 90, 120... */
+function jalonFete(n){ return CFG.MOIS * n; }
 
 function peutFeter(){
-  if (!S || S.fete) return false;
+  if (!S || S.fete || S.chapitre) return false;
   if (S.jour < jalonFete(S.prochainJalon)) return false;
 
   var toutes = true;
   for (var i=0;i<DAMES.length;i++){ if (S.parties[i]) toutes = false; }
 
-  if (!toutes){                    // jalon manqué : il ne repassera pas
+  if (!toutes){
     var perdu = jalonFete(S.prochainJalon);
     S.prochainJalon++;
     flash('Jour ' + perdu + ' \u2014 f\u00eate manqu\u00e9e. Le cercle n\u2019est pas complet.', 3000);
-    noter(S.jour, 'F\u00eate du jour ' + perdu + ' manqu\u00e9e : une Dame n\u2019\u00e9tait plus l\u00e0.');
+    noter(S.jour, 'Fin du mois manqu\u00e9e : une Dame n\u2019\u00e9tait plus l\u00e0.');
     return false;
   }
   S.prochainJalon++;
   return true;
 }
 
-function lancerLaFete(){
-  S.derniereFete = S.jour;
-  S.fetes++;
-  var niveau = Math.min(TITRES_FETE.length - 1, S.fetes - 1);
-  var duree = CFG.FETE_DUREE + niveau * 0.8;
-  S.fete = { t:0, niveau:niveau, duree:duree, prochain:0, salve:0 };
-  filetDeSecurite(duree);
+/* =========================================================
+   L'ÉCRAN DE FIN DE CHAPITRE
+   Modou seul sur fond sombre, feux d'artifice, musique.
+   Plus riche à chaque mois passé.
+   ========================================================= */
+var CHAPITRES = [
+  { t:'BRAVO',            s:'Tu as tenu la maison de Modou pendant un mois.' },
+  { t:'BRAVO, DEUX MOIS', s:'Ton fils t\u2019aide maintenant. La maison tient toujours.' },
+  { t:'BRAVO, TROIS MOIS',s:'L\u2019\u00e2ne, le fils, les quatre Dames. Tu tiens tout.' },
+  { t:'QUATRE MOIS',      s:'Personne n\u2019a jamais tenu aussi longtemps.' },
+  { t:'LE DOMAINE EST \u00c0 TOI', s:'Le temps ne compte plus.' }
+];
 
-  // Modou se plante au milieu du foyer et danse
-  S.modou.x = CENTRE.x; S.modou.y = CENTRE.y;
-  stopperAuto(); joyFin(); doigtFin();
-  modouEl.classList.add('danse');
-  if (niveau >= 2) for (var i=0;i<DAMES.length;i++) damesEl[i].classList.add('danse');
+function ouvrirLeChapitre(){
+  var n = S.fetes;                       // 1 = fin du premier mois
+  var niveau = Math.min(CHAPITRES.length, Math.max(1, n));
+  var C = CHAPITRES[niveau - 1];
+  S.chapitre = { niveau:niveau, t:0, prochain:0 };
 
-  var T = TITRES_FETE[niveau];
-  if (S.jour >= 30 && S.jour < 40){
-    T = { t:'BRAVO \u2014 UN MOIS',
-          s:'Tu as tenu la maison de Modou pendant un mois entier.' };
-  }
-  var b = document.getElementById('fete');
-  b.innerHTML = '<div class="jourfete">JOUR ' + S.jour + '</div>' +
-                '<div class="titrefete">' + T.t + '</div>' +
-                '<div class="sousfete">' + T.s + '</div>' +
-                '<div class="prochfete">Prochaine f\u00eate : jour ' +
-                  jalonFete(S.prochainJalon) + '</div>';
-  b.className = 'on niv' + niveau;
+  document.body.classList.remove('playing');
+  couperLaParole();
+
+  var z = document.getElementById('chapitre');
+  z.className = 'on niv' + niveau;
+  z.innerHTML =
+    '<div class="chFond"></div>' +
+    '<div class="chScene">' +
+      '<div class="chModou">' + bonhommeSVG() + '</div>' +
+      (niveau >= 2 ? '<div class="chEnfant">' + enfantSVG() + '</div>' : '') +
+      (niveau >= 3 ? '<div class="chAne">' + aneSVG() + '</div>' : '') +
+    '</div>' +
+    '<div class="chTexte">' +
+      '<div class="chPartie">PARTIE ' + niveau + ' TERMIN\u00c9E \u2014 JOUR ' + S.jour + '</div>' +
+      '<div class="chTitre">' + C.t + '</div>' +
+      '<div class="chSous">' + C.s + '</div>' +
+    '</div>' +
+    '<div class="chBoutons">' +
+      '<button class="cta" id="chContinuer">Continuer \u2014 partie ' + (niveau + 1) + '</button>' +
+      '<button class="cta ghost" id="chRejouer">Rejouer</button>' +
+    '</div>';
 
   ouvrirLaMusiqueDeFete();
-  fanfare(niveau);
-  parler('Les quatre sont l\u00e0 ! On tient !', VOIX_MODOU);
-  noter(S.jour, 'F\u00eate de l\u2019\u00e9quilibre \u2014 ' + T.t + '.');
+  fanfare(Math.min(4, niveau));
+  parler('On a tenu ! Al\u2019hamdoulillah !', VOIX_MODOU);
+  noter(S.jour, 'Fin de la partie ' + niveau + '.');
+  sauvegarder();
 }
 
-function teinte(varCss){
-  var v = { '--sante':'#4CC97A', '--amour':'#FF7FB0',
-            '--spirit':'#8B9BFF', '--argent':'#FFC53D' };
-  return v[varCss] || '#FFC53D';
+function majChapitre(dt){
+  var C = S.chapitre;
+  if (!C) return;
+  C.t += dt;
+  C.prochain -= dt;
+  if (C.prochain <= 0){
+    var n = C.niveau;
+    for (var k=0;k<n+1;k++) uneSalve(Math.min(5, n));
+    C.prochain = Math.max(0.16, 0.5 - n * 0.07);
+    if (Math.random() < 0.5) bipFeu(n);
+  }
+  musique();
+}
+
+function fermerLeChapitre(continuer){
+  S.chapitre = null;
+  var z = document.getElementById('chapitre');
+  if (z){ z.className = ''; z.innerHTML = ''; }
+  var fx = document.getElementById('feux');
+  if (fx) setTimeout(function(){ if (fx) fx.innerHTML = ''; }, 1400);
+  fermerLaMusiqueDeFete();
+  if (continuer){
+    document.body.classList.add('playing');
+    last = 0;
+    flash('Partie ' + (S.fetes + 1) + '. \u00c7a continue.', 2600);
+  } else {
+    finir('abandon');
+  }
 }
 
 function majFete(dt){
@@ -4184,6 +4338,7 @@ function demarrer(){
   CAM.tx = 50; CAM.ty = 40; CAM.tz = CFG.Z_LIBRE;
   construire();
   finirLaFete();
+  if (S.ane && modouEl) modouEl.classList.add('surLane');
   redimensionner();
   S.enCours = true;
   last = 0;
