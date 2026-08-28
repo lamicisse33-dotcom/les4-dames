@@ -94,32 +94,74 @@ html,body{height:100%;overflow:hidden;background:#1B2A1B;font-family:var(--ui);c
 .badge .prix.monte{background:#FF5C7A;animation:monte .4s ease-in-out 6}
 @keyframes monte{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
 
-/* ---- DAMES ---- */
-.dame{width:54px;height:54px;pointer-events:none;display:flex;align-items:center;justify-content:center;
+/* ---- LES QUATRE DAMES ---- */
+.dame{width:62px;height:90px;pointer-events:none;display:flex;align-items:flex-end;justify-content:center;
   transition:opacity .5s ease}
 .dame.partie{opacity:0}
-.dame.sen-va .pastille{animation:sen-va 1.05s ease-in-out infinite}
-.dame.sen-va .pastille{box-shadow:0 3px 0 var(--trait),0 0 0 4px rgba(255,92,122,.55)}
-.dame.sen-va .cri{background:#FFE2E8;border-color:#C2405A;color:#8E2337}
-@keyframes sen-va{0%,100%{margin-top:0;transform:scaleY(1.4286) rotate(-3deg)}
-  50%{margin-top:-5px;transform:scaleY(1.4286) rotate(3deg)}}
-.pastille{width:38px;height:38px;border-radius:50%;border:3.5px solid var(--trait);
-  box-shadow:var(--ombre);display:flex;align-items:center;justify-content:center;
-  font-size:17px;font-weight:900;position:relative}
-.ring{position:absolute;left:-8px;top:-8px;width:calc(100% + 16px);height:calc(100% + 16px);
+.pastille{position:relative;width:100%;height:100%;
+  transform:scaleY(1.3514);transform-origin:50% 100%}
+.corps{position:absolute;inset:0;overflow:visible;
+  filter:drop-shadow(0 2px 3px rgba(0,0,0,.35))}
+.num{position:absolute;left:50%;bottom:-3px;transform:translateX(-50%);
+  width:19px;height:19px;border-radius:50%;border:2.5px solid var(--trait);
+  display:flex;align-items:center;justify-content:center;
+  font-size:10px;font-weight:900;color:var(--trait);box-shadow:0 2px 0 var(--trait)}
+.ring{position:absolute;left:50%;bottom:-10px;width:34px;height:34px;margin-left:-17px;
   opacity:0;transition:opacity .3s}
+.ring circle{fill:none;stroke-width:5;stroke-linecap:round;
+  transform:rotate(-90deg);transform-origin:50% 50%}
+.ring .bg{stroke:rgba(43,33,24,.4)}
 .dame.basse .ring{opacity:1}
-.ring circle{fill:none;stroke-width:5;stroke-linecap:round;transform:rotate(-90deg);transform-origin:50% 50%}
-.ring .bg{stroke:rgba(43,33,24,.45)}
-.dame.murmure{animation:bob 1.6s ease-in-out infinite}
-.dame.appelle{animation:shake .42s ease-in-out infinite}
-@keyframes bob{0%,100%{margin-top:0}50%{margin-top:-5px}}
-@keyframes shake{0%,100%{margin-left:0}25%{margin-left:-3px}75%{margin-left:3px}}
-.cri{position:absolute;top:-4px;background:var(--blanc);border:2.5px solid var(--trait);
+
+/* le repos, propre à chacune */
+.dame.d1 .buste{animation:souffleLent 3.4s ease-in-out infinite}
+.dame.d1 .brasD{animation:mainCoeur 3.4s ease-in-out infinite}
+.dame.d2 .buste{animation:seRedresse 2.6s ease-in-out infinite}
+.dame.d2 .brasG{animation:petitGeste 2.2s ease-in-out infinite}
+.dame.d3 .buste{animation:presqueImmobile 5.5s ease-in-out infinite}
+.dame.d4 .buste{animation:impatience 1.5s ease-in-out infinite}
+.dame.d4 .brasD{animation:tapote .9s ease-in-out infinite}
+@keyframes souffleLent{0%,100%{transform:scaleY(1) translateY(0)}50%{transform:scaleY(1.035) translateY(-1px)}}
+@keyframes mainCoeur{0%,100%{transform:translateY(0)}50%{transform:translateY(-1.2px)}}
+@keyframes seRedresse{0%,100%{transform:rotate(-1.2deg)}50%{transform:rotate(1.2deg)}}
+@keyframes petitGeste{0%,100%{transform:rotate(0)}30%{transform:rotate(-7deg)}60%{transform:rotate(3deg)}}
+@keyframes presqueImmobile{0%,100%{transform:translateY(0)}50%{transform:translateY(-.8px)}}
+@keyframes impatience{0%,100%{transform:translateY(0) rotate(-1deg)}
+  40%{transform:translateY(-1.6px) rotate(1deg)}70%{transform:translateY(0) rotate(0)}}
+@keyframes tapote{0%,100%{transform:rotate(0)}50%{transform:rotate(-9deg)}}
+
+/* la demande : elle se tourne vers Modou */
+.dame.appel .buste{animation:demande .9s ease-in-out 2}
+.dame.appel .brasD{animation:mainTendue 1s ease-in-out 2}
+@keyframes demande{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(-4px) rotate(4deg)}}
+@keyframes mainTendue{0%,100%{transform:rotate(0)}50%{transform:rotate(-22deg)}}
+
+/* l'urgence, puis l'état critique */
+.dame.urgence .buste{animation:urgence 1.4s ease-in-out infinite}
+@keyframes urgence{0%,100%{transform:translateX(0) rotate(-2deg)}50%{transform:translateX(2px) rotate(2deg)}}
+.dame.critique{filter:saturate(.7)}
+.dame.critique .buste{animation:critique 1.9s ease-in-out infinite}
+@keyframes critique{0%,100%{transform:translateY(0) rotate(-3.5deg);opacity:1}
+  50%{transform:translateY(2px) rotate(3.5deg);opacity:.78}}
+.dame.d3.critique .buste{animation:critiqueSilence 3s ease-in-out infinite}
+@keyframes critiqueSilence{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}
+
+/* elle s'en va, elle revient */
+.dame.marche .buste{animation:marcheDame .46s ease-in-out infinite}
+.dame.marche .brasG{animation:brasMarche .46s ease-in-out infinite}
+.dame.marche .brasD{animation:brasMarche .46s ease-in-out infinite reverse}
+@keyframes marcheDame{0%,100%{transform:translateY(0) rotate(-3deg)}50%{transform:translateY(-3px) rotate(3deg)}}
+@keyframes brasMarche{0%,100%{transform:rotate(-14deg)}50%{transform:rotate(14deg)}}
+.dame.d4.marche .buste{animation-duration:.34s}
+.dame.d1.marche .buste{animation-duration:.66s}
+.dame.d3.marche .buste{animation-duration:.58s}
+.dame.sen-va .num{background:#FF5C7A!important}
+
+.cri{position:absolute;top:-6px;background:var(--blanc);border:2.5px solid var(--trait);
   border-radius:12px;padding:3px 9px;font-size:10px;font-weight:900;white-space:nowrap;
   box-shadow:0 2px 0 var(--trait);opacity:0;transition:opacity .25s;z-index:5}
-.dame.gauche .cri{right:calc(100% + 8px)}
-.dame.droite .cri{left:calc(100% + 8px)}
+.dame.gauche .cri{right:calc(100% + 4px)}
+.dame.droite .cri{left:calc(100% + 4px)}
 .dame.parle .cri{opacity:1}
 
 /* ---- MODOU ---- */
@@ -259,6 +301,26 @@ html,body{height:100%;overflow:hidden;background:#1B2A1B;font-family:var(--ui);c
   border:3px solid var(--trait);box-shadow:var(--ombre);font-family:var(--ui);
   font-size:15px;line-height:1;color:var(--trait);cursor:pointer}
 #voixBtn.coupe{background:#D8D2C6}
+#mouvBtn{position:fixed;right:44px;bottom:calc(270px + env(safe-area-inset-bottom));
+  z-index:42;width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.85);
+  border:3px solid var(--trait);box-shadow:var(--ombre);font-family:var(--ui);
+  font-size:15px;line-height:1;color:var(--trait);cursor:pointer}
+#mouvBtn.coupe{background:#D8D2C6;color:#8E877A}
+#mouvBtn:active{transform:translateY(2px);box-shadow:0 1px 0 var(--trait)}
+
+/* l'indicateur de fuite : où elle en est, combien de temps il reste */
+#fuite{position:fixed;left:50%;transform:translateX(-50%);
+  top:calc(52px + env(safe-area-inset-top));z-index:46;
+  display:none;align-items:center;gap:7px;
+  background:#FFE2E8;border:3px solid var(--trait);box-shadow:var(--ombre);
+  padding:4px 12px 4px 4px;border-radius:20px;pointer-events:none}
+#fuite.on{display:flex;animation:fuitePulse 1.1s ease-in-out infinite}
+@keyframes fuitePulse{0%,100%{box-shadow:0 3px 0 var(--trait)}
+  50%{box-shadow:0 3px 0 var(--trait),0 0 0 5px rgba(255,92,122,.35)}}
+#fuite .fnum{width:22px;height:22px;border-radius:50%;border:2.5px solid var(--trait);
+  display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;
+  color:var(--trait)}
+#fuite .ftxt{font-size:11px;font-weight:900;color:#8E2337}
 #voixBtn:active{transform:translateY(2px);box-shadow:0 1px 0 var(--trait)}
 #sonBtn:active{transform:translateY(2px);box-shadow:0 1px 0 var(--trait)}
 #camBtn:active{transform:translateY(2px);box-shadow:0 1px 0 var(--trait)}
@@ -461,6 +523,8 @@ button.cta{touch-action:manipulation;position:relative;z-index:2}
 <button id="camBtn">⊕</button>
 <button id="sonBtn">♪</button>
 <button id="voixBtn">🗣</button>
+<button id="mouvBtn">◎</button>
+<div id="fuite"></div>
 <div id="stick"><div id="knob"></div></div>
 <div id="flottant"><div id="flottantKnob"></div></div>
 <div id="feux"></div>
@@ -553,142 +617,268 @@ document.addEventListener('click', function(e){
 
 <script>
 /* =========================================================
-   LA CARTE DU DOMAINE — repère 1400 x 800
-   Le tracé des allées ici DOIT correspondre à VOIES dans game.js
+   LE DOMAINE — repère 2400 x 1300
+   Le tracé ici DOIT correspondre au réseau NOEUDS/ARETES de game.js
    ========================================================= */
 function carteSVG(){
-  var s = '<svg class="carte" viewBox="0 0 1400 800" xmlns="http://www.w3.org/2000/svg">';
+  var s = '<svg class="carte" viewBox="0 0 2400 1300" xmlns="http://www.w3.org/2000/svg">';
 
-  s += '<rect width="1400" height="800" fill="#79C46B"/>';
-  var taches = [[70,330],[1330,330],[700,760],[240,760],[1160,760],[70,600],[1330,600]];
+  s += '<rect width="2400" height="1300" fill="#79C46B"/>';
+  var taches = [[110,760],[2290,760],[1200,1270],[420,60],[1980,60],[110,380],[2290,380],[700,1270],[1700,1270]];
   for (var t=0;t<taches.length;t++){
-    s += '<ellipse cx="'+taches[t][0]+'" cy="'+taches[t][1]+'" rx="66" ry="30" fill="#8AD177" opacity=".65"/>';
+    s += '<ellipse cx="'+taches[t][0]+'" cy="'+taches[t][1]+'" rx="105" ry="46" fill="#8AD177" opacity=".6"/>';
   }
 
-  // ---------- ALLÉES ----------
-  var trace =
-    '<rect x="130" y="150" width="1140" height="530" rx="54"/>' +   // anneau
-    '<path d="M700 150 L700 680"/>' +                               // allée verticale
-    '<path d="M130 415 L1270 415"/>' +                              // allée horizontale
-    '<path d="M700 150 L700 95"/>' +                                 // montée vers le chantier
-    '<path d="M400 415 L400 330"/>' +                                // allée du jardin AMOUR
-    '<path d="M1000 415 L1000 330"/>' +                              // allée du TEMPLE
-    '<path d="M400 680 L400 600"/>' +                                // allée de la BANQUE
-    '<path d="M1000 680 L1000 600"/>';                               // allée de la SANTÉ
-  s += '<g stroke="#CBB88C" stroke-width="66" fill="none" stroke-linecap="round">' + trace + '</g>';
-  s += '<g stroke="#EADCB8" stroke-width="52" fill="none" stroke-linecap="round">' + trace + '</g>';
+  // ---------- LES RACCOURCIS : plus étroits, sol différent ----------
+  var raccourcis = '<path d="M760 520 L760 980"/><path d="M1780 520 L1780 980"/>';
+  s += '<g stroke="#B49A6A" stroke-width="46" fill="none" stroke-linecap="round">' + raccourcis + '</g>';
+  s += '<g stroke="#D6C08A" stroke-width="32" fill="none" stroke-linecap="round" ' +
+       'stroke-dasharray="26 16">' + raccourcis + '</g>';
 
-  // ---------- PLACE CENTRALE ----------
-  s += '<rect x="552" y="417" width="296" height="246" rx="26" fill="#CBB88C"/>';
-  s += '<rect x="562" y="427" width="276" height="226" rx="20" fill="#DCD3C4"/>';
-  var lits = [[640,480],[760,480],[640,600],[760,600]];
+  // ---------- LES ALLÉES PRINCIPALES ----------
+  var trace =
+    '<rect x="200" y="260" width="2000" height="920" rx="70"/>' +   // anneau extérieur
+    '<path d="M1200 260 L1200 1180"/>' +                            // axe central
+    '<path d="M200 520 L2200 520"/>' +                              // allée nord
+    '<path d="M200 980 L2200 980"/>' +                              // allée sud
+    '<path d="M1000 260 L1000 150"/>' +                             // montée du chantier
+    '<path d="M760 520 L760 430"/><path d="M1780 520 L1780 430"/>' +
+    '<path d="M520 980 L520 1070"/><path d="M1880 980 L1880 1070"/>' +
+    '<path d="M2200 720 L2380 720"/>';                              // sortie est
+  s += '<g stroke="#CBB88C" stroke-width="96" fill="none" stroke-linecap="round">' + trace + '</g>';
+  s += '<g stroke="#EADCB8" stroke-width="78" fill="none" stroke-linecap="round">' + trace + '</g>';
+
+  // ---------- LE FOYER ----------
+  s += '<rect x="1014" y="614" width="372" height="272" rx="34" fill="#CBB88C"/>';
+  s += '<rect x="1028" y="628" width="344" height="244" rx="26" fill="#DCD3C4"/>';
+  var lits = [[1116,700],[1284,700],[1116,800],[1284,800]];
   for (var L=0;L<lits.length;L++){
     s += '<g transform="translate('+lits[L][0]+','+lits[L][1]+')">';
-    s += '<rect x="-38" y="-30" width="76" height="60" rx="10" fill="#8C6A4A" stroke="#5B4430" stroke-width="4"/>';
-    s += '<rect x="-32" y="-24" width="64" height="48" rx="8" fill="#FFF6E4"/>';
-    s += '<rect x="-32" y="-24" width="64" height="16" rx="8" fill="#E8DCC6"/></g>';
+    s += '<rect x="-44" y="-34" width="88" height="68" rx="12" fill="#8C6A4A" stroke="#5B4430" stroke-width="5"/>';
+    s += '<rect x="-37" y="-27" width="74" height="54" rx="9" fill="#FFF6E4"/>';
+    s += '<rect x="-37" y="-27" width="74" height="18" rx="9" fill="#E8DCC6"/></g>';
   }
 
-  // ---------- AMOUR : maison rose et jardin fleuri (400,270) ----------
-  s += '<g transform="translate(400,270)">';
-  s += '<rect x="-140" y="-95" width="280" height="190" rx="24" fill="#A9E27C" stroke="#4E8F45" stroke-width="6"/>';
-  var fl = [[-112,-64],[-78,-76],[-46,-62],[104,-66],[112,-32],[-116,50],[-84,68],[104,52],[72,72],[-50,76],[6,80],[46,-80]];
+  // ---------- FLEURISTE : maison rose (760,390) ----------
+  s += '<g transform="translate(760,390)">';
+  s += '<rect x="-175" y="-118" width="350" height="236" rx="30" fill="#A9E27C" stroke="#4E8F45" stroke-width="7"/>';
+  var fl = [[-140,-80],[-98,-95],[-58,-78],[130,-82],[140,-40],[-145,62],[-105,85],[130,65],[90,90],[-62,95],[8,100],[58,-100]];
   var cf = ['#FF7FB0','#FFD166','#FF5C7A','#FFFFFF','#FF9EC4'];
   for (var f=0;f<fl.length;f++){
-    s += '<g transform="translate('+fl[f][0]+','+fl[f][1]+')"><circle r="9" fill="'+cf[f%cf.length]+'" stroke="#2B2118" stroke-width="2.4"/><circle r="3.4" fill="#FFD166"/></g>';
+    s += '<g transform="translate('+fl[f][0]+','+fl[f][1]+')"><circle r="11" fill="'+cf[f%cf.length]+
+         '" stroke="#2B2118" stroke-width="3"/><circle r="4" fill="#FFD166"/></g>';
   }
-  s += '<rect x="-72" y="-46" width="144" height="102" rx="14" fill="#FF9EC4" stroke="#2B2118" stroke-width="5"/>';
-  s += '<path d="M-86 -46 L0 -94 L86 -46 Z" fill="#E4568C" stroke="#2B2118" stroke-width="5" stroke-linejoin="round"/>';
-  s += '<rect x="-19" y="10" width="38" height="46" rx="6" fill="#8C4A2F" stroke="#2B2118" stroke-width="4"/>';
-  s += '<circle cx="9" cy="34" r="3.5" fill="#FFD166"/>';
-  s += '<rect x="-58" y="-24" width="28" height="24" rx="5" fill="#FFF6E4" stroke="#2B2118" stroke-width="4"/>';
-  s += '<rect x="30" y="-24" width="28" height="24" rx="5" fill="#FFF6E4" stroke="#2B2118" stroke-width="4"/>';
+  s += '<rect x="-90" y="-58" width="180" height="128" rx="17" fill="#FF9EC4" stroke="#2B2118" stroke-width="6"/>';
+  s += '<path d="M-108 -58 L0 -118 L108 -58 Z" fill="#E4568C" stroke="#2B2118" stroke-width="6" stroke-linejoin="round"/>';
+  s += '<rect x="-24" y="12" width="48" height="58" rx="7" fill="#8C4A2F" stroke="#2B2118" stroke-width="5"/>';
+  s += '<circle cx="11" cy="42" r="4.5" fill="#FFD166"/>';
+  s += '<rect x="-72" y="-30" width="35" height="30" rx="6" fill="#FFF6E4" stroke="#2B2118" stroke-width="5"/>';
+  s += '<rect x="37" y="-30" width="35" height="30" rx="6" fill="#FFF6E4" stroke="#2B2118" stroke-width="5"/>';
   s += '</g>';
 
-  // ---------- TEMPLE : blanc à coupoles (1000,270) ----------
-  s += '<g transform="translate(1000,270)">';
-  s += '<rect x="-140" y="-95" width="280" height="190" rx="24" fill="#DCE9CE" stroke="#4E8F45" stroke-width="6"/>';
-  s += '<rect x="-90" y="-38" width="180" height="94" rx="12" fill="#FFFFFF" stroke="#2B2118" stroke-width="5"/>';
-  s += '<rect x="-90" y="-38" width="180" height="20" rx="10" fill="#EFEFE6" stroke="#2B2118" stroke-width="5"/>';
-  var domes = [[-52,-48,24],[0,-60,31],[52,-48,24]];
+  // ---------- LIEU DE CULTE : blanc à coupoles (1780,390) ----------
+  s += '<g transform="translate(1780,390)">';
+  s += '<rect x="-175" y="-118" width="350" height="236" rx="30" fill="#DCE9CE" stroke="#4E8F45" stroke-width="7"/>';
+  s += '<rect x="-112" y="-48" width="224" height="118" rx="15" fill="#FFFFFF" stroke="#2B2118" stroke-width="6"/>';
+  s += '<rect x="-112" y="-48" width="224" height="26" rx="12" fill="#EFEFE6" stroke="#2B2118" stroke-width="6"/>';
+  var domes = [[-65,-60,30],[0,-76,39],[65,-60,30]];
   for (var d=0;d<domes.length;d++){
     var D = domes[d];
-    s += '<path d="M'+(D[0]-D[2])+' '+D[1]+' a'+D[2]+' '+D[2]+' 0 0 1 '+(D[2]*2)+' 0 z" fill="#FFFFFF" stroke="#2B2118" stroke-width="5" stroke-linejoin="round"/>';
-    s += '<line x1="'+D[0]+'" y1="'+(D[1]-D[2])+'" x2="'+D[0]+'" y2="'+(D[1]-D[2]-14)+'" stroke="#F2B705" stroke-width="6" stroke-linecap="round"/>';
-    s += '<circle cx="'+D[0]+'" cy="'+(D[1]-D[2]-18)+'" r="6" fill="#F2B705" stroke="#2B2118" stroke-width="3"/>';
+    s += '<path d="M'+(D[0]-D[2])+' '+D[1]+' a'+D[2]+' '+D[2]+' 0 0 1 '+(D[2]*2)+' 0 z" fill="#FFFFFF" stroke="#2B2118" stroke-width="6" stroke-linejoin="round"/>';
+    s += '<line x1="'+D[0]+'" y1="'+(D[1]-D[2])+'" x2="'+D[0]+'" y2="'+(D[1]-D[2]-18)+'" stroke="#F2B705" stroke-width="7" stroke-linecap="round"/>';
+    s += '<circle cx="'+D[0]+'" cy="'+(D[1]-D[2]-23)+'" r="7.5" fill="#F2B705" stroke="#2B2118" stroke-width="4"/>';
   }
-  s += '<path d="M-18 56 v-40 a18 18 0 0 1 36 0 v40 z" fill="#8B9BFF" stroke="#2B2118" stroke-width="4"/>';
-  s += '<circle cx="-112" cy="62" r="15" fill="#5FA84E" stroke="#2B2118" stroke-width="4"/>';
-  s += '<circle cx="112" cy="62" r="15" fill="#5FA84E" stroke="#2B2118" stroke-width="4"/>';
+  s += '<path d="M-23 70 v-50 a23 23 0 0 1 46 0 v50 z" fill="#8B9BFF" stroke="#2B2118" stroke-width="5"/>';
+  s += '<circle cx="-140" cy="78" r="19" fill="#5FA84E" stroke="#2B2118" stroke-width="5"/>';
+  s += '<circle cx="140" cy="78" r="19" fill="#5FA84E" stroke="#2B2118" stroke-width="5"/>';
   s += '</g>';
 
-  // ---------- BANQUE : colonnes dorées (400,540) ----------
-  s += '<g transform="translate(400,540)">';
-  s += '<rect x="-140" y="-95" width="280" height="190" rx="24" fill="#D9E7C4" stroke="#4E8F45" stroke-width="6"/>';
-  s += '<rect x="-96" y="-34" width="192" height="98" rx="10" fill="#FFF0C2" stroke="#2B2118" stroke-width="5"/>';
-  s += '<path d="M-106 -34 L0 -82 L106 -34 Z" fill="#F2B705" stroke="#2B2118" stroke-width="5" stroke-linejoin="round"/>';
+  // ---------- BANQUE (520,1080) ----------
+  s += '<g transform="translate(520,1080)">';
+  s += '<rect x="-175" y="-118" width="350" height="236" rx="30" fill="#D9E7C4" stroke="#4E8F45" stroke-width="7"/>';
+  s += '<rect x="-120" y="-42" width="240" height="122" rx="12" fill="#FFF0C2" stroke="#2B2118" stroke-width="6"/>';
+  s += '<path d="M-133 -42 L0 -104 L133 -42 Z" fill="#F2B705" stroke="#2B2118" stroke-width="6" stroke-linejoin="round"/>';
   for (var c=-3;c<=3;c++){
-    s += '<rect x="'+(c*27-7)+'" y="-24" width="14" height="76" rx="4" fill="#FFFFFF" stroke="#2B2118" stroke-width="4"/>';
+    s += '<rect x="'+(c*34-9)+'" y="-30" width="18" height="96" rx="5" fill="#FFFFFF" stroke="#2B2118" stroke-width="5"/>';
   }
-  s += '<rect x="-21" y="12" width="42" height="52" rx="6" fill="#5B4430" stroke="#2B2118" stroke-width="4"/>';
-  s += '<text x="0" y="-44" text-anchor="middle" font-family="Arial" font-size="32" font-weight="900" fill="#2B2118">$</text>';
-  s += '<rect x="70" y="66" width="42" height="24" rx="6" fill="#3FBF6F" stroke="#2B2118" stroke-width="4"/>';
-  s += '<rect x="64" y="58" width="42" height="24" rx="6" fill="#5FD98A" stroke="#2B2118" stroke-width="4"/>';
+  s += '<rect x="-26" y="14" width="52" height="66" rx="7" fill="#5B4430" stroke="#2B2118" stroke-width="5"/>';
+  s += '<text x="0" y="-56" text-anchor="middle" font-family="Arial" font-size="40" font-weight="900" fill="#2B2118">$</text>';
+  s += '<rect x="88" y="82" width="52" height="30" rx="7" fill="#3FBF6F" stroke="#2B2118" stroke-width="5"/>';
+  s += '<rect x="80" y="72" width="52" height="30" rx="7" fill="#5FD98A" stroke="#2B2118" stroke-width="5"/>';
   s += '</g>';
 
-  // ---------- SANTÉ : clinique à toit végétal (1000,540) ----------
-  s += '<g transform="translate(1000,540)">';
-  s += '<rect x="-140" y="-95" width="280" height="190" rx="24" fill="#CFE8C0" stroke="#4E8F45" stroke-width="6"/>';
-  s += '<rect x="-98" y="-44" width="196" height="108" rx="14" fill="#FFFFFF" stroke="#2B2118" stroke-width="5"/>';
-  s += '<rect x="-98" y="-44" width="196" height="42" rx="14" fill="#5FD98A" stroke="#2B2118" stroke-width="5"/>';
-  s += '<rect x="-13" y="-27" width="26" height="8" rx="3" fill="#FFFFFF"/>';
-  s += '<rect x="-4" y="-36" width="8" height="26" rx="3" fill="#FFFFFF"/>';
-  s += '<rect x="-21" y="20" width="42" height="44" rx="6" fill="#7BD3F7" stroke="#2B2118" stroke-width="4"/>';
-  s += '<rect x="-78" y="10" width="32" height="26" rx="5" fill="#DFF3FF" stroke="#2B2118" stroke-width="4"/>';
-  s += '<rect x="46" y="10" width="32" height="26" rx="5" fill="#DFF3FF" stroke="#2B2118" stroke-width="4"/>';
-  s += '<circle cx="-112" cy="-62" r="15" fill="#5FA84E" stroke="#2B2118" stroke-width="4"/>';
-  s += '<circle cx="112" cy="-62" r="15" fill="#5FA84E" stroke="#2B2118" stroke-width="4"/>';
+  // ---------- CLINIQUE (1880,1080) ----------
+  s += '<g transform="translate(1880,1080)">';
+  s += '<rect x="-175" y="-118" width="350" height="236" rx="30" fill="#CFE8C0" stroke="#4E8F45" stroke-width="7"/>';
+  s += '<rect x="-122" y="-55" width="244" height="135" rx="17" fill="#FFFFFF" stroke="#2B2118" stroke-width="6"/>';
+  s += '<rect x="-122" y="-55" width="244" height="52" rx="17" fill="#5FD98A" stroke="#2B2118" stroke-width="6"/>';
+  s += '<rect x="-16" y="-34" width="32" height="10" rx="4" fill="#FFFFFF"/>';
+  s += '<rect x="-5" y="-45" width="10" height="32" rx="4" fill="#FFFFFF"/>';
+  s += '<rect x="-26" y="25" width="52" height="55" rx="7" fill="#7BD3F7" stroke="#2B2118" stroke-width="5"/>';
+  s += '<rect x="-98" y="12" width="40" height="33" rx="6" fill="#DFF3FF" stroke="#2B2118" stroke-width="5"/>';
+  s += '<rect x="58" y="12" width="40" height="33" rx="6" fill="#DFF3FF" stroke="#2B2118" stroke-width="5"/>';
+  s += '<circle cx="-140" cy="-78" r="19" fill="#5FA84E" stroke="#2B2118" stroke-width="5"/>';
+  s += '<circle cx="140" cy="-78" r="19" fill="#5FA84E" stroke="#2B2118" stroke-width="5"/>';
   s += '</g>';
 
-  // ---------- CHANTIER (700,70) ----------
-  s += '<g transform="translate(700,70)">';
-  s += '<rect x="-180" y="-62" width="360" height="130" rx="20" fill="#E8C98A" stroke="#B08A4A" stroke-width="6"/>';
-  s += '<rect x="-150" y="-40" width="104" height="96" rx="6" fill="#C9C2B4" stroke="#2B2118" stroke-width="5"/>';
-  for (var b=0;b<3;b++){
-    s += '<line x1="-150" y1="'+(-40+b*30)+'" x2="-46" y2="'+(-40+b*30)+'" stroke="#8E877A" stroke-width="4"/>';
+  // ---------- CHANTIER (1100,110) ----------
+  s += '<g transform="translate(1100,110)">';
+  s += '<rect x="-230" y="-95" width="460" height="200" rx="26" fill="#E8C98A" stroke="#B08A4A" stroke-width="7"/>';
+  s += '<rect x="-190" y="-60" width="130" height="150" rx="8" fill="#C9C2B4" stroke="#2B2118" stroke-width="6"/>';
+  for (var b=0;b<4;b++){
+    s += '<line x1="-190" y1="'+(-60+b*38)+'" x2="-60" y2="'+(-60+b*38)+'" stroke="#8E877A" stroke-width="5"/>';
   }
-  s += '<g stroke="#F2B705" stroke-width="6" stroke-linecap="round">';
-  s += '<line x1="-158" y1="-46" x2="-158" y2="58"/><line x1="-38" y1="-46" x2="-38" y2="58"/>';
-  s += '<line x1="-158" y1="-8" x2="-38" y2="-8"/><line x1="-158" y1="28" x2="-38" y2="28"/></g>';
+  s += '<g stroke="#F2B705" stroke-width="7" stroke-linecap="round">';
+  s += '<line x1="-200" y1="-68" x2="-200" y2="92"/><line x1="-50" y1="-68" x2="-50" y2="92"/>';
+  s += '<line x1="-200" y1="-14" x2="-50" y2="-14"/><line x1="-200" y1="40" x2="-50" y2="40"/></g>';
   s += '<g stroke-linecap="round">';
-  s += '<line x1="132" y1="58" x2="132" y2="-52" stroke="#FF8A3D" stroke-width="10"/>';
-  s += '<line x1="92" y1="-52" x2="176" y2="-52" stroke="#FF8A3D" stroke-width="9"/>';
-  s += '<line x1="160" y1="-48" x2="160" y2="-16" stroke="#7A6A55" stroke-width="4"/></g>';
-  s += '<rect x="148" y="-16" width="26" height="20" rx="4" fill="#8C6A4A" stroke="#2B2118" stroke-width="4"/>';
-  s += '<rect x="10" y="26" width="32" height="24" rx="6" fill="#DCD3C4" stroke="#2B2118" stroke-width="4"/>';
-  s += '<rect x="48" y="32" width="32" height="22" rx="6" fill="#C9BFAE" stroke="#2B2118" stroke-width="4"/>';
-  s += '<path d="M-14 58 l11 -30 l11 30 z" fill="#FF8A3D" stroke="#2B2118" stroke-width="4" stroke-linejoin="round"/>';
+  s += '<line x1="170" y1="92" x2="170" y2="-72" stroke="#FF8A3D" stroke-width="13"/>';
+  s += '<line x1="118" y1="-72" x2="224" y2="-72" stroke="#FF8A3D" stroke-width="12"/>';
+  s += '<line x1="205" y1="-66" x2="205" y2="-22" stroke="#7A6A55" stroke-width="5"/></g>';
+  s += '<rect x="188" y="-22" width="34" height="28" rx="5" fill="#8C6A4A" stroke="#2B2118" stroke-width="5"/>';
+  s += '<rect x="20" y="46" width="44" height="34" rx="8" fill="#DCD3C4" stroke="#2B2118" stroke-width="5"/>';
+  s += '<rect x="72" y="54" width="44" height="30" rx="8" fill="#C9BFAE" stroke="#2B2118" stroke-width="5"/>';
   s += '</g>';
 
-  // ---------- seuils devant chaque porte ----------
-  var portes = [[400,336],[1000,336],[400,606],[1000,606]];
-  for (var pp=0;pp<portes.length;pp++){
-    s += '<rect x="'+(portes[pp][0]-30)+'" y="'+(portes[pp][1]-9)+'" width="60" height="18" rx="7" ' +
-         'fill="#B08A4A" stroke="#2B2118" stroke-width="3"/>';
+  // ---------- OBSTACLES FIXES ----------
+  // tas de briques près du chantier : impose le détour par la gauche
+  s += '<g transform="translate(1200,205)">';
+  for (var br=0;br<7;br++){
+    var bx = -46 + (br % 4) * 26, by = -14 + Math.floor(br / 4) * 20;
+    s += '<rect x="'+bx+'" y="'+by+'" width="24" height="17" rx="3" fill="#C2703A" stroke="#2B2118" stroke-width="4"/>';
+  }
+  s += '</g>';
+  // haie épaisse sur l'axe fleuriste
+  s += '<rect x="890" y="470" width="230" height="42" rx="21" fill="#4E8F45" stroke="#2B2118" stroke-width="5"/>';
+  s += '<rect x="905" y="478" width="200" height="16" rx="8" fill="#69A85C"/>';
+  // petit muret sur l'axe clinique
+  s += '<rect x="1480" y="1010" width="210" height="34" rx="8" fill="#D8D2C6" stroke="#2B2118" stroke-width="5"/>';
+  for (var mu=0;mu<4;mu++){
+    s += '<line x1="'+(1480+42+mu*42)+'" y1="1010" x2="'+(1480+42+mu*42)+'" y2="1044" stroke="#2B2118" stroke-width="3"/>';
+  }
+  // parterre fermé près du foyer
+  s += '<rect x="1010" y="930" width="380" height="52" rx="24" fill="#A9E27C" stroke="#4E8F45" stroke-width="6"/>';
+  for (var pa=0;pa<7;pa++){
+    s += '<circle cx="'+(1046+pa*52)+'" cy="956" r="10" fill="'+cf[pa%cf.length]+'" stroke="#2B2118" stroke-width="3"/>';
+  }
+  // banc et arbre sur l'axe du culte
+  s += '<rect x="1560" y="452" width="96" height="24" rx="8" fill="#8C6A4A" stroke="#2B2118" stroke-width="5"/>';
+  s += '<rect x="1572" y="476" width="12" height="20" fill="#5B4430"/>';
+  s += '<rect x="1632" y="476" width="12" height="20" fill="#5B4430"/>';
+
+  // ---------- ZONES DE CALME (ombre) ----------
+  var ombres = [[200,760,1],[2200,860,-1]];
+  for (var o=0;o<ombres.length;o++){
+    var ox = ombres[o][0], oy = ombres[o][1], sens = ombres[o][2];
+    // l'ombre couvre l'allée ; l'arbre est planté juste à côté
+    s += '<ellipse cx="'+ox+'" cy="'+oy+'" rx="130" ry="98" fill="rgba(24,52,26,.3)"/>';
+    var ax = ox + sens * 128;
+    s += '<circle cx="'+ax+'" cy="'+(oy-24)+'" r="74" fill="#4E8F45" stroke="#3E7635" stroke-width="8"/>';
+    s += '<circle cx="'+(ax - sens*30)+'" cy="'+(oy-52)+'" r="34" fill="#69A85C"/>';
+    s += '<rect x="'+(ax-13)+'" y="'+(oy+34)+'" width="26" height="52" fill="#6B4326" stroke="#2B2118" stroke-width="6"/>';
   }
 
-  // ---------- marques au sol des points d'arrêt ----------
-  var arrets = [[400,336],[1000,336],[400,606],[1000,606],[700,100]];
-  for (var a=0;a<arrets.length;a++){
-    s += '<circle cx="'+arrets[a][0]+'" cy="'+arrets[a][1]+'" r="46" fill="none" stroke="#FFFFFF" stroke-width="4" opacity=".5" stroke-dasharray="10 9"/>';
-  }
+  // ---------- SORTIE EST ----------
+  s += '<g transform="translate(2330,720)">';
+  s += '<rect x="-16" y="-92" width="18" height="184" rx="8" fill="#8C6A4A" stroke="#2B2118" stroke-width="5"/>';
+  s += '<path d="M6 -70 h44 l-14 22 l14 22 h-44 z" fill="#FF5C7A" stroke="#2B2118" stroke-width="5" stroke-linejoin="round"/>';
+  s += '</g>';
 
-  // ---------- arbres, loin des allées ----------
-  var arbres = [[210,240],[600,240],[800,240],[1190,240],[210,600],[1190,600],[560,760],[840,760]];
+  // ---------- ARBRES ----------
+  var arbres = [[330,120],[2070,120],[330,1230],[2070,1230],[1200,1250],[100,900],[2300,900],[960,760],[1440,760]];
   for (var r=0;r<arbres.length;r++){
-    s += '<circle cx="'+arbres[r][0]+'" cy="'+(arbres[r][1]+7)+'" r="24" fill="rgba(0,0,0,.15)"/>';
-    s += '<circle cx="'+arbres[r][0]+'" cy="'+arbres[r][1]+'" r="24" fill="#5FA84E" stroke="#3E7635" stroke-width="5"/>';
-    s += '<circle cx="'+(arbres[r][0]-7)+'" cy="'+(arbres[r][1]-7)+'" r="8" fill="#79C46B"/>';
+    s += '<circle cx="'+arbres[r][0]+'" cy="'+(arbres[r][1]+9)+'" r="30" fill="rgba(0,0,0,.14)"/>';
+    s += '<circle cx="'+arbres[r][0]+'" cy="'+arbres[r][1]+'" r="30" fill="#5FA84E" stroke="#3E7635" stroke-width="6"/>';
+    s += '<circle cx="'+(arbres[r][0]-9)+'" cy="'+(arbres[r][1]-9)+'" r="11" fill="#79C46B"/>';
+  }
+
+  s += '</svg>';
+  return s;
+}
+
+
+/* =========================================================
+   LES QUATRE DAMES — silhouettes dessinées
+   Repère 64 x 92. Chaque partie animable porte une classe :
+   .tete .buste .brasG .brasD .voile
+   ========================================================= */
+function dameSVG(i){
+  var peau = ['#7A4A2B', '#8A5A3B', '#6B4326', '#8A5A3B'][i];
+  var s = '<svg viewBox="0 0 64 92" width="100%" height="100%" class="corps">';
+  s += '<ellipse cx="32" cy="87" rx="17" ry="5" fill="rgba(0,0,0,.28)"/>';
+
+  if (i === 0){
+    /* ---- PREMIÈRE DAME — l'aînée, boubou bordeaux, foulard indigo ---- */
+    s += '<g class="buste" stroke="#2B2118" stroke-width="2.6" stroke-linejoin="round">';
+    s += '<path d="M14 86 q0 -34 18 -34 q18 0 18 34 z" fill="#7A2E3B"/>';
+    s += '<path d="M14 86 q0 -34 18 -34 q18 0 18 34 z" fill="none"/>';
+    s += '<path d="M22 60 q10 -6 20 0 l-2 10 q-8 -5 -16 0 z" fill="#5E2230" stroke="none"/>';
+    s += '<g class="brasG"><path d="M18 60 q-6 12 -2 20" fill="none" stroke="#7A2E3B" stroke-width="7" stroke-linecap="round"/>' +
+         '<circle cx="17" cy="81" r="4" fill="' + peau + '"/></g>';
+    // la main posée sur la poitrine
+    s += '<g class="brasD"><path d="M46 60 q4 8 -8 12" fill="none" stroke="#8E3B49" stroke-width="7" stroke-linecap="round"/>' +
+         '<circle cx="37" cy="72" r="4.4" fill="' + peau + '"/></g>';
+    s += '<circle cx="32" cy="34" r="15" fill="' + peau + '"/>';
+    s += '<path d="M18 30 q2 -18 14 -18 q12 0 14 18 q-6 -8 -14 -8 q-8 0 -14 8 z" fill="#35407A"/>';
+    s += '<path d="M17 30 q-4 -6 2 -9 q4 12 26 0 q6 3 2 9 z" fill="#2A3466"/>';
+    s += '<path d="M25 36 q3 -3 6 0" fill="none" stroke="#2B2118" stroke-width="2.4" stroke-linecap="round"/>';
+    s += '<path d="M35 36 q3 -3 6 0" fill="none" stroke="#2B2118" stroke-width="2.4" stroke-linecap="round"/>';
+    s += '<path d="M28 45 q4 2 8 0" fill="none" stroke="#2B2118" stroke-width="2.2" stroke-linecap="round"/>';
+    s += '</g>';
+
+  } else if (i === 1){
+    /* ---- DEUXIÈME DAME — wax élégant, chignon, boucles d'oreilles ---- */
+    s += '<g class="buste" stroke="#2B2118" stroke-width="2.6" stroke-linejoin="round">';
+    s += '<path d="M15 86 q1 -36 17 -36 q16 0 17 36 z" fill="#E8632F"/>';
+    s += '<path d="M16 66 h32" stroke="#1E9B8A" stroke-width="5"/>';
+    s += '<path d="M15 76 h34" stroke="#F7C948" stroke-width="4.5"/>';
+    s += '<path d="M15 82 h34" stroke="#1E9B8A" stroke-width="3.5"/>';
+    s += '<g class="brasG"><path d="M19 58 q-8 10 -5 20" fill="none" stroke="#E8632F" stroke-width="7" stroke-linecap="round"/>' +
+         '<circle cx="15" cy="80" r="4.2" fill="' + peau + '"/></g>';
+    s += '<g class="brasD"><path d="M45 58 q8 10 5 20" fill="none" stroke="#D14F1E" stroke-width="7" stroke-linecap="round"/>' +
+         '<circle cx="49" cy="80" r="4.2" fill="' + peau + '"/></g>';
+    s += '<circle cx="32" cy="33" r="14.5" fill="' + peau + '"/>';
+    s += '<path d="M17 32 q0 -20 15 -20 q15 0 15 20 q-5 -9 -15 -9 q-10 0 -15 9 z" fill="#2B2118"/>';
+    s += '<circle cx="32" cy="13" r="7" fill="#2B2118"/>';
+    s += '<circle cx="17.5" cy="38" r="3.4" fill="#F7C948"/>';
+    s += '<circle cx="46.5" cy="38" r="3.4" fill="#F7C948"/>';
+    s += '<circle cx="27" cy="34" r="2.4" fill="#2B2118" stroke="none"/>';
+    s += '<circle cx="37" cy="34" r="2.4" fill="#2B2118" stroke="none"/>';
+    s += '<path d="M27 43 q5 4 10 0" fill="none" stroke="#2B2118" stroke-width="2.2" stroke-linecap="round"/>';
+    s += '</g>';
+
+  } else if (i === 2){
+    /* ---- TROISIÈME DAME — voile clair, tenue sobre, mains jointes ---- */
+    s += '<g class="buste" stroke="#2B2118" stroke-width="2.6" stroke-linejoin="round">';
+    s += '<path d="M15 86 q0 -35 17 -35 q17 0 17 35 z" fill="#2E5E4E"/>';
+    s += '<path d="M22 62 q10 -5 20 0 l-1 8 q-9 -4 -18 0 z" fill="#26503F" stroke="none"/>';
+    s += '<g class="brasG"><path d="M20 60 q-4 10 6 14" fill="none" stroke="#2E5E4E" stroke-width="6.5" stroke-linecap="round"/></g>';
+    s += '<g class="brasD"><path d="M44 60 q4 10 -6 14" fill="none" stroke="#26503F" stroke-width="6.5" stroke-linecap="round"/></g>';
+    s += '<ellipse cx="32" cy="75" rx="7" ry="5" fill="' + peau + '"/>';   // mains jointes
+    s += '<circle cx="32" cy="34" r="14.5" fill="' + peau + '"/>';
+    s += '<path class="voile" d="M16 36 q0 -24 16 -24 q16 0 16 24 q0 14 -6 18 q2 -18 -10 -18 q-12 0 -10 18 q-6 -4 -6 -18 z" fill="#F2EDE0"/>';
+    s += '<circle cx="27" cy="36" r="2.2" fill="#2B2118" stroke="none"/>';
+    s += '<circle cx="37" cy="36" r="2.2" fill="#2B2118" stroke="none"/>';
+    s += '<path d="M28 44 h8" stroke="#2B2118" stroke-width="2" stroke-linecap="round"/>';
+    s += '</g>';
+
+  } else {
+    /* ---- QUATRIÈME DAME — jeune, moderne, sac et lunettes ---- */
+    s += '<g class="buste" stroke="#2B2118" stroke-width="2.6" stroke-linejoin="round">';
+    s += '<path d="M17 86 q-1 -32 15 -32 q16 0 15 32 z" fill="#D6318F"/>';
+    s += '<path d="M18 70 h28" stroke="#F7C948" stroke-width="4"/>';
+    s += '<g class="brasG"><path d="M20 58 q-9 8 -7 18" fill="none" stroke="#D6318F" stroke-width="6.5" stroke-linecap="round"/>' +
+         '<circle cx="14" cy="78" r="4" fill="' + peau + '"/>' +
+         '<rect x="6" y="72" width="13" height="11" rx="3" fill="#F7C948" stroke="#2B2118" stroke-width="2.4"/></g>';
+    s += '<g class="brasD"><path d="M44 58 q10 6 8 16" fill="none" stroke="#B92578" stroke-width="6.5" stroke-linecap="round"/>' +
+         '<circle cx="52" cy="76" r="4.2" fill="' + peau + '"/></g>';
+    s += '<circle cx="32" cy="33" r="14.5" fill="' + peau + '"/>';
+    s += '<path d="M17 33 q0 -21 15 -21 q15 0 15 21 q-4 -10 -15 -10 q-11 0 -15 10 z" fill="#241A14"/>';
+    s += '<rect x="19" y="17" width="26" height="6" rx="3" fill="#2B2118"/>';   // lunettes sur la tête
+    s += '<circle cx="27" cy="34" r="2.5" fill="#2B2118" stroke="none"/>';
+    s += '<circle cx="37" cy="34" r="2.5" fill="#2B2118" stroke="none"/>';
+    s += '<path d="M27 43 q5 3 10 -1" fill="none" stroke="#2B2118" stroke-width="2.2" stroke-linecap="round"/>';
+    s += '</g>';
   }
 
   s += '</svg>';
@@ -702,7 +892,7 @@ function carteSVG(){
    ========================================================= */
 'use strict';
 
-var BUILD_TAG = 'LQD-v5.7';
+var BUILD_TAG = 'LQD-v6.2';
 document.getElementById('build').textContent = BUILD_TAG;
 
 /* ---------- affichage des erreurs, pour pouvoir diagnostiquer ---------- */
@@ -763,6 +953,7 @@ function surAppui(e){
     }
     if (n.id === 'sonBtn'){ try { basculerSon(); } catch (err) {} return; }
     if (n.id === 'voixBtn'){ try { basculerVoix(); } catch (err) {} return; }
+    if (n.id === 'mouvBtn'){ try { basculerMouvement(); } catch (err) {} return; }
     n = n.parentNode;
   }
 }
@@ -787,20 +978,22 @@ var CFG = {
   PALIER_JOURS: 15,       // tous les 15 jours...
   PALIER_HAUSSE: 0.30,    // ...tout augmente de 30 %
 
-  VITESSE: 12.5,
+  VITESSE: 7.2,          // grande carte : Modou couvre moins de % par seconde
   VIT_PLEIN: 1.40,        // à 100 de force, Modou file
   VIT_VIDE: 0.30,         // à zéro, il se traîne
   COURBE_VIT: 0.80,       // la perte se sent dès la première moitié
-  RAYON_ZONE: 0.042,
-  RAYON_CENTRE: 0.075,
+  RAYON_ZONE: 0.030,
+  RAYON_CENTRE: 0.052,
 
-  GAIN_ACHAT: 45,         // ce que l'objet rend à la Dame
+  GAIN_ACHAT: 52,         // ce que l'objet rend à la Dame
   COUT_ACHAT: 5,
   SCENE_MS: 1400,
   REPOS_MS: 600,
 
   SOUFFLE_PAR_SEC: 26,
-  COUT_MARCHE: 3.2,      // marcher use
+  COUT_MARCHE: 3.2,
+  RACCOURCI_PEINE: 1.6,   // les raccourcis usent davantage
+  OMBRE_REPIT: 0.35,      // à l'ombre, on souffle un peu      // marcher use
   COUT_REPOS: 0.3,
 
   MAX_JAUGE: 90,          // la barre des Dames plafonne 10 % plus bas
@@ -814,7 +1007,7 @@ var CFG = {
   JAUGE_RETOUR: 55,       // dans quel état elle revient
   VIT_RETOUR: 2.4,        // elle revient plus vite qu'elle n'est partie
   VIT_DAME: 3.5,          // elle s'en va lentement : Modou peut encore la rattraper
-  SORTIE_X: 108,          // au-delà du bord droit, elle est perdue
+  SORTIE_X: 103,          // au-delà du bord droit, elle est perdue
   DEUIL: [1.0, 1.45, 2.0],  // chaque Dame partie durcit tout le reste
   USURE_EPUISE: 0.9,      // à bout de force, les Dames se vident jusqu'à 1,9 fois plus vite
   SERIE_BONUS: 0.06,      // le chantier paie mieux si Modou tient sans s'arrêter
@@ -825,9 +1018,13 @@ var CFG = {
   RENDEMENT_FATIGUE: 0.62,
   RENDEMENT_EPUISE: 0.28,
 
-  APLAT: 0.70,            // le sol est écrasé : vue de trois quarts au lieu de plein ciel
+  APLAT: 0.74,            // le sol est écrasé : vue de trois quarts au lieu de plein ciel
   Z_LIBRE: 1.10,
-  Z_TRAVAIL: 1.55,
+  CAM_SOUS: 4.5,          // Modou reste un peu sous le centre de l'écran
+  CAM_LIGNE: 0.88,        // sur une longue ligne droite, le plan s'élargit
+  CAM_ALERTE: 0.55,       // plan B : durée du décalage vers le foyer
+  Z_FOYER: 1.22,          // plan D : on doit voir les quatre d'un coup
+  Z_TRAVAIL: 1.38,
   Z_SORTIE: 1.35,
   CAM_SOUPLESSE: 4.2
 };
@@ -837,65 +1034,79 @@ var DAMES = [
   { id:1, nom:'Première Dame',  lieu:'SANTE',  cri:'Je tousse encore…',
     demande:'Modou, ach\u00e8te-moi mes m\u00e9dicaments.',
     suite:'Ach\u00e8te-moi mes m\u00e9dicaments.', voix:{ hauteur:0.92, vitesse:0.84 },
-    usure:0.58, muette:false, bed:{x:45.7,y:60.0}, col:'--sante'  },
+    usure:0.42, muette:false, bed:{x:46.5,y:53.8}, col:'--sante'  },
   { id:2, nom:'Deuxième Dame',  lieu:'AMOUR',  cri:'Tu ne me vois plus.',
     demande:'Modou, am\u00e8ne-moi des fleurs.',
     suite:'Am\u00e8ne-moi des fleurs.', voix:{ hauteur:1.22, vitesse:0.98 },
-    usure:0.68, muette:false, bed:{x:54.3,y:60.0}, col:'--amour'  },
+    usure:0.49, muette:false, bed:{x:53.5,y:53.8}, col:'--amour'  },
   { id:3, nom:'Troisième Dame', lieu:'TEMPLE', cri:'…',
     demande:'Modou, j\u2019ai besoin de pri\u00e8res.',
     suite:'J\u2019ai besoin de pri\u00e8res.', voix:{ hauteur:1.08, vitesse:0.76 },
-    usure:0.48, muette:true,  bed:{x:45.7,y:75.0}, col:'--spirit' },
+    usure:0.35, muette:true,  bed:{x:46.5,y:61.5}, col:'--spirit' },
   { id:4, nom:'Quatrième Dame', lieu:'BANQUE', cri:'Il me faut ça demain.',
     demande:'Modou, j\u2019ai besoin d\u2019argent.',
     suite:'J\u2019ai besoin d\u2019argent.', voix:{ hauteur:1.42, vitesse:1.12 },
-    usure:0.84, muette:false, bed:{x:54.3,y:75.0}, col:'--argent' }
+    usure:0.60, muette:false, bed:{x:53.5,y:61.5}, col:'--argent' }
 ];
 
 /* ---------- LES CINQ LIEUX ---------- */
 /* x,y = centre de la zone · px,py = porte · cx,cy = comptoir (où le vendeur s'arrête) */
 var LIEUX = {
-  AMOUR:  { nom:'AMOUR',  icone:'\uD83D\uDC90', objet:'\uD83D\uDC90', prix:40, col:'--amour',
-            x:28.6, y:42.0, bx:28.6, by:33.8, mur:'#FFDCEB', sol:'#E9B9CE', ly:19.5,
+  AMOUR:  { nom:'FLEURISTE', icone:'\uD83D\uDC90', objet:'\uD83D\uDC90', prix:40, col:'--amour',
+            x:31.67, y:40.0, bx:31.67, by:30.0, mur:'#FFDCEB', sol:'#E9B9CE', ly:15.5,
             qui:'Tata Rose', mot:'Des fleurs pour la deuxi\u00e8me !',
             vend:{peau:'#8A5A3B', hab:'#FF7FB0', hab2:'#E4568C', tete:'#FF5C7A', barbe:0, lun:0} },
-  TEMPLE: { nom:'TEMPLE', icone:'\uD83D\uDCFF', objet:'\uD83D\uDCFF', prix:25, col:'--spirit',
-            x:71.4, y:42.0, bx:71.4, by:33.8, mur:'#EDEFFF', sol:'#C4CBEA', ly:19.5,
+  TEMPLE: { nom:'TEMPLE',    icone:'\uD83D\uDCFF', objet:'\uD83D\uDCFF', prix:25, col:'--spirit',
+            x:74.17, y:40.0, bx:74.17, by:30.0, mur:'#EDEFFF', sol:'#C4CBEA', ly:15.5,
             qui:'Le Vieux Serigne', mot:'Qu\u2019elle trouve la paix.',
             vend:{peau:'#8A5A3B', hab:'#F2F0E6', hab2:'#DAD6C4', tete:'#FFFFFF', barbe:1, lun:0} },
-  BANQUE: { nom:'BANQUE', icone:'\uD83D\uDCB5', objet:'\uD83D\uDCB5', prix:90, col:'--argent',
-            x:28.6, y:75.8, bx:28.6, by:67.5, mur:'#FFF3D2', sol:'#E5CF95', ly:88.0,
+  BANQUE: { nom:'BANQUE',    icone:'\uD83D\uDCB5', objet:'\uD83D\uDCB5', prix:90, col:'--argent',
+            x:21.67, y:78.5, bx:21.67, by:83.1, mur:'#FFF3D2', sol:'#E5CF95', ly:94.0,
             qui:'Monsieur Gomis', mot:'Elle a d\u00e9j\u00e0 tout d\u00e9pens\u00e9.',
             vend:{peau:'#6B4326', hab:'#2F3B52', hab2:'#1F293B', tete:'#2F3B52', barbe:0, lun:1} },
-  SANTE:  { nom:'SANTÉ',  icone:'\uD83D\uDC89', objet:'\uD83D\uDC89', prix:55, col:'--sante',
-            x:71.4, y:75.8, bx:71.4, by:67.5, mur:'#E8FBEF', sol:'#B8E3C8', ly:88.0,
-            qui:'Docteur Séka', mot:'Elle doit prendre \u00e7a chaque jour.',
+  SANTE:  { nom:'CLINIQUE',  icone:'\uD83D\uDC89', objet:'\uD83D\uDC89', prix:55, col:'--sante',
+            x:78.33, y:78.5, bx:78.33, by:83.1, mur:'#E8FBEF', sol:'#B8E3C8', ly:94.0,
+            qui:'Docteur S\u00e9ka', mot:'Elle doit prendre \u00e7a chaque jour.',
             vend:{peau:'#8A5A3B', hab:'#FFFFFF', hab2:'#E6EFEA', tete:'#FFFFFF', barbe:0, lun:1} }
 };
-var CHANTIER = { x:50.0, y:12.5, px:44.3, py:7.5, cx:46.6, cy:11.5, ly:20.5,
+var CHANTIER = { x:41.67, y:12.3, px:37.5, py:7.7, cx:39.2, cy:11.5, ly:2.5,
                  qui:'Le Patron', mot:'Tu es en retard, Modou.',
                  vend:{peau:'#6B4326', hab:'#FF8A3D', hab2:'#D96A22', tete:'#FFC53D', barbe:0, lun:0} };
-var CENTRE = { x:50.0, y:67.5, ly:88.0 };
+var CENTRE = { x:50.0, y:57.7, ly:74.5 };
 
-/* ---------- LE RÉSEAU D'ALLÉES (repère 1400 x 800) ----------
-   Les mêmes segments servent à trois choses : dessiner la carte,
-   empêcher Modou de couper à travers les jardins, et calculer ses trajets. */
+/* ---------- LE RÉSEAU D'ALLÉES (repère 2400 x 1300) ----------
+   Anneau extérieur, axe central, allée nord, allée sud, deux raccourcis. */
 var NOEUDS = {
-  TL:[130,150],  TR:[1270,150],  BL:[130,680],  BR:[1270,680],
-  HE:[700,150],  BF:[700,680],   GO:[130,415],  DR:[1270,415],
-  CX:[700,415],  FO:[700,540],   CH:[700,95],
-  AK:[400,415],  AP:[400,330],   TK:[1000,415], TP:[1000,330],
-  BK:[400,680],  BP:[400,600],   SK:[1000,680], SP:[1000,600]
+  RNG:[200,260],  RND:[2200,260],  RSG:[200,1180], RSD:[2200,1180],
+  VN:[1200,260],  VS:[1200,1180],
+  ANG:[200,520],  ANC:[1200,520],  AND:[2200,520],
+  ASG:[200,980],  ASC:[1200,980],  ASD:[2200,980],
+  RDM:[2200,720], SOR:[2380,720],
+  FO:[1200,750],
+  FLJ:[760,520],  FLP:[760,430],
+  CUJ:[1780,520], CUP:[1780,430],
+  BQJ:[520,980],  BQP:[520,1070],
+  CLJ:[1880,980], CLP:[1880,1070],
+  CHJ:[1000,260], CHP:[1000,150],
+  RCO:[760,980],  RCE:[1780,980]
 };
 var ARETES = [
-  ['TL','HE'],['HE','TR'],
-  ['TL','GO'],['GO','BL'],
-  ['TR','DR'],['DR','BR'],
-  ['BL','BK'],['BK','BF'],['BF','SK'],['SK','BR'],
-  ['GO','AK'],['AK','CX'],['CX','TK'],['TK','DR'],
-  ['HE','CX'],['CX','FO'],['FO','BF'],
-  ['HE','CH'],['AK','AP'],['TK','TP'],['BK','BP'],['SK','SP']
+  ['RNG','CHJ'],['CHJ','VN'],['VN','RND'],
+  ['RNG','ANG'],['ANG','ASG'],['ASG','RSG'],
+  ['RND','AND'],['AND','RDM'],['RDM','ASD'],['ASD','RSD'],['RDM','SOR'],
+  ['RSG','VS'],['VS','RSD'],
+  ['ANG','FLJ'],['FLJ','ANC'],['ANC','CUJ'],['CUJ','AND'],
+  ['ASG','BQJ'],['BQJ','ASC'],['ASC','CLJ'],['CLJ','ASD'],
+  ['VN','ANC'],['ANC','FO'],['FO','ASC'],['ASC','VS'],
+  ['FLJ','FLP'],['CUJ','CUP'],['BQJ','BQP'],['CLJ','CLP'],['CHJ','CHP'],
+  ['FLJ','RCO'],['RCO','BQJ'],
+  ['CUJ','RCE'],['RCE','CLJ']
 ];
+/* les deux raccourcis : plus courts, mais ils fatiguent davantage */
+var RACCOURCIS = [['FLJ','RCO'],['RCO','BQJ'],['CUJ','RCE'],['RCE','CLJ']];
+/* les deux zones d'ombre : on s'y use moins */
+var OMBRES = [{x:200,y:760,r:130},{x:2200,y:860,r:130}];
+
 var VOIES = ARETES.map(function(a){
   return [NOEUDS[a[0]][0], NOEUDS[a[0]][1], NOEUDS[a[1]][0], NOEUDS[a[1]][1]];
 });
@@ -907,8 +1118,8 @@ var VOISINS = {};
     VOISINS[ARETES[i][1]].push(ARETES[i][0]);
   }
 })();
-var PLACE = { x0:552, y0:417, x1:848, y1:663 };
-var DEMI = 30;
+var PLACE = { x0:1014, y0:614, x1:1386, y1:886 };
+var DEMI = 46;
 
 function distSeg(px, py, x1, y1, x2, y2){
   var dx = x2 - x1, dy = y2 - y1;
@@ -919,7 +1130,7 @@ function distSeg(px, py, x1, y1, x2, y2){
   return { d: Math.sqrt((px-qx)*(px-qx) + (py-qy)*(py-qy)), x:qx, y:qy, t:t };
 }
 function marchable(xPct, yPct){
-  var X = xPct * 14, Y = yPct * 8;
+  var X = xPct * 24, Y = yPct * 13;
   if (X > PLACE.x0 - DEMI && X < PLACE.x1 + DEMI &&
       Y > PLACE.y0 - DEMI && Y < PLACE.y1 + DEMI) return true;
   for (var i=0;i<VOIES.length;i++){
@@ -928,8 +1139,6 @@ function marchable(xPct, yPct){
   }
   return false;
 }
-
-/* projette un point sur l'allée la plus proche et rend ses deux extrémités */
 function surLAllee(X, Y){
   var best = null;
   for (var i=0;i<ARETES.length;i++){
@@ -940,10 +1149,8 @@ function surLAllee(X, Y){
   return best;
 }
 function ecart(a, b){
-  var dx = NOEUDS[a][0] - NOEUDS[b][0], dy = NOEUDS[a][1] - NOEUDS[b][1];
-  return Math.sqrt(dx*dx + dy*dy);
+  return Math.abs(NOEUDS[a][0] - NOEUDS[b][0]) + Math.abs(NOEUDS[a][1] - NOEUDS[b][1]);
 }
-/* plus court chemin entre deux nœuds (Dijkstra, le graphe est minuscule) */
 function routeEntre(depart, arrivee){
   var dist = {}, prec = {}, vus = {};
   for (var k in NOEUDS) dist[k] = Infinity;
@@ -951,8 +1158,7 @@ function routeEntre(depart, arrivee){
   while (true){
     var u = null, mn = Infinity;
     for (var n in dist){ if (!vus[n] && dist[n] < mn){ mn = dist[n]; u = n; } }
-    if (u === null) break;
-    if (u === arrivee) break;
+    if (u === null || u === arrivee) break;
     vus[u] = true;
     var vs = VOISINS[u];
     for (var i=0;i<vs.length;i++){
@@ -968,41 +1174,53 @@ function routeEntre(depart, arrivee){
   }
   return route;
 }
-
-/* trajet complet, de la position de Modou jusqu'au point touché */
 function trajetVers(cibleXpct, cibleYpct){
-  var MX = S.modou.x * 14, MY = S.modou.y * 8;
-  var CX2 = cibleXpct * 14, CY2 = cibleYpct * 8;
+  var MX = S.modou.x * 24, MY = S.modou.y * 13;
+  var CX2 = cibleXpct * 24, CY2 = cibleYpct * 13;
   var dep = surLAllee(MX, MY), arr = surLAllee(CX2, CY2);
   if (!dep || !arr) return null;
-
   var meilleur = null;
   var paires = [[dep.a, arr.a],[dep.a, arr.b],[dep.b, arr.a],[dep.b, arr.b]];
   for (var i=0;i<paires.length;i++){
     var r = routeEntre(paires[i][0], paires[i][1]);
     if (!r) continue;
-    var L = Math.sqrt(Math.pow(dep.x-NOEUDS[r[0]][0],2) + Math.pow(dep.y-NOEUDS[r[0]][1],2));
+    var L = Math.abs(dep.x-NOEUDS[r[0]][0]) + Math.abs(dep.y-NOEUDS[r[0]][1]);
     for (var j=0;j<r.length-1;j++) L += ecart(r[j], r[j+1]);
-    var fin2 = r[r.length-1];
-    L += Math.sqrt(Math.pow(arr.x-NOEUDS[fin2][0],2) + Math.pow(arr.y-NOEUDS[fin2][1],2));
+    var f2 = r[r.length-1];
+    L += Math.abs(arr.x-NOEUDS[f2][0]) + Math.abs(arr.y-NOEUDS[f2][1]);
     if (!meilleur || L < meilleur.L) meilleur = { L:L, r:r };
   }
   if (!meilleur) return null;
-
-  var pts = [{ x:dep.x/14, y:dep.y/8 }];
+  var pts = [{ x:dep.x/24, y:dep.y/13 }];
   for (var k=0;k<meilleur.r.length;k++){
     var N = NOEUDS[meilleur.r[k]];
-    pts.push({ x:N[0]/14, y:N[1]/8 });
+    pts.push({ x:N[0]/24, y:N[1]/13 });
   }
-  pts.push({ x:arr.x/14, y:arr.y/8 });
-
-  // on enlève les points confondus
+  pts.push({ x:arr.x/24, y:arr.y/13 });
   var net = [];
   for (var m=0;m<pts.length;m++){
-    var p = pts[m], d = net.length ? net[net.length-1] : null;
-    if (!d || Math.abs(d.x-p.x) > 0.15 || Math.abs(d.y-p.y) > 0.15) net.push(p);
+    var p = pts[m], dd = net.length ? net[net.length-1] : null;
+    if (!dd || Math.abs(dd.x-p.x) > 0.1 || Math.abs(dd.y-p.y) > 0.1) net.push(p);
   }
   return net;
+}
+
+/* sur un raccourci ? à l'ombre ? */
+function surUnRaccourci(xPct, yPct){
+  var X = xPct * 24, Y = yPct * 13;
+  for (var i=0;i<RACCOURCIS.length;i++){
+    var a = NOEUDS[RACCOURCIS[i][0]], b = NOEUDS[RACCOURCIS[i][1]];
+    if (distSeg(X, Y, a[0], a[1], b[0], b[1]).d <= DEMI) return true;
+  }
+  return false;
+}
+function sousLOmbre(xPct, yPct){
+  var X = xPct * 24, Y = yPct * 13;
+  for (var i=0;i<OMBRES.length;i++){
+    var o = OMBRES[i];
+    if (Math.abs(X - o.x) < o.r && Math.abs(Y - o.y) < o.r * 0.75) return true;
+  }
+  return false;
 }
 
 /* ---------- ÉTAT ---------- */
@@ -1016,7 +1234,7 @@ function nouvelEtat(){
     crise:[0,0,0,0],
     parties:[false,false,false,false],
     sorties:0,
-    modou:{ x:50, y:51.9, dir:1, marche:false },
+    modou:{ x:50, y:57.7, dir:1, marche:false },
     zone:null,
     scene:null,       // { lieu, t, ok }
     cool:0,
@@ -1119,11 +1337,14 @@ function construire(){
     d.className = 'dame pos';
     d.style.left = D.bed.x + '%'; d.style.top = D.bed.y + '%';
     d.innerHTML =
-      '<div class="pastille" style="background:var(' + D.col + ')">' +
+      '<div class="pastille">' +
+        dameSVG(D.id - 1) +
         '<svg class="ring" viewBox="0 0 60 60">' +
           '<circle class="bg" cx="30" cy="30" r="25"></circle>' +
-          '<circle class="fg" cx="30" cy="30" r="25" stroke="#fff" stroke-dasharray="157" stroke-dashoffset="0"></circle>' +
-        '</svg>' + D.id +
+          '<circle class="fg" cx="30" cy="30" r="25" stroke="var(' + D.col + ')" ' +
+          'stroke-dasharray="157" stroke-dashoffset="0"></circle>' +
+        '</svg>' +
+        '<span class="num" style="background:var(' + D.col + ')">' + D.id + '</span>' +
         '<div class="cri">' + D.cri + '</div>' +
       '</div>';
     layer.appendChild(d);
@@ -1315,6 +1536,15 @@ function animerJambes(t, marche){
    ========================================================= */
 var AC = null, BUS_EFF = null, BUS_MUS = null, BRUIT = null;
 var SON_ON = true;
+var MOUV_REDUIT = false;
+try { MOUV_REDUIT = localStorage.getItem('lqd_mouv') === '0'; } catch (e) {}
+function basculerMouvement(){
+  MOUV_REDUIT = !MOUV_REDUIT;
+  try { localStorage.setItem('lqd_mouv', MOUV_REDUIT ? '0' : '1'); } catch (e) {}
+  var b = document.getElementById('mouvBtn');
+  if (b) b.classList.toggle('coupe', MOUV_REDUIT);
+  flash(MOUV_REDUIT ? 'Cam\u00e9ra calme.' : 'Cam\u00e9ra normale.', 1500);
+}
 
 function audioInit(){
   if (AC) return;
@@ -1603,6 +1833,10 @@ function couperLeDialogue(){
 function lancerLeDialogue(i){
   couperLeDialogue();
   var D = DAMES[i];
+  if (damesEl[i]){
+    damesEl[i].classList.add('appel');
+    setTimeout(function(){ if (damesEl[i]) damesEl[i].classList.remove('appel'); }, 2200);
+  }
 
   parleDame(i, 'Modou !');
   flash(D.nom + ' appelle Modou\u2026', 1400);
@@ -1857,27 +2091,95 @@ function clavier(){
 }
 
 /* ---------- CAMÉRA ---------- */
-var BW = 0, BH = 0, VW = 0, VH = 0, RATIO = 1400/800, TOP_PAD = 0;
+var BW = 0, BH = 0, VW = 0, VH = 0, RATIO = 2400/1300, TOP_PAD = 0;
 var CAM = { x:50, y:50, z:1.45, tx:50, ty:50, tz:1.45, libre:false };
+/* =========================================================
+   CAMÉRA — six plans, par ordre de priorité
+   A vue principale · B alerte Dame · C intérieur · D retour foyer
+   E départ d'une Dame · F fête
+   ========================================================= */
+var CAM_PLAN = 'A';
+var alerteCam = 0, alerteQui = -1, ligneDroite = 0, dernierSens = 0, bascule = 0;
+
+function signalerAlerte(i, discret){
+  if (MOUV_REDUIT) return;
+  alerteCam = discret ? CFG.CAM_ALERTE * 0.5 : CFG.CAM_ALERTE;
+  alerteQui = i;
+}
+function signalerBascule(){ if (!MOUV_REDUIT) bascule = 0.5; }
+
 function majCamera(dt){
-  var cx = S.modou.x, cy = S.modou.y, cz = CFG.Z_LIBRE;
-  if (S.fete){                       // plan très rapproché sur le foyer
+  var cx, cy, cz, souplesse = CFG.CAM_SOUPLESSE;
+
+  if (alerteCam > 0) alerteCam -= dt;
+  if (bascule > 0) bascule -= dt;
+
+  // combien de temps Modou file-t-il tout droit ?
+  if (S.modou.marche){
+    var sens = Math.abs(S.modou.dir) + (S.auto ? 2 : 0);
+    if (sens === dernierSens) ligneDroite = Math.min(2.5, ligneDroite + dt);
+    else { ligneDroite = 0; dernierSens = sens; }
+  } else ligneDroite = Math.max(0, ligneDroite - dt * 2);
+
+  if (S.fete){
+    /* ---- PLAN F : la fête, temps suspendu ---- */
+    CAM_PLAN = 'F';
+    var n = S.fete.niveau;
     cx = CENTRE.x; cy = CENTRE.y - 2;
-    cz = 2.7 + S.fete.niveau * 0.12;
+    cz = n >= 3 ? (2.2 - (n - 3) * 0.18)      // jours 100+ : cadre plus large
+               : (2.4 + n * 0.22);            // jours 10 à 60 : de plus en plus près
+    souplesse = 3.2;
   }
   else if (CAM.libre){
+    CAM_PLAN = 'L';
     cx = 50; cy = 50;
     cz = BW ? Math.min(VW / BW, VH / (BH * CFG.APLAT)) : 1;
   }
+  else if (S.zone && LIEUX[S.zone]){
+    /* ---- PLAN C : l'intérieur d'un bâtiment ---- */
+    CAM_PLAN = 'C';
+    cx = S.modou.x; cy = S.modou.y - CFG.CAM_SOUS * 0.5;
+    cz = CFG.Z_TRAVAIL;
+  }
   else if (S.sortieVue > 0){
+    /* ---- PLAN E : le départ, gros plan très court ---- */
+    CAM_PLAN = 'E';
     var qui = -1;
     for (var e=0;e<DAMES.length;e++){ if (S.exode[e] && !S.exode[e].retour) qui = e; }
-    if (qui >= 0){ cx = S.exode[qui].x; cy = S.exode[qui].y; cz = CFG.Z_SORTIE; }
-    else { cx = 50; cy = 60; cz = CFG.Z_SORTIE; }
+    if (qui >= 0){ cx = S.exode[qui].x; cy = S.exode[qui].y - 3; cz = CFG.Z_SORTIE; }
+    else { cx = CENTRE.x; cy = CENTRE.y; cz = CFG.Z_SORTIE; }
+    souplesse = 5;
   }
-  else if (S.zone){ cz = CFG.Z_TRAVAIL; }
+  else if (S.zone === 'CENTRE'){
+    /* ---- PLAN D : au foyer, on doit lire les quatre ---- */
+    CAM_PLAN = 'D';
+    cx = CENTRE.x; cy = CENTRE.y - 1.5;
+    cz = CFG.Z_FOYER;
+    souplesse = 3.4;
+  }
+  else if (alerteCam > 0 && alerteQui >= 0){
+    /* ---- PLAN B : une Dame appelle, léger décalage vers le foyer ---- */
+    CAM_PLAN = 'B';
+    var poids = DAMES[alerteQui].muette ? 0.18 : 0.34;   // la Troisième reste discrète
+    cx = S.modou.x + (CENTRE.x - S.modou.x) * poids;
+    cy = S.modou.y - CFG.CAM_SOUS + (CENTRE.y - S.modou.y) * poids;
+    cz = CFG.Z_LIBRE * (DAMES[alerteQui].muette ? 1.0 : 1.04);
+    souplesse = 5.5;
+  }
+  else {
+    /* ---- PLAN A : la vue principale, 85 à 90 % du temps ---- */
+    CAM_PLAN = 'A';
+    cx = S.modou.x;
+    cy = S.modou.y - CFG.CAM_SOUS;
+    cz = CFG.Z_LIBRE;
+    if (ligneDroite > 0.9) cz *= CFG.CAM_LIGNE;          // longue ligne droite : on élargit
+    if (bascule > 0) cz *= 0.94;                          // bascule jour/nuit
+  }
+
+  if (MOUV_REDUIT){ cz = CFG.Z_LIBRE; souplesse = 2.6; }
+
   CAM.tx = cx; CAM.ty = cy; CAM.tz = cz;
-  var k = 1 - Math.exp(-dt * CFG.CAM_SOUPLESSE);
+  var k = 1 - Math.exp(-dt * souplesse);
   CAM.x += (CAM.tx - CAM.x) * k;
   CAM.y += (CAM.ty - CAM.y) * k;
   CAM.z += (CAM.tz - CAM.z) * k;
@@ -2029,14 +2331,17 @@ function majCrises(){
     else if (v < CFG.SEUIL_MURMURE) n = 1;
 
     if (n !== S.crise[i]){
+      if (n === 1 && S.crise[i] < 1) signalerAlerte(i, true);
       if (n === 2 && S.crise[i] < 2){
         sonAppel();
+        signalerAlerte(i, DAMES[i].muette);
         if (i === urgente) lancerLeDialogue(i);
       }
       S.crise[i] = n;
     }
-    damesEl[i].className = 'dame pos' +
-      (n === 1 ? ' murmure basse' : '') + (n === 2 ? ' appelle basse' : '') +
+    damesEl[i].className = 'dame pos d' + (i+1) +
+      (n === 0 ? ' repos' : '') +
+      (n === 1 ? ' urgence basse' : '') + (n === 2 ? ' critique basse' : '') +
       (i === urgente && n >= 2 ? ' parle' : '') +
       (S.exode[i] ? ' sen-va parle' : '') +
       (DAMES[i].bed.x > 50 ? ' droite' : ' gauche');
@@ -2072,7 +2377,8 @@ function commencerExode(i){
   var D = DAMES[i];
   S.exode[i] = {
     x: D.bed.x, y: D.bed.y, etape: 0, retour: false,
-    route: [ {x:50, y:D.bed.y}, {x:50, y:51.9}, {x:90.7, y:51.9}, {x:CFG.SORTIE_X, y:51.9} ]
+    route: [ {x:50, y:D.bed.y}, {x:50, y:75.4}, {x:91.7, y:75.4},
+             {x:91.7, y:55.4}, {x:CFG.SORTIE_X, y:55.4} ]
   };
   damesEl[i].classList.add('sen-va');
   var bulle = damesEl[i].querySelector('.cri');
@@ -2088,6 +2394,26 @@ function commencerExode(i){
   flash(D.nom + ' s\u2019en va. Rattrape-la avant la sortie !', 3000);
   noter(S.jour, D.nom + ' s\u2019est lev\u00e9e pour partir.');
   S.sortieVue = 2.2;
+}
+
+function majIndicateurSortie(){
+  var z = document.getElementById('fuite');
+  if (!z) return;
+  var qui = -1;
+  for (var i=0;i<DAMES.length;i++){ if (S.exode[i] && !S.exode[i].retour) qui = i; }
+  if (qui < 0){ z.className = ''; return; }
+  var E = S.exode[qui];
+  // distance restante jusqu'à la sortie, en secondes
+  var reste = 0, x = E.x, y = E.y;
+  for (var k=E.etape;k<E.route.length;k++){
+    reste += Math.abs(E.route[k].x - x) + Math.abs(E.route[k].y - y) / RATIO;
+    x = E.route[k].x; y = E.route[k].y;
+  }
+  var sec = Math.max(0, Math.round(reste / (E.vit || CFG.VIT_DAME)));
+  z.className = 'on';
+  z.innerHTML = '<span class="fnum" style="background:var(' + DAMES[qui].col + ')">' +
+                DAMES[qui].id + '</span>' +
+                '<span class="ftxt">sortie dans ' + sec + ' s</span>';
 }
 
 function majExode(dt){
@@ -2114,6 +2440,7 @@ function majExode(dt){
       if (E.retour){                      // rentrée au lit
         var revenait = E.rachat;
         S.exode[i] = null;
+        damesEl[i].classList.remove('marche');
         damesEl[i].style.left = DAMES[i].bed.x + '%';
         damesEl[i].style.top  = DAMES[i].bed.y + '%';
         var b3 = damesEl[i].querySelector('.cri');
@@ -2145,6 +2472,7 @@ function majExode(dt){
       E.x = but.x; E.y = but.y; E.etape++;
     }
 
+    damesEl[i].classList.add('marche');
     damesEl[i].style.left = E.x + '%';
     damesEl[i].style.top  = E.y + '%';
   }
@@ -2182,15 +2510,16 @@ function faireRevenir(i){
 
   // elle rentre par où elle est sortie, mais d'un pas décidé
   var el = damesEl[i];
-  el.className = 'dame pos ' + (D.bed.x > 50 ? 'droite' : 'gauche');
+  el.className = 'dame pos d' + (i+1) + ' ' + (D.bed.x > 50 ? 'droite' : 'gauche');
   el.style.left = CFG.SORTIE_X + '%';
   el.style.top  = '51.9%';
   var bulle = el.querySelector('.cri');
   if (bulle) bulle.textContent = 'Je reviens.';
 
   S.exode[i] = {
-    x: CFG.SORTIE_X, y: 51.9, etape: 0, retour: true, rachat: true, vit: CFG.VIT_RETOUR,
-    route: [ {x:90.7, y:51.9}, {x:50, y:51.9}, {x:50, y:D.bed.y}, {x:D.bed.x, y:D.bed.y} ]
+    x: CFG.SORTIE_X, y: 55.4, etape: 0, retour: true, rachat: true, vit: CFG.VIT_RETOUR,
+    route: [ {x:91.7, y:55.4}, {x:91.7, y:75.4}, {x:50, y:75.4},
+             {x:50, y:D.bed.y}, {x:D.bed.x, y:D.bed.y} ]
   };
   S.sortieVue = 2.4;
   sonFoyer();
@@ -2384,6 +2713,7 @@ function tourDeBoucle(ts){
   var estNuit = S.nuit > 0.5;
   if (estNuit !== S.etaitNuit){
     S.etaitNuit = estNuit;
+    signalerBascule();
     if (estNuit){ note(220,0.8,'sine',0.2,0,BUS_EFF,165); flash('La nuit tombe. Le chantier ferme.', 2000); }
     else { note(392,0.7,'sine',0.2,0,BUS_EFF,523); flash('Le jour se l\u00e8ve. Le chantier rouvre.', 2000); }
   }
@@ -2459,7 +2789,10 @@ function tourDeBoucle(ts){
 
   // hors du cercle familial, le temps use Modou quoi qu'il fasse
   if (S.zone !== 'CENTRE'){
-    S.force = Math.max(0, S.force - (bouge ? CFG.COUT_MARCHE : CFG.COUT_REPOS) * dt);
+    var peine = bouge ? CFG.COUT_MARCHE : CFG.COUT_REPOS;
+    if (surUnRaccourci(S.modou.x, S.modou.y)) peine *= CFG.RACCOURCI_PEINE;
+    if (sousLOmbre(S.modou.x, S.modou.y)) peine *= CFG.OMBRE_REPIT;
+    S.force = Math.max(0, S.force - peine * dt);
   }
 
   // zone
@@ -2580,6 +2913,7 @@ function tourDeBoucle(ts){
   }
 
   majExode(dt);
+  majIndicateurSortie();
   animerJambes(S.temps, bouge);
   majCrises();
   rendre();
@@ -3305,7 +3639,7 @@ function restaurerLeDecor(){
       fermerLeFoyer(i);                       // maison grisée, barre retirée
       damesEl[i].className = 'dame pos partie';
       damesEl[i].style.left = CFG.SORTIE_X + '%';
-      damesEl[i].style.top  = '51.9%';
+      damesEl[i].style.top  = '55.4%';
     } else if (S.exode[i]){
       var E = S.exode[i];
       damesEl[i].style.left = E.x + '%';
