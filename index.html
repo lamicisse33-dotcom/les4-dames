@@ -636,6 +636,9 @@ button.cta{margin-top:4px;background:var(--or);color:var(--trait);border:3px sol
 button.cta:active{transform:translateY(3px);box-shadow:0 1px 0 var(--trait)}
 button.cta.ghost{background:var(--creme);color:var(--trait)}
 button.cta.hide{display:none}
+button.cta small{display:block;font-size:8px;font-weight:700;letter-spacing:.06em;
+  text-transform:none;opacity:.7;margin-top:2px}
+button.cta.petit{padding:8px 18px;font-size:10px;opacity:.75}
 button.cta{touch-action:manipulation;position:relative;z-index:2}
 .screen{touch-action:manipulation}
 #portrait{width:min(34vh,210px);height:min(40vh,248px);flex:0 0 auto;
@@ -774,7 +777,9 @@ button.cta{touch-action:manipulation;position:relative;z-index:2}
   Joystick pour marcher. Entre dans un cercle et l'affaire se fait toute seule.</p>
   <div id="recordAccueil"></div>
   <button class="cta ghost hide" id="btnReprendre">Reprendre</button>
+  <button class="cta hide" id="btnProgres">Continuer</button>
   <button class="cta" id="btnStart">Réveiller Modou</button>
+  <button class="cta ghost petit" id="btnZero">Repartir de zéro</button>
 </div>
 
 <div class="screen hide" id="scrFin">
@@ -785,7 +790,10 @@ button.cta{touch-action:manipulation;position:relative;z-index:2}
   <div id="journal"></div>
   <div id="verdictList"></div>
   <p class="lede" id="finTexte"></p>
-  <button class="cta" id="btnRejouer">Recommencer</button>
+  <div style="display:flex;gap:9px;flex-wrap:wrap;justify-content:center">
+    <button class="cta hide" id="btnProgres2">Continuer</button>
+    <button class="cta ghost" id="btnRejouer">Recommencer</button>
+  </div>
 </div>
 
 <div class="screen hide" id="scrBord">
@@ -1088,7 +1096,7 @@ function dameSVG(i){
    ========================================================= */
 'use strict';
 
-var BUILD_TAG = 'LQD-v8.0';
+var BUILD_TAG = 'LQD-v8.1';
 document.getElementById('build').textContent = BUILD_TAG;
 
 /* ---------- affichage des erreurs, pour pouvoir diagnostiquer ---------- */
@@ -1125,6 +1133,24 @@ function surAppui(e){
     }
     if (n.id === 'bordVider'){
       if (confirm('Effacer tout l\u2019historique des parties ?')){ effacerStats(); construireTableau(); }
+      return;
+    }
+    if (n.id === 'btnProgres' || n.id === 'btnProgres2'){
+      if (e.cancelable) e.preventDefault();
+      try {
+        sonBouton();
+        var pr = lireProgres();
+        if (pr) demarrerA(pr); else demarrer();
+      } catch (err){ montrerErreur('progression : ' + (err && err.message ? err.message : err)); }
+      return;
+    }
+    if (n.id === 'btnZero'){
+      if (e.cancelable) e.preventDefault();
+      if (confirm('Tout effacer et repartir du premier jour ?')){
+        effacerProgres(); effacerPartie();
+        majBoutonProgres(); majBoutonReprendre();
+        sonBouton();
+      }
       return;
     }
     if (n.id === 'btnReprendre'){
@@ -3772,6 +3798,7 @@ var TITRES = [
 ];
 function finir(cause){
   S.enCours = false;
+  ecrireProgres();
   enregistrerPartie();
   envoyerAudience();
   effacerPartie();
@@ -3844,6 +3871,7 @@ function finir(cause){
   document.getElementById('finTexte').innerHTML =
     verdictRecord + '<br><br>Modou a gagn\u00e9 <b>' + Math.round(S.gagne) + ' F</b> sur le chantier.';
   afficherRecordAccueil();
+  majBoutonProgres();
   document.getElementById('scrFin').classList.remove('hide');
 }
 
@@ -3928,6 +3956,7 @@ function ouvrirLeChapitre(){
   fanfare(Math.min(4, niveau));
   parler('On a tenu ! Al\u2019hamdoulillah !', VOIX_MODOU);
   noter(S.jour, 'Fin de la partie ' + niveau + '.');
+  ecrireProgres();
   sauvegarder();
 }
 
@@ -4502,6 +4531,66 @@ var DUREE_PORTE = 10000, DELAI_INDICE = 4000;
 })();
 
 /* =========================================================
+   LA PROGRESSION — ce que Modou a atteint, et ce qu'il possède.
+   Elle survit à la fin de partie : on ne recommence pas tout à zéro.
+   ========================================================= */
+var CLE_PROGRES = 'lqd_progres_v1';
+
+function lireProgres(){
+  try {
+    var d = JSON.parse(localStorage.getItem(CLE_PROGRES) || 'null');
+    if (!d || !d.partie) return null;
+    return d;
+  } catch (e) { return null; }
+}
+function ecrireProgres(){
+  if (!S) return;
+  var ancien = lireProgres() || { partie:1 };
+  var atteinte = Math.max(ancien.partie, S.fetes + 1);
+  var d = {
+    partie: atteinte,
+    ane: !!(S.ane || ancien.ane),
+    moto: !!(S.moto || ancien.moto),
+    toit: !!(S.toitRepare || ancien.toit),
+    jours: Math.max(ancien.jours || 0, S.jour)
+  };
+  try { localStorage.setItem(CLE_PROGRES, JSON.stringify(d)); } catch (e) {}
+}
+function effacerProgres(){
+  try { localStorage.removeItem(CLE_PROGRES); } catch (e) {}
+}
+
+/* on remet Modou dans l'état où il était au début de cette partie-là */
+function appliquerLaProgression(pr){
+  var n = pr.partie;
+  S.fetes = n - 1;
+  S.prochainJalon = n;
+  S.temps = CFG.MOIS * (n - 1) * CFG.SEC_PAR_JOUR;
+  S.jour = CFG.MOIS * (n - 1) + 1;
+  S.moisSalue = S.jour > 30;
+
+  // l'argent de départ suit le coût de la vie
+  S.argent = Math.round(CFG.ARGENT_DEPART * Math.pow(1 + CFG.PALIER_HAUSSE, palierActuel()));
+
+  if (n >= 3){
+    S.filsParti = true;
+    S.aneOffert = true;
+  }
+  if (n >= 4){
+    S.saisonPluies = true;
+    S.toitPropose = true;
+    S.prochaineAverse = 8;
+  }
+  if (n >= 5) S.motoOfferte = true;
+
+  // ce qu'il a déjà payé lui reste acquis
+  S.ane  = !!pr.ane;
+  S.moto = !!pr.moto;
+  S.toitRepare = !!pr.toit;
+  if (S.moto) S.dette = 0;
+}
+
+/* =========================================================
    SAUVEGARDE — un appel, l'écran qui s'éteint, l'app fermée :
    la partie reprend exactement où elle était.
    ========================================================= */
@@ -4615,6 +4704,26 @@ function afficherRecordAccueil(){
   }
 }
 
+function majBoutonProgres(){
+  [document.getElementById('btnProgres'), document.getElementById('btnProgres2')]
+    .forEach(function(b){ if (b) remplirBoutonProgres(b); });
+}
+function remplirBoutonProgres(b){
+  if (!b) return;
+  var pr = lireProgres();
+  if (pr && pr.partie > 1){
+    b.classList.remove('hide');
+    var avoir = [];
+    if (pr.ane)  avoir.push('l\u2019\u00e2ne');
+    if (pr.moto) avoir.push('la moto');
+    if (pr.toit) avoir.push('le toit');
+    b.innerHTML = 'Continuer \u2014 partie ' + pr.partie +
+      (avoir.length ? '<small>avec ' + avoir.join(', ') + '</small>' : '');
+  } else {
+    b.classList.add('hide');
+  }
+}
+
 function majBoutonReprendre(){
   var b = document.getElementById('btnReprendre');
   if (!b) return;
@@ -4627,6 +4736,7 @@ function majBoutonReprendre(){
   }
 }
 majBoutonReprendre();
+majBoutonProgres();
 afficherRecordAccueil();
 
 /* ---------- MISE À L'ÉCHELLE ---------- */
@@ -4672,6 +4782,35 @@ window.addEventListener('resize', redimensionner);
 window.addEventListener('orientationchange', function(){ setTimeout(redimensionner, 250); });
 
 /* ---------- DÉMARRAGE ---------- */
+function demarrerA(pr){
+  effacerPartie();
+  couperLeDialogue();
+  audioInit();
+  if (AC && AC.state === 'suspended') AC.resume();
+  S = nouvelEtat();
+  appliquerLaProgression(pr);
+  CAM.x = 50; CAM.y = 55; CAM.z = CFG.Z_LIBRE;
+  CAM.tx = 50; CAM.ty = 55; CAM.tz = CFG.Z_LIBRE;
+  construire();
+  finirLaFete();
+  if (S.filsParti === false && S.jour >= CFG.ENFANT_JOUR) faireVenirLEnfant();
+  if (modouEl){
+    if (S.moto) modouEl.classList.add('surLaMoto');
+    else if (S.ane) modouEl.classList.add('surLane');
+  }
+  redimensionner();
+  S.enCours = true;
+  last = 0;
+  document.body.classList.add('playing');
+  document.getElementById('scrIntro').classList.add('hide');
+  document.getElementById('scrFin').classList.add('hide');
+  if (AC){ MUS.depart = AC.currentTime + 0.2; MUS.pas = 0; MUS.tension = 0; MUS.fete = 0;
+           monter(BUS_MUS, SON_ON ? 0.15 : 0, 2.0); }
+  majRecord(); majBoutonEnfant(); majBoutonReprendre(); afficherRecordAccueil();
+  flash('Partie ' + pr.partie + ' \u2014 jour ' + S.jour + '. On reprend.', 3200);
+  if (S.filsParti) ouvrirUnMandat(true);
+}
+
 function demarrer(){
   effacerPartie();
   couperLeDialogue();
