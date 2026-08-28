@@ -544,6 +544,20 @@ html,body{height:100%;overflow:hidden;background:#1B2A1B;font-family:var(--ui);c
   0%,100%{transform:scaleY(1.4286) rotate(-14deg)}
   50%{transform:scaleY(1.4286) translateY(-7px) rotate(14deg)}}
 
+/* ---- LA PLUIE ---- */
+#pluie{position:fixed;inset:0;z-index:38;pointer-events:none;opacity:0;
+  transition:opacity .8s;
+  background:repeating-linear-gradient(104deg,
+    rgba(190,215,240,0) 0 7px,
+    rgba(190,215,240,.42) 7px 8.5px,
+    rgba(190,215,240,0) 8.5px 15px)}
+#pluie.on{opacity:1;animation:tombe .42s linear infinite}
+@keyframes tombe{0%{background-position:0 0}100%{background-position:-60px 220px}}
+#pluie.on::after{content:"";position:absolute;inset:0;
+  background:linear-gradient(180deg,rgba(28,44,70,.34),rgba(20,34,56,.18))}
+#pluie.fuite::before{content:"";position:absolute;inset:0;
+  box-shadow:inset 0 0 120px rgba(20,40,70,.55)}
+
 /* ---- LE MANDAT ET LA DETTE ---- */
 #mandat,#dette{position:fixed;left:50%;transform:translateX(-50%);z-index:44;
   display:none;align-items:center;gap:7px;border:3px solid var(--trait);
@@ -734,6 +748,7 @@ button.cta{touch-action:manipulation;position:relative;z-index:2}
   </div>
 </div>
 
+<div id="pluie"></div>
 <div id="mandat"></div>
 <div id="dette"></div>
 
@@ -1073,7 +1088,7 @@ function dameSVG(i){
    ========================================================= */
 'use strict';
 
-var BUILD_TAG = 'LQD-v7.7';
+var BUILD_TAG = 'LQD-v8.0';
 document.getElementById('build').textContent = BUILD_TAG;
 
 /* ---------- affichage des erreurs, pour pouvoir diagnostiquer ---------- */
@@ -1194,10 +1209,20 @@ var CFG = {
   MANDAT_DELAI: 3,        // il a trois jours pour l'envoyer
   MANDAT_PEINE: 22,       // ce que lui coûte un mandat oublié
 
-  MOTO_JOUR: 91,
+  PLUIE_JOUR: 91,         // quatrième partie : la saison des pluies
+  PLUIE_PERIODE: 26,      // une averse toutes les vingt-six secondes
+  PLUIE_DUREE: 9,
+  TOIT_PRIX: 1200,        // réparer le toit du foyer
+  FOYER_FUITE: 0.5,       // sous la pluie, un toit percé ne repose qu'à moitié
+  PLUIE_USURE: 1.25,      // et les Dames supportent mal l'humidité
+
+  VACANCES_JOUR: 106,     // le fils revient une semaine
+  VACANCES_DUREE: 7,
+
+  MOTO_JOUR: 121,        // cinquième partie
   MOTO_PRIX: 3000,
   MOTO_RETENUE: 0.35,     // le patron retient ce tiers sur chaque paye
-  MOTO_VITESSE: 2.7,
+  MOTO_VITESSE: 4.0,     // quatre fois plus rapide qu'à pied
 
   ANE_JOUR: 61,           // troisième mois : le gardien du temple le propose
   PRIX_ANE: 800,
@@ -1440,9 +1465,11 @@ function nouvelEtat(){
     fete:null, chapitre:null, derniereFete:0, fetes:0, prochainJalon:1, rachats:0,
     recordBattu:false, recordVu:false, moisSalue:false,
     enfant:null, coursesEnfant:0,
-    ane:false, aneOffert:false,
+    ane:false, aneOffert:false, rappelAne:0,
     filsParti:false, mandat:null, mandatsEnvoyes:0, mandatsRates:0,
     moto:false, motoOfferte:false, dette:0,
+    saisonPluies:false, pluie:0, prochaineAverse:0, toitRepare:false, toitPropose:false,
+    vacances:false, vacancesFin:0,
     auto:null,
     nuit:0, etaitNuit:false,
     journal:[],
@@ -2797,6 +2824,7 @@ function aneSVG(){
 function proposerLAne(){
   if (S.aneOffert) return;
   S.aneOffert = true;
+  S.rappelAne = 0;
   flash('Le Vieux Serigne te propose son \u00e2ne pour ' + CFG.PRIX_ANE + ' F.', 3600);
   parler('Un \u00e2ne\u2026 je n\u2019aurais plus mal aux jambes.', VOIX_MODOU);
   noter(S.jour, 'Le gardien du temple propose son \u00e2ne.');
@@ -2960,6 +2988,96 @@ function majBandeauDette(){
   z.innerHTML = '<span class="mpic">\uD83C\uDFCD\uFE0F</span>' +
                 '<span class="mbar"><i style="width:' + (part*100).toFixed(0) + '%"></i></span>' +
                 '<span class="mtxt">' + Math.round(S.dette) + ' F</span>';
+}
+
+/* =========================================================
+   LA SAISON DES PLUIES — quatrième partie
+   Le toit du foyer fuit. Modou peut le réparer, il est maçon.
+   ========================================================= */
+function ouvrirLaSaison(){
+  if (S.saisonPluies) return;
+  S.saisonPluies = true;
+  S.prochaineAverse = 6;
+  flash('La saison des pluies commence. Le toit du foyer fuit.', 4200);
+  parler('Les pluies arrivent\u2026 et mon toit est perc\u00e9.', VOIX_MODOU);
+  noter(S.jour, 'D\u00e9but de la saison des pluies.');
+}
+
+function proposerLeToit(){
+  if (S.toitPropose) return;
+  S.toitPropose = true;
+  flash('Prends des t\u00f4les au chantier pour ' + CFG.TOIT_PRIX + ' F et r\u00e9pare le toit.', 4000);
+  var b = badgesEl.CHANTIER;
+  if (b) b.classList.add('dernier');
+}
+
+function reparerLeToit(){
+  if (S.toitRepare || !S.saisonPluies) return false;
+  if (S.argent < CFG.TOIT_PRIX){
+    if (S.cool <= 0){
+      flash('Les t\u00f4les co\u00fbtent ' + CFG.TOIT_PRIX + ' F. Il te manque ' +
+            (CFG.TOIT_PRIX - Math.floor(S.argent)) + ' F.', 2800);
+      S.cool = 3.5;
+    }
+    return false;
+  }
+  S.argent -= CFG.TOIT_PRIX;
+  S.toitRepare = true;
+  volant('-' + CFG.TOIT_PRIX + ' F', '#7BD3F7');
+  sonCaisse();
+  var b = badgesEl.CHANTIER;
+  if (b) b.classList.remove('dernier');
+  flash('Le toit est refait. Le foyer redevient s\u00fbr.', 3600);
+  parler('Je suis ma\u00e7on, quand m\u00eame ! Le toit tiendra.', VOIX_MODOU);
+  noter(S.jour, 'Toit du foyer r\u00e9par\u00e9 : ' + CFG.TOIT_PRIX + ' F.');
+  return true;
+}
+
+function majPluie(dt){
+  if (!S.saisonPluies) return;
+  S.prochaineAverse -= dt;
+  if (S.pluie > 0){
+    S.pluie -= dt;
+    if (S.pluie <= 0){
+      S.pluie = 0;
+      S.prochaineAverse = CFG.PLUIE_PERIODE * (0.75 + Math.random() * 0.5);
+      var z = document.getElementById('pluie');
+      if (z) z.className = '';
+    }
+  } else if (S.prochaineAverse <= 0){
+    S.pluie = CFG.PLUIE_DUREE * (0.8 + Math.random() * 0.5);
+    var z2 = document.getElementById('pluie');
+    if (z2) z2.className = 'on' + (S.toitRepare ? '' : ' fuite');
+    note(180, 1.2, 'sine', 0.16, 0, BUS_EFF, 120);
+    if (!S.toitRepare) modouDit('\u00c7a fuit encore\u2026', 2400, true);
+  }
+  if (S.pluie > 0 && Math.random() < dt * 6) souffleBruit(0.09, 0.05, 3800);
+}
+
+/* =========================================================
+   LES VACANCES DU FILS — il revient une semaine
+   ========================================================= */
+function leFilsRevient(){
+  if (S.vacances || !S.filsParti) return;
+  S.vacances = true;
+  S.vacancesFin = S.jour + CFG.VACANCES_DUREE;
+  S.enfant = null;
+  faireVenirLEnfant();
+  flash('Ton fils rentre en vacances. Il t\u2019aide pendant une semaine.', 4200);
+  parler('Mon fils est rentr\u00e9 ! Al\u2019hamdoulillah !', VOIX_MODOU);
+  noter(S.jour, 'Le fils revient en vacances.');
+}
+
+function leFilsRepart(){
+  if (!S.vacances) return;
+  S.vacances = false;
+  if (enfantEl && enfantEl.parentNode) enfantEl.parentNode.removeChild(enfantEl);
+  enfantEl = null;
+  S.enfant = null;
+  majBoutonEnfant();
+  flash('Les vacances sont finies. Ton fils repart en ville.', 3600);
+  parler('Travaille bien, mon fils.', VOIX_MODOU);
+  noter(S.jour, 'Fin des vacances du fils.');
 }
 
 /* ---------- CRISES ---------- */
@@ -3370,6 +3488,10 @@ function tourDeBoucle(ts){
     if (jour === CFG.ENFANT_JOUR && !S.enfant) faireVenirLEnfant();
     if (jour >= CFG.ANE_JOUR && !S.aneOffert && !S.ane) proposerLAne();
     if (jour >= CFG.ANE_JOUR && !S.filsParti) leFilsPart();
+    if (jour >= CFG.PLUIE_JOUR && !S.saisonPluies) ouvrirLaSaison();
+    if (jour >= CFG.PLUIE_JOUR + 1 && S.saisonPluies && !S.toitRepare) proposerLeToit();
+    if (jour === CFG.VACANCES_JOUR && S.filsParti && !S.vacances) leFilsRevient();
+    if (S.vacances && jour >= S.vacancesFin) leFilsRepart();
     if (jour >= CFG.MOTO_JOUR && !S.motoOfferte && !S.moto) proposerLaMoto();
     if (S.filsParti && !S.mandat &&
         (jour - CFG.ANE_JOUR) % CFG.MANDAT_JOURS === 0 && jour > CFG.ANE_JOUR){
@@ -3377,6 +3499,17 @@ function tourDeBoucle(ts){
     }
     majMandat();
     majBandeauMandat();
+
+    // tant que l'âne n'est pas pris, on le rappelle tous les cinq jours
+    if (S.aneOffert && !S.ane && !S.moto){
+      S.rappelAne = (S.rappelAne || 0) + 1;
+      if (S.rappelAne % 5 === 0){
+        flash('L\u2019\u00e2ne du Vieux Serigne t\u2019attend au temple \u2014 ' +
+              CFG.PRIX_ANE + ' F.', 3000);
+        var bt = badgesEl.TEMPLE;
+        if (bt) bt.classList.add('dernier');
+      }
+    }
 
     if (jour === 30 && !S.moisSalue){
       S.moisSalue = true;
@@ -3411,7 +3544,9 @@ function tourDeBoucle(ts){
   S.abandon = abandon;
   for (var i=0;i<DAMES.length;i++){
     var nuitFacteur = 1 - (1 - CFG.NUIT_USURE) * S.nuit;
-    S.jauges[i] = Math.max(0, S.jauges[i] - DAMES[i].usure * pression * abandon * deuil * nuitFacteur * dt);
+    var pluieFacteur = (S.pluie > 0 && !S.toitRepare) ? CFG.PLUIE_USURE : 1;
+    S.jauges[i] = Math.max(0, S.jauges[i] -
+      DAMES[i].usure * pression * abandon * deuil * nuitFacteur * pluieFacteur * dt);
   }
 
   // déplacement
@@ -3499,12 +3634,14 @@ function tourDeBoucle(ts){
       if (tickSouffle > 0.9){ tickSouffle = 0; sonSouffle(); }
     }
     var bonusNuit = 1 + (CFG.NUIT_SOUFFLE - 1) * S.nuit;
-    S.force = Math.min(100, S.force + CFG.SOUFFLE_PAR_SEC * bonusNuit * dt);
+    var fuite = (S.pluie > 0 && !S.toitRepare) ? CFG.FOYER_FUITE : 1;
+    S.force = Math.min(100, S.force + CFG.SOUFFLE_PAR_SEC * bonusNuit * fuite * dt);
     if (!S.foyer){
       S.foyer = true;
       sonFoyer();
     }
   } else if (S.zone === 'CHANTIER'){
+    if (S.saisonPluies && !S.toitRepare) reparerLeToit();
     if (S.motoOfferte && !S.moto) prendreLaMoto();
     if (estNuit){
       S.serie = 0;
@@ -3552,7 +3689,13 @@ function tourDeBoucle(ts){
   } else if (S.zone){
     var iZ = -1;
     for (var z2=0;z2<DAMES.length;z2++){ if (DAMES[z2].lieu === S.zone) iZ = z2; }
-    if (iZ >= 0 && S.parties[iZ]){
+    // l'âne et le mandat ne dépendent ni du foyer ni de l'état de la maison :
+    // ce sont des affaires d'homme à homme, pas des courses pour les Dames.
+    if (S.zone === 'TEMPLE' && S.aneOffert && !S.ane){
+      if (acheterLAne()) S.cool = 2;
+    } else if (S.zone === 'BANQUE' && S.mandat){
+      if (envoyerLeMandat()) S.cool = 2;
+    } else if (iZ >= 0 && S.parties[iZ]){
       // maison fermée : rien ne se passe
     } else if (iZ >= 0 && !S.foyer){
       if (S.cool <= 0){
@@ -3566,10 +3709,6 @@ function tourDeBoucle(ts){
         if (n2) sonRefus();
         S.cool = n2 ? 3.2 : 5;
       }
-    } else if (S.zone === 'BANQUE' && S.mandat && envoyerLeMandat()){
-      S.cool = 2;
-    } else if (S.zone === 'TEMPLE' && S.aneOffert && !S.ane && acheterLAne()){
-      S.cool = 2;
     } else if (iZ >= 0 && S.exode[iZ] && S.exode[iZ].retour){
       // elle rentre déjà : inutile de repayer
     } else if (iZ >= 0 && S.jauges[iZ] >= CFG.SEUIL_RASSASIE){
@@ -3611,6 +3750,7 @@ function tourDeBoucle(ts){
 
   majExode(dt);
   majEnfant(dt);
+  majPluie(dt);
   majPensees(dt);
   animerJambes(S.temps, bouge);
   majCrises();
@@ -3750,7 +3890,8 @@ var CHAPITRES = [
   { t:'BRAVO',            s:'Tu as tenu la maison de Modou pendant un mois.' },
   { t:'BRAVO, DEUX MOIS', s:'Ton fils t\u2019aide maintenant. La maison tient toujours.' },
   { t:'BRAVO, TROIS MOIS',s:'L\u2019\u00e2ne, le fils, les quatre Dames. Tu tiens tout.' },
-  { t:'QUATRE MOIS',      s:'Personne n\u2019a jamais tenu aussi longtemps.' },
+  { t:'QUATRE MOIS',      s:'Les pluies arrivent. Le toit du foyer ne tiendra pas.' },
+  { t:'CINQ MOIS',        s:'La moto t\u2019attend au chantier.' },
   { t:'LE DOMAINE EST \u00c0 TOI', s:'Le temps ne compte plus.' }
 ];
 
@@ -3770,7 +3911,7 @@ function ouvrirLeChapitre(){
     '<div class="chScene">' +
       '<div class="chModou">' + bonhommeSVG() + '</div>' +
       (niveau >= 2 ? '<div class="chEnfant">' + enfantSVG() + '</div>' : '') +
-      (niveau >= 4 ? '<div class="chAne">' + motoSVG() + '</div>' :
+      (niveau >= 5 ? '<div class="chAne">' + motoSVG() + '</div>' :
        (niveau >= 3 ? '<div class="chAne">' + aneSVG() + '</div>' : '')) +
     '</div>' +
     '<div class="chTexte">' +
