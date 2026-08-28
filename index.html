@@ -359,6 +359,8 @@ button.cta{margin-top:4px;background:var(--or);color:var(--trait);border:3px sol
   border-radius:22px;padding:12px 28px;font-size:12px;font-weight:900;letter-spacing:.14em;
   text-transform:uppercase;font-family:var(--ui);cursor:pointer;box-shadow:0 4px 0 var(--trait)}
 button.cta:active{transform:translateY(3px);box-shadow:0 1px 0 var(--trait)}
+button.cta.ghost{background:var(--creme);color:var(--trait)}
+button.cta.hide{display:none}
 button.cta{touch-action:manipulation;position:relative;z-index:2}
 .screen{touch-action:manipulation}
 #portrait{width:min(34vh,210px);height:min(40vh,248px);flex:0 0 auto;
@@ -446,6 +448,7 @@ button.cta{touch-action:manipulation;position:relative;z-index:2}
   Une Dame dont la jauge tombe à zéro <b>quitte le cercle pour de bon</b>. La partie ne s'arrête qu'à la troisième qui part.<br><br>
   <b>Ton score, c'est le nombre de jours tenus.</b><br><br>
   Joystick pour marcher. Entre dans un cercle et l'affaire se fait toute seule.</p>
+  <button class="cta ghost hide" id="btnReprendre">Reprendre</button>
   <button class="cta" id="btnStart">Réveiller Modou</button>
 </div>
 
@@ -662,7 +665,7 @@ function carteSVG(){
    ========================================================= */
 'use strict';
 
-var BUILD_TAG = 'LQD-v4.9';
+var BUILD_TAG = 'LQD-v5.0';
 document.getElementById('build').textContent = BUILD_TAG;
 
 /* ---------- affichage des erreurs, pour pouvoir diagnostiquer ---------- */
@@ -691,6 +694,15 @@ window.addEventListener('unhandledrejection', function(e){
 function surAppui(e){
   var n = e.target;
   while (n && n !== document.body){
+    if (n.id === 'btnReprendre'){
+      if (e.cancelable) e.preventDefault();
+      try {
+        if (typeof audioInit === 'function') audioInit();
+        if (typeof sonBouton === 'function') sonBouton();
+        reprendreLaPartie();
+      } catch (err){ montrerErreur('reprise : ' + (err && err.message ? err.message : err)); }
+      return;
+    }
     if (n.id === 'btnStart' || n.id === 'btnRejouer'){
       if (e.cancelable) e.preventDefault();
       try {
@@ -776,16 +788,20 @@ var CFG = {
 /* ---------- LES QUATRE DAMES ---------- */
 var DAMES = [
   { id:1, nom:'Première Dame',  lieu:'SANTE',  cri:'Je tousse encore…',
-    demande:'Modou, ach\u00e8te-moi mes m\u00e9dicaments.', voix:{ hauteur:0.92, vitesse:0.84 },
+    demande:'Modou, ach\u00e8te-moi mes m\u00e9dicaments.',
+    suite:'Ach\u00e8te-moi mes m\u00e9dicaments.', voix:{ hauteur:0.92, vitesse:0.84 },
     usure:0.58, muette:false, bed:{x:45.7,y:60.0}, col:'--sante'  },
   { id:2, nom:'Deuxième Dame',  lieu:'AMOUR',  cri:'Tu ne me vois plus.',
-    demande:'Modou, am\u00e8ne-moi des fleurs.', voix:{ hauteur:1.22, vitesse:0.98 },
+    demande:'Modou, am\u00e8ne-moi des fleurs.',
+    suite:'Am\u00e8ne-moi des fleurs.', voix:{ hauteur:1.22, vitesse:0.98 },
     usure:0.68, muette:false, bed:{x:54.3,y:60.0}, col:'--amour'  },
   { id:3, nom:'Troisième Dame', lieu:'TEMPLE', cri:'…',
-    demande:'Modou, j\u2019ai besoin de pri\u00e8res.', voix:{ hauteur:1.08, vitesse:0.76 },
+    demande:'Modou, j\u2019ai besoin de pri\u00e8res.',
+    suite:'J\u2019ai besoin de pri\u00e8res.', voix:{ hauteur:1.08, vitesse:0.76 },
     usure:0.48, muette:true,  bed:{x:45.7,y:75.0}, col:'--spirit' },
   { id:4, nom:'Quatrième Dame', lieu:'BANQUE', cri:'Il me faut ça demain.',
-    demande:'Modou, j\u2019ai besoin d\u2019argent.', voix:{ hauteur:1.42, vitesse:1.12 },
+    demande:'Modou, j\u2019ai besoin d\u2019argent.',
+    suite:'J\u2019ai besoin d\u2019argent.', voix:{ hauteur:1.42, vitesse:1.12 },
     usure:0.84, muette:false, bed:{x:54.3,y:75.0}, col:'--argent' }
 ];
 
@@ -1518,6 +1534,7 @@ function couperLaParole(){
   try { if ('speechSynthesis' in window) window.speechSynthesis.cancel(); } catch (e) {}
 }
 var VOIX_MODOU = { homme:true, hauteur:0.62, vitesse:0.96 };
+var VOIX_MODOU_DROLE = { homme:true, hauteur:1.38, vitesse:1.26 };   // quand il panique
 function parleDame(i, texte){
   if (i < 0 || i >= DAMES.length) return;
   parler(texte, DAMES[i].voix);
@@ -1528,6 +1545,33 @@ function basculerVoix(){
   var b = document.getElementById('voixBtn');
   if (b){ b.textContent = VOIX_ON ? '\uD83D\uDDE3' : '\uD83D\uDD07'; b.classList.toggle('coupe', !VOIX_ON); }
   if (VOIX_ON) parler('Je t\u2019\u00e9coute.', VOIX_MODOU);
+}
+
+/* ---------- LE DIALOGUE : elle appelle, il râle, elle demande ---------- */
+var minuteursDialogue = [];
+function couperLeDialogue(){
+  for (var i=0;i<minuteursDialogue.length;i++) clearTimeout(minuteursDialogue[i]);
+  minuteursDialogue = [];
+}
+function lancerLeDialogue(i){
+  couperLeDialogue();
+  var D = DAMES[i];
+
+  parleDame(i, 'Modou !');
+  flash(D.nom + ' appelle Modou\u2026', 1400);
+
+  minuteursDialogue.push(setTimeout(function(){
+    if (!S || !S.enCours || S.parties[i]) return;
+    parler('Qu\u2019est-ce qu\u2019il y a encore, oh oh oh !', VOIX_MODOU);
+    modouDit('Qu\u2019est-ce qu\u2019il y a encore, oh oh oh !', 2200, true);
+  }, 1150));
+
+  minuteursDialogue.push(setTimeout(function(){
+    if (!S || !S.enCours || S.parties[i]) return;
+    if (S.jauges[i] >= CFG.SEUIL_RASSASIE) return;   // il l'a déjà servie entre-temps
+    parleDame(i, D.suite);
+    flash(D.nom + ' : « ' + D.suite + ' »', 2800);
+  }, 3100));
 }
 
 /* ---------- LE GUIDAGE : chaque règle une seule fois, au bon moment ---------- */
@@ -1940,10 +1984,7 @@ function majCrises(){
     if (n !== S.crise[i]){
       if (n === 2 && S.crise[i] < 2){
         sonAppel();
-        if (i === urgente){
-          parleDame(i, DAMES[i].demande);
-          flash(DAMES[i].nom + ' : « ' + DAMES[i].demande + ' »', 2800);
-        }
+        if (i === urgente) lancerLeDialogue(i);
       }
       S.crise[i] = n;
     }
@@ -1990,7 +2031,13 @@ function commencerExode(i){
   var bulle = damesEl[i].querySelector('.cri');
   if (bulle) bulle.textContent = 'Je m\u2019en vais…';
   sonDebout();
+  couperLeDialogue();
   parleDame(i, 'Modou, je m\u2019en vais.');
+  setTimeout(function(){
+    if (!S || !S.enCours) return;
+    parler('Ne t\u2019en va pas ! Ne t\u2019en va pas !', VOIX_MODOU_DROLE);
+    modouDit('Ne t\u2019en va pas !', 2400, true);
+  }, 1500);
   flash(D.nom + ' s\u2019en va. Rattrape-la avant la sortie !', 3000);
   noter(S.jour, D.nom + ' s\u2019est lev\u00e9e pour partir.');
   S.sortieVue = 2.2;
@@ -2008,9 +2055,9 @@ function majExode(dt){
       E.etape = 0;
       damesEl[i].classList.remove('sen-va');
       var b2 = damesEl[i].querySelector('.cri');
-      if (b2) b2.textContent = 'Tu es venu.';
+      if (b2) b2.textContent = 'Tu as int\u00e9r\u00eat \u00e0 me faire revenir !';
       sonFoyer();
-      parleDame(i, 'Tu es venu. Merci.');
+      parleDame(i, 'Tu as int\u00e9r\u00eat \u00e0 me faire revenir !');
       flash(DAMES[i].nom + ' revient se coucher.', 2200);
       noter(S.jour, DAMES[i].nom + ' a \u00e9t\u00e9 rattrap\u00e9e \u00e0 temps.');
     }
@@ -2235,7 +2282,7 @@ function tailleZones(){
 }
 
 /* ---------- BOUCLE ---------- */
-var last = 0, tickPiece = 0, tickSouffle = 0, tickSerie = 0;
+var last = 0, tickPiece = 0, tickSouffle = 0, tickSerie = 0, tickSauve = 0;
 function boucle(ts){
   requestAnimationFrame(boucle);
   try { tourDeBoucle(ts); }
@@ -2379,7 +2426,6 @@ function tourDeBoucle(ts){
     if (!S.foyer){
       S.foyer = true;
       sonFoyer();
-      modouDit('Bon. Je peux repartir.', 1800);
     }
   } else if (S.zone === 'CHANTIER'){
     if (estNuit){
@@ -2475,6 +2521,9 @@ function tourDeBoucle(ts){
   rendre();
   majCamera(dt);
 
+  tickSauve += dt;
+  if (tickSauve > 2){ tickSauve = 0; sauvegarder(); }
+
 }
 
 /* ---------- VERDICT ---------- */
@@ -2487,6 +2536,8 @@ var TITRES = [
 ];
 function finir(cause){
   S.enCours = false;
+  effacerPartie();
+  couperLeDialogue();
   document.body.classList.remove('playing');
   joyFin();
   stopperAuto();
@@ -2793,6 +2844,109 @@ function sonPleurs(){
   for (var i=0;i<5;i++) souffleBruit(0.13, 0.07, 500, t + 1.9 + i*0.42, BUS_EFF);
 }
 
+/* =========================================================
+   SAUVEGARDE — un appel, l'écran qui s'éteint, l'app fermée :
+   la partie reprend exactement où elle était.
+   ========================================================= */
+var CLE_PARTIE = 'lqd_partie_v5';
+
+function sauvegarder(){
+  if (!S || !S.enCours) return;
+  try {
+    var copie = JSON.parse(JSON.stringify(S));
+    copie.fete = null;          // on ne reprend jamais au milieu d'une fête
+    copie.auto = null;          // ni au milieu d'un trajet automatique
+    copie.sortieVue = 0;
+    copie.cool = 0;
+    copie.version = BUILD_TAG;
+    localStorage.setItem(CLE_PARTIE, JSON.stringify(copie));
+  } catch (e) {}
+}
+function partieEnAttente(){
+  try {
+    var t = localStorage.getItem(CLE_PARTIE);
+    if (!t) return null;
+    var d = JSON.parse(t);
+    if (!d || !d.enCours || !d.jauges) return null;
+    return d;
+  } catch (e) { return null; }
+}
+function effacerPartie(){
+  try { localStorage.removeItem(CLE_PARTIE); } catch (e) {}
+}
+
+/* remet le plateau dans l'état exact de la sauvegarde */
+function restaurerLeDecor(){
+  for (var i=0;i<DAMES.length;i++){
+    if (S.parties[i]){
+      fermerLeFoyer(i);                       // maison grisée, barre retirée
+      damesEl[i].className = 'dame pos partie';
+      damesEl[i].style.left = CFG.SORTIE_X + '%';
+      damesEl[i].style.top  = '51.9%';
+    } else if (S.exode[i]){
+      var E = S.exode[i];
+      damesEl[i].style.left = E.x + '%';
+      damesEl[i].style.top  = E.y + '%';
+      if (!E.retour) damesEl[i].classList.add('sen-va');
+    }
+  }
+  if (S.sorties > 0) S.viseRetour = true;      // pas de rappel intempestif
+}
+
+function reprendreLaPartie(){
+  var d = partieEnAttente();
+  if (!d) { demarrer(); return; }
+  audioInit();
+  if (AC && AC.state === 'suspended') AC.resume();
+
+  S = d;
+  S.fete = null; S.auto = null; S.cool = 0; S.sortieVue = 0;
+  S.vu = S.vu || {}; S.rappels = S.rappels || {};
+
+  construire();
+  finirLaFete();
+  restaurerLeDecor();
+  redimensionner();
+
+  CAM.x = S.modou.x; CAM.y = S.modou.y; CAM.z = CFG.Z_LIBRE;
+  CAM.tx = CAM.x; CAM.ty = CAM.y; CAM.tz = CFG.Z_LIBRE;
+
+  S.enCours = true;
+  last = 0;
+  document.body.classList.add('playing');
+  document.getElementById('scrIntro').classList.add('hide');
+  document.getElementById('scrFin').classList.add('hide');
+  if (AC){ MUS.depart = AC.currentTime + 0.2; MUS.pas = 0; MUS.fete = 0;
+           monter(BUS_MUS, SON_ON ? 0.085 : 0, 2.0); }
+  majRecord();
+  flash('Jour ' + S.jour + ' \u2014 on reprend o\u00f9 tu t\u2019\u00e9tais arr\u00eat\u00e9.', 2600);
+}
+
+/* on sauvegarde à chaque interruption possible */
+function armerLaSauvegarde(){
+  document.addEventListener('visibilitychange', function(){
+    if (document.hidden){ sauvegarder(); couperLaParole(); }
+  });
+  window.addEventListener('pagehide', sauvegarder);
+  window.addEventListener('blur', sauvegarder);
+  window.addEventListener('beforeunload', sauvegarder);
+}
+armerLaSauvegarde();
+
+/* et le bouton Reprendre n'apparaît que s'il y a quelque chose à reprendre */
+function majBoutonReprendre(){
+  var b = document.getElementById('btnReprendre');
+  if (!b) return;
+  var d = partieEnAttente();
+  if (d){
+    b.classList.remove('hide');
+    b.textContent = 'Reprendre \u2014 jour ' + d.jour;
+  } else {
+    b.classList.add('hide');
+  }
+}
+majBoutonReprendre();
+
 /* ---------- MISE À L'ÉCHELLE ---------- */
 function redimensionner(){
   VW = window.innerWidth;
@@ -2836,6 +2990,8 @@ window.addEventListener('orientationchange', function(){ setTimeout(redimensionn
 
 /* ---------- DÉMARRAGE ---------- */
 function demarrer(){
+  effacerPartie();
+  couperLeDialogue();
   audioInit();
   if (AC && AC.state === 'suspended') AC.resume();
   S = nouvelEtat();
