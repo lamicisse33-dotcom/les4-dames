@@ -1202,7 +1202,7 @@ function dameSVG(i){
    ========================================================= */
 'use strict';
 
-var BUILD_TAG = 'LQD-v10.6';
+var BUILD_TAG = 'LQD-v10.7';
 document.getElementById('build').textContent = BUILD_TAG;
 var vIntro = document.getElementById('versionIntro');
 if (vIntro) vIntro.textContent = BUILD_TAG;
@@ -1392,8 +1392,8 @@ var CFG = {
   VIT_PLEIN: 1.40,        // à 100 de force, Modou file
   VIT_VIDE: 0.30,         // à zéro, il se traîne
   COURBE_VIT: 0.80,       // la perte se sent dès la première moitié
-  RAYON_ZONE: 0.042,
-  RAYON_CENTRE: 0.075,
+  RAYON_ZONE: 0.062,     // cercles nettement plus larges, plus faciles à attraper
+  RAYON_CENTRE: 0.088,
 
   GAIN_ACHAT: 45,         // ce que l'objet rend à la Dame
   COUT_ACHAT: 5,
@@ -2920,16 +2920,37 @@ function distPx(ax, ay, bx, by){
   var dx = (ax - bx)/100*BW, dy = (ay - by)/100*BH;
   return Math.sqrt(dx*dx + dy*dy);
 }
-function zoneSous(){
+function zoneEn(x, y){
   var rz = CFG.RAYON_ZONE * BW;
   var cles = Object.keys(LIEUX);
   for (var i=0;i<cles.length;i++){
     var L = LIEUX[cles[i]];
-    if (distPx(S.modou.x, S.modou.y, L.x, L.y) < rz) return cles[i];
+    if (distPx(x, y, L.x, L.y) < rz) return cles[i];
   }
-  if (distPx(S.modou.x, S.modou.y, CHANTIER.x, CHANTIER.y) < rz) return 'CHANTIER';
-  if (distPx(S.modou.x, S.modou.y, CENTRE.x, CENTRE.y) < CFG.RAYON_CENTRE*BW) return 'CENTRE';
+  if (distPx(x, y, CHANTIER.x, CHANTIER.y) < rz) return 'CHANTIER';
+  if (distPx(x, y, CENTRE.x, CENTRE.y) < CFG.RAYON_CENTRE*BW) return 'CENTRE';
   return null;
+}
+
+/* Modou peut traverser un cercle en deux images quand il est à moto.
+   On regarde donc tout le trajet de l'image, pas seulement son point d'arrivée. */
+var avantX = null, avantY = null;
+function zoneSous(){
+  var z = zoneEn(S.modou.x, S.modou.y);
+  if (!z && avantX !== null){
+    var dx = S.modou.x - avantX, dy = S.modou.y - avantY;
+    var saut = Math.abs(dx) + Math.abs(dy);
+    if (saut > 0.3){
+      var pas = Math.min(14, Math.ceil(saut / 0.4));
+      for (var k=1;k<pas;k++){
+        var f = k / pas;
+        z = zoneEn(avantX + dx*f, avantY + dy*f);
+        if (z) break;
+      }
+    }
+  }
+  avantX = S.modou.x; avantY = S.modou.y;
+  return z;
 }
 
 /* ---------- LA SCÈNE D'ÉCHANGE ---------- */
