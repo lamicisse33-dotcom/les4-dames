@@ -1202,7 +1202,7 @@ function dameSVG(i){
    ========================================================= */
 'use strict';
 
-var BUILD_TAG = 'LQD-v10.4';
+var BUILD_TAG = 'LQD-v10.6';
 document.getElementById('build').textContent = BUILD_TAG;
 var vIntro = document.getElementById('versionIntro');
 if (vIntro) vIntro.textContent = BUILD_TAG;
@@ -1375,7 +1375,6 @@ document.addEventListener('touchend', surAppui, {passive:false});
 
 /* ---------- RÉGLAGES ---------- */
 var CFG = {
-  JOURS_REF: 30,          // repère d'inflation, plus une limite
   SEC_PAR_JOUR: 13,       // 8 s de jour, 5 s de nuit
   PART_JOUR: 0.62,
   TRANSITION: 0.09,       // douceur de l'aube et du crépuscule
@@ -1386,10 +1385,8 @@ var CFG = {
   GAIN_CHANTIER: 51,      // francs par seconde de travail
   COUT_CHANTIER: 9,       // le chantier paie bien, mais il casse le dos
   MOIS: 30,               // une partie dure un mois de jeu
-  FETE_DUREE: 5.0,        // et ça dure plus longtemps à chaque fois
 
   PALIER_JOURS: 15,       // tous les 15 jours...
-  PALIER_HAUSSE: 0.30,    // ...tout augmente de 30 %
 
   VITESSE: 12.5,
   VIT_PLEIN: 1.40,        // à 100 de force, Modou file
@@ -1444,7 +1441,6 @@ var CFG = {
   ENFANT_JOUR: 31,        // il arrive au deuxième mois
   ENFANT_VITESSE: 0.52,   // il marche à la moitié du pas de Modou
   ENFANT_RENDEMENT: 0.75, // un enfant s'y prend moins bien que son père
-  ENFANT_PAUSE: 2.0,      // il souffle avant de repartir
 
   PRIX_RETOUR: 1000,      // avec cette somme, Modou fait revenir une Dame partie
   JAUGE_RETOUR: 55,       // dans quel état elle revient
@@ -1527,41 +1523,33 @@ function majBoutonsNiveau(){
 /* ---------- LES QUATRE DAMES ---------- */
 var DAMES = [
   { id:1, nom:'Première Dame',  lieu:'SANTE',  cri:'Je tousse encore…',
-    demande:'Modou, ach\u00e8te-moi mes m\u00e9dicaments.',
     suite:'Ach\u00e8te-moi mes m\u00e9dicaments.',
     dernier:'Modou ! Mes m\u00e9dicaments, ou je m\u2019en vais.',
     besoin:'ses m\u00e9dicaments',
-    replique:'Tant que tu ne m\u2019apportes pas mes m\u00e9dicaments, tu ne me verras plus.',
     retour:'La polygamie, ce n\u2019est pas pour tout le monde. Maintenant tu le sais.',
     adieu:'La polygamie n\u2019est pas pour tout le monde.',
     voix:{ hauteur:0.92, vitesse:0.84 },
     usure:0.58, muette:false, bed:{x:43.5,y:58.0}, col:'--sante'  },
   { id:2, nom:'Deuxième Dame',  lieu:'AMOUR',  cri:'Tu ne me vois plus.',
-    demande:'Modou, am\u00e8ne-moi des fleurs.',
     suite:'Am\u00e8ne-moi des fleurs.',
     dernier:'Modou ! Mes fleurs, ou je m\u2019en vais.',
     besoin:'ses fleurs',
-    replique:'Tant que tu ne m\u2019apportes pas mes fleurs, tu ne me verras plus.',
     retour:'Je n\u2019ai rien fait, moi. C\u2019est toi qui avais promis des fleurs chaque jour. Tiens parole.',
     adieu:'Tu avais promis des fleurs.',
     voix:{ hauteur:1.22, vitesse:0.98 },
     usure:0.68, muette:false, bed:{x:56.5,y:58.0}, col:'--amour'  },
   { id:3, nom:'Troisième Dame', lieu:'TEMPLE', cri:'…',
-    demande:'Modou, j\u2019ai besoin de pri\u00e8res.',
     suite:'J\u2019ai besoin de pri\u00e8res.',
     dernier:'Modou\u2026 mes pri\u00e8res. Je ne demanderai plus.',
     besoin:'ses pri\u00e8res',
-    replique:'Tant que tu ne pries pas pour moi, tu ne me verras plus.',
     retour:'C\u2019est mieux pour toi que je sois \u00e0 tes c\u00f4t\u00e9s. Tu le verras.',
     adieu:'Tu verras ce que c\u2019est, sans moi.',
     voix:{ hauteur:1.08, vitesse:0.76 },
     usure:0.48, muette:true,  bed:{x:43.5,y:77.0}, col:'--spirit' },
   { id:4, nom:'Quatrième Dame', lieu:'BANQUE', cri:'Il me faut ça demain.',
-    demande:'Modou, j\u2019ai besoin d\u2019argent.',
     suite:'J\u2019ai besoin d\u2019argent.',
     dernier:'Modou ! Mon argent, ou je m\u2019en vais !',
     besoin:'son argent',
-    replique:'Tant que tu ne me donnes pas mon argent, tu ne me verras plus.',
     retour:'Tu as dit \u00e0 mes parents que tu ferais de moi une princesse. Respecte ta parole.',
     adieu:'Tu avais donn\u00e9 ta parole \u00e0 mes parents.',
     voix:{ hauteur:1.42, vitesse:1.12 },
@@ -3336,6 +3324,7 @@ function envoyerLeMandat(){
 
 function majMandat(){
   if (!S.filsParti || !S.mandat) return;
+  if (S.vacances){ S.mandat.echeance = S.jour + CFG.MANDAT_DELAI; return; }
   if (S.jour > S.mandat.echeance){
     S.mandatsRates++;
     S.force = Math.max(0, S.force - CFG.MANDAT_PEINE);
@@ -3485,6 +3474,11 @@ function leFilsRevient(){
   S.vacancesFin = S.jour + CFG.VACANCES_DUREE;
   S.enfant = null;
   faireVenirLEnfant();
+  if (S.mandat){
+    S.mandat = null;
+    majBandeauMandat();
+    flash('Ton fils est l\u00e0 : plus de mandat \u00e0 envoyer cette semaine.', 3600);
+  }
   flash('Ton fils rentre en vacances. Il t\u2019aide pendant une semaine.', 4200);
   parler('Mon fils est rentr\u00e9 ! Al\u2019hamdoulillah !', VOIX_MODOU);
   noter(S.jour, 'Le fils revient en vacances.');
@@ -3499,6 +3493,7 @@ function leFilsRepart(){
   majBoutonEnfant();
   flash('Les vacances sont finies. Ton fils repart en ville.', 3600);
   parler('Travaille bien, mon fils.', VOIX_MODOU);
+  ouvrirUnMandat(false);
   noter(S.jour, 'Fin des vacances du fils.');
 }
 
@@ -3962,6 +3957,7 @@ function deplacerModou(dt){
 /* tout ce qui se passe dans un lieu : entrer, acheter, payer, réparer.
    Isolé pour que ça marche aussi pendant l'attente d'un jour chômé. */
 function vivreDansLaZone(dt){
+  var estNuit = S.nuit > 0.5;
   // zone
   var z = zoneSous();
   if (z !== S.zone){
@@ -4195,7 +4191,7 @@ function tourDeBoucle(ts){
     if (jour === CFG.VACANCES_JOUR && S.filsParti && !S.vacances) leFilsRevient();
     if (S.vacances && jour >= S.vacancesFin) leFilsRepart();
     if (jour >= CFG.MOTO_JOUR && !S.motoOfferte && !S.moto) proposerLaMoto();
-    if (S.filsParti && !S.mandat &&
+    if (S.filsParti && !S.vacances && !S.mandat &&
         (jour - CFG.ANE_JOUR) % CFG.MANDAT_JOURS === 0 && jour > CFG.ANE_JOUR){
       ouvrirUnMandat(false);
     }
@@ -4371,14 +4367,6 @@ function finir(cause){
 /* =========================================================
    LA FÊTE DE L'ÉQUILIBRE — tous les 10 jours, si les quatre sont là
    ========================================================= */
-var TITRES_FETE = [
-  { t:'L\u2019ÉQUILIBRE',        s:'Les quatre sont l\u00e0.' },
-  { t:'LE DOMAINE TIENT',        s:'Dix jours de plus.' },
-  { t:'MODOU NE PLIE PAS',       s:'Personne n\u2019est parti.' },
-  { t:'LA MAISON EST DEBOUT',    s:'Trente jours de suite.' },
-  { t:'MODOU EST UN ROI',        s:'Le domaine chante.' },
-  { t:'LÉGENDE DU DOMAINE',      s:'Plus personne ne compte les jours.' }
-];
 var COULEURS_FEU = ['#FFC53D','#FF7FB0','#8B9BFF','#4CC97A','#FFFFFF','#FF8A3D','#7BD3F7'];
 
 /* fin de chaque mois : 30, 60, 90, 120... */
@@ -5366,7 +5354,9 @@ var AIDE = [
     'Ton fils part \u00e9tudier. Chaque semaine, il faut lui envoyer de l\u2019argent.',
     'Le bandeau bleu en haut indique la somme et les jours qu\u2019il te reste.',
     'Va \u00e0 la banque pour l\u2019envoyer. L\u2019envoi se fait en entrant dans le cercle.',
-    'Un mandat oubli\u00e9 co\u00fbte de la force \u00e0 Modou et se reporte sur le suivant.'
+    'Un mandat oubli\u00e9 co\u00fbte de la force \u00e0 Modou et se reporte sur le suivant.',
+    'Au jour 106 il rentre une semaine en vacances : il refait les courses,',
+    'et tant qu\u2019il est \u00e0 la maison, il n\u2019y a plus de mandat \u00e0 envoyer.'
   ]},
   { t:'La saison des pluies \u2014 jour 91', l:[
     'Le toit du foyer fuit : sous l\u2019averse, Modou r\u00e9cup\u00e8re deux fois moins bien.',
