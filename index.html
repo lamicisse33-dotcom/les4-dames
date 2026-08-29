@@ -334,6 +334,8 @@ html,body{height:100%;overflow:hidden;background:#1B2A1B;font-family:var(--ui);c
 #nomJour{display:block;font-size:6.5px;font-weight:900;letter-spacing:.1em;
   text-transform:uppercase;color:rgba(43,33,24,.5);margin-top:1px}
 #nomJour.chome{color:#C8892B}
+#nomJour.attente{color:#B3243B;animation:attendBat .5s ease-in-out infinite}
+@keyframes attendBat{0%,100%{opacity:1}50%{opacity:.45}}
 .badge .prix.prime{background:#FF8A3D;animation:monte .5s ease-in-out infinite}
 .badge.prime{background:#FFF0C2}
 
@@ -456,6 +458,8 @@ html,body{height:100%;overflow:hidden;background:#1B2A1B;font-family:var(--ui);c
 #nomJour{display:block;font-size:6.5px;font-weight:900;letter-spacing:.1em;
   text-transform:uppercase;color:rgba(43,33,24,.5);margin-top:1px}
 #nomJour.chome{color:#C8892B}
+#nomJour.attente{color:#B3243B;animation:attendBat .5s ease-in-out infinite}
+@keyframes attendBat{0%,100%{opacity:1}50%{opacity:.45}}
 .badge .prix.prime{background:#FF8A3D;animation:monte .5s ease-in-out infinite}
 .badge.prime{background:#FFF0C2}
 
@@ -1175,7 +1179,7 @@ function dameSVG(i){
    ========================================================= */
 'use strict';
 
-var BUILD_TAG = 'LQD-v9.1';
+var BUILD_TAG = 'LQD-v9.2';
 document.getElementById('build').textContent = BUILD_TAG;
 
 /* ---------- affichage des erreurs, pour pouvoir diagnostiquer ---------- */
@@ -1372,7 +1376,8 @@ var CFG = {
   MOTO_PRIX: 3000,
   MOTO_RETENUE: 0.35,     // le patron retient ce tiers sur chaque paye
   MOTO_VITESSE: 4.0,
-  PRIME_REPOS: 2.0,      // samedi, dimanche et jours fériés : la paye double     // quatre fois plus rapide qu'à pied
+  PRIME_REPOS: 2.0,      // samedi, dimanche et jours fériés : la paye double
+  ATTENTE_MAX: 15,       // le jour chômé attend Modou au chantier, au plus quinze secondes      // samedi, dimanche et jours fériés : la paye double     // quatre fois plus rapide qu'à pied
 
   ANE_JOUR: 61,           // troisième mois : le gardien du temple le propose
   PRIX_ANE: 800,
@@ -1670,6 +1675,7 @@ function nouvelEtat(){
     fete:null, chapitre:null, derniereFete:0, fetes:0, prochainJalon:1, rachats:0,
     recordBattu:false, recordVu:false, moisSalue:false,
     tuto:null, achats:0,
+    attente:0,
     enfant:null, coursesEnfant:0,
     ane:false, aneOffert:false, rappelAne:0,
     filsParti:false, mandat:null, mandatsEnvoyes:0, mandatsRates:0,
@@ -3692,8 +3698,13 @@ function rendre(){
   var nomJ = document.getElementById('nomJour');
   if (nomJ){
     var f = ferieDuJour(S.jour);
-    nomJ.textContent = f ? f : nomDuJour(S.jour);
-    nomJ.className = (f || estWeekend(S.jour)) ? 'chome' : '';
+    if (S.attente > 0){
+      nomJ.textContent = 'ON T\u2019ATTEND ' + Math.ceil(S.attente) + 's';
+      nomJ.className = 'attente';
+    } else {
+      nomJ.textContent = f ? f : nomDuJour(S.jour);
+      nomJ.className = (f || estWeekend(S.jour)) ? 'chome' : '';
+    }
   }
   zonesEl.CENTRE.classList.toggle('foyerdu', !S.foyer && S.zone !== 'CENTRE');
   badgesEl.CENTRE.classList.toggle('foyerdu', !S.foyer);
@@ -3771,6 +3782,69 @@ function boucle(ts){
     if (S) S.enCours = false;   // on arrête au lieu de planter soixante fois par seconde
   }
 }
+/* le déplacement de Modou, isolé : il sert aussi pendant l'attente du jour chômé */
+function deplacerModou(dt){
+  var kb = clavier();
+  var vx, vy, butAuto = null;
+  if (kb){ vx = kb.x; vy = kb.y; stopperAuto(); }
+  else if (DOIGT.actif && (DOIGT.dx || DOIGT.dy)){ vx = DOIGT.dx; vy = DOIGT.dy; }
+  else if (JOY.dx || JOY.dy){ vx = JOY.dx; vy = JOY.dy; }
+  else if (S.auto){
+    // il rejoint le point touché en suivant UNE allée à la fois,
+    // jamais deux à la fois : d'abord l'axe horizontal, puis le vertical.
+    butAuto = S.auto.pts[S.auto.i];
+    if (!butAuto){ stopperAuto(); vx = 0; vy = 0; }
+    else {
+      var ex = butAuto.x - S.modou.x;
+      var ey = butAuto.y - S.modou.y;
+      var seuilX = 0.18, seuilY = 0.18 * RATIO;
+      if (Math.abs(ex) > seuilX){ vx = ex > 0 ? 1 : -1; vy = 0; }
+      else if (Math.abs(ey) > seuilY){ vx = 0; vy = ey > 0 ? 1 : -1; }
+      else {
+        S.modou.x = butAuto.x; S.modou.y = butAuto.y;   // arrivé au carrefour
+        S.auto.i++;
+        if (S.auto.i >= S.auto.pts.length) stopperAuto();
+        vx = 0; vy = 0; butAuto = null;
+      }
+    }
+  }
+  else { vx = 0; vy = 0; }
+  var bouge = (Math.abs(vx) + Math.abs(vy)) > 0.02;
+  if (bouge){
+    var mult = vitesseDeModou();
+    if (S.moto) mult *= CFG.MOTO_VITESSE;
+    else if (S.ane) mult *= CFG.ANE_VITESSE;
+    var px = vx * CFG.VITESSE * mult * dt;
+    var py = vy * CFG.VITESSE * RATIO * mult * dt;
+    var nx = Math.max(3, Math.min(97, S.modou.x + px));
+    var ny = Math.max(4, Math.min(96, S.modou.y + py));
+
+    // Modou ne quitte jamais les allées : on tente le mouvement complet,
+    // puis on le fait glisser sur un seul axe s'il bute.
+    if (S.auto){
+      if (butAuto){
+        if (vx > 0) nx = Math.min(nx, butAuto.x);
+        if (vx < 0) nx = Math.max(nx, butAuto.x);
+        if (vy > 0) ny = Math.min(ny, butAuto.y);
+        if (vy < 0) ny = Math.max(ny, butAuto.y);
+      }
+      S.modou.x = nx; S.modou.y = ny;
+    }
+    else if (marchable(nx, ny)){ S.modou.x = nx; S.modou.y = ny; }
+    else if (marchable(nx, S.modou.y)){ S.modou.x = nx; }
+    else if (marchable(S.modou.x, ny)){ S.modou.y = ny; }
+    else bouge = false;
+
+    if (Math.abs(vx) > 0.05) S.modou.dir = vx > 0 ? 1 : -1;
+  }
+  S.modou.marche = bouge;
+
+  // hors du cercle familial, le temps use Modou quoi qu'il fasse
+  if (S.zone !== 'CENTRE'){
+    S.force = Math.max(0, S.force - (bouge ? CFG.COUT_MARCHE : CFG.COUT_REPOS) * dt);
+  }
+}
+
 function tourDeBoucle(ts){
   if (!S || !S.enCours) return;
   if (!last) last = ts;
@@ -3792,6 +3866,31 @@ function tourDeBoucle(ts){
     return;
   }
   if (peutFeter()){ lancerLaFete(); return; }
+
+  // un jour chômé retient son souffle : rien ne bouge tant que Modou
+  // n'est pas arrivé au chantier. Il ne perd pas sa journée à marcher.
+  if (S.attente > 0){
+    S.attente -= dt;
+    if (S.zone === 'CHANTIER' || S.attente <= 0){
+      var gagne = S.attente > 0;
+      S.attente = 0;
+      if (gagne){
+        flash('La journ\u00e9e commence. Paye doubl\u00e9e.', 2400);
+        sonSerie();
+      } else {
+        flash('Le patron n\u2019attend plus. La journ\u00e9e est lanc\u00e9e.', 2400);
+      }
+    } else {
+      // le temps ne passe pas : ni les jauges, ni le jour
+      deplacerModou(dt);
+      animerJambes(performance.now() / 1000, S.modou.marche);
+      var z0 = zoneSous();
+      if (z0 !== S.zone){ if (z0) sonEntree(); else sonSortie(); S.zone = z0; }
+      rendre();
+      majCamera(dt);
+      return;
+    }
+  }
 
   S.temps += dt;
 
@@ -3823,6 +3922,10 @@ function tourDeBoucle(ts){
       flash('Samedi \u2014 le patron paie double tout le week-end.', 3000);
       parler('Le week-end, on paie double. Je travaille.', VOIX_MODOU);
       sonSerie();
+    }
+    if (payeDoublee(jour) && S.zone !== 'CHANTIER'){
+      S.attente = CFG.ATTENTE_MAX;
+      flash('Le jour t\u2019attend au chantier. Cours.', 3000);
     }
 
     if (jour >= CFG.PLUIE_JOUR && !S.saisonPluies) ouvrirLaSaison();
@@ -3887,65 +3990,7 @@ function tourDeBoucle(ts){
   }
 
   // déplacement
-  var kb = clavier();
-  var vx, vy, butAuto = null;
-  if (kb){ vx = kb.x; vy = kb.y; stopperAuto(); }
-  else if (DOIGT.actif && (DOIGT.dx || DOIGT.dy)){ vx = DOIGT.dx; vy = DOIGT.dy; }
-  else if (JOY.dx || JOY.dy){ vx = JOY.dx; vy = JOY.dy; }
-  else if (S.auto){
-    // il rejoint le point touché en suivant UNE allée à la fois,
-    // jamais deux à la fois : d'abord l'axe horizontal, puis le vertical.
-    butAuto = S.auto.pts[S.auto.i];
-    if (!butAuto){ stopperAuto(); vx = 0; vy = 0; }
-    else {
-      var ex = butAuto.x - S.modou.x;
-      var ey = butAuto.y - S.modou.y;
-      var seuilX = 0.18, seuilY = 0.18 * RATIO;
-      if (Math.abs(ex) > seuilX){ vx = ex > 0 ? 1 : -1; vy = 0; }
-      else if (Math.abs(ey) > seuilY){ vx = 0; vy = ey > 0 ? 1 : -1; }
-      else {
-        S.modou.x = butAuto.x; S.modou.y = butAuto.y;   // arrivé au carrefour
-        S.auto.i++;
-        if (S.auto.i >= S.auto.pts.length) stopperAuto();
-        vx = 0; vy = 0; butAuto = null;
-      }
-    }
-  }
-  else { vx = 0; vy = 0; }
-  var bouge = (Math.abs(vx) + Math.abs(vy)) > 0.02;
-  if (bouge){
-    var mult = vitesseDeModou();
-    if (S.moto) mult *= CFG.MOTO_VITESSE;
-    else if (S.ane) mult *= CFG.ANE_VITESSE;
-    var px = vx * CFG.VITESSE * mult * dt;
-    var py = vy * CFG.VITESSE * RATIO * mult * dt;
-    var nx = Math.max(3, Math.min(97, S.modou.x + px));
-    var ny = Math.max(4, Math.min(96, S.modou.y + py));
-
-    // Modou ne quitte jamais les allées : on tente le mouvement complet,
-    // puis on le fait glisser sur un seul axe s'il bute.
-    if (S.auto){
-      if (butAuto){
-        if (vx > 0) nx = Math.min(nx, butAuto.x);
-        if (vx < 0) nx = Math.max(nx, butAuto.x);
-        if (vy > 0) ny = Math.min(ny, butAuto.y);
-        if (vy < 0) ny = Math.max(ny, butAuto.y);
-      }
-      S.modou.x = nx; S.modou.y = ny;
-    }
-    else if (marchable(nx, ny)){ S.modou.x = nx; S.modou.y = ny; }
-    else if (marchable(nx, S.modou.y)){ S.modou.x = nx; }
-    else if (marchable(S.modou.x, ny)){ S.modou.y = ny; }
-    else bouge = false;
-
-    if (Math.abs(vx) > 0.05) S.modou.dir = vx > 0 ? 1 : -1;
-  }
-  S.modou.marche = bouge;
-
-  // hors du cercle familial, le temps use Modou quoi qu'il fasse
-  if (S.zone !== 'CENTRE'){
-    S.force = Math.max(0, S.force - (bouge ? CFG.COUT_MARCHE : CFG.COUT_REPOS) * dt);
-  }
+  deplacerModou(dt);
 
   // zone
   var z = zoneSous();
@@ -4091,7 +4136,7 @@ function tourDeBoucle(ts){
   majPluie(dt);
   majPensees(dt);
   majTuto(dt);
-  animerJambes(S.temps, bouge);
+  animerJambes(S.temps, S.modou.marche);
   majCrises();
   rendre();
   majCamera(dt);
