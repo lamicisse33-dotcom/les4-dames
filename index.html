@@ -321,10 +321,21 @@ html,body{height:100%;overflow:hidden;background:#1B2A1B;font-family:var(--ui);c
 #recordBox.neuf #record{color:var(--trait)}
 @keyframes recordNeuf{0%,100%{transform:scale(1) rotate(-2deg)}
   50%{transform:scale(1.1) rotate(2deg)}}
+#menuBtn{pointer-events:auto;width:34px;height:34px;border-radius:12px;
+  background:var(--blanc);border:3px solid var(--trait);box-shadow:var(--ombre);
+  font-family:var(--ui);font-size:17px;line-height:1;color:var(--trait);cursor:pointer;
+  padding:0;flex:0 0 auto}
+#menuBtn:active{transform:translateY(2px);box-shadow:0 1px 0 var(--trait)}
+
 #jourBox{background:var(--blanc);border:3px solid var(--trait);border-radius:18px;
   padding:3px 10px;box-shadow:var(--ombre);text-align:center}
 #jourBox small{display:block;font-size:7.5px;font-weight:900;letter-spacing:.14em;opacity:.55}
 #jour{font-size:16px;font-weight:900;line-height:1}
+#nomJour{display:block;font-size:6.5px;font-weight:900;letter-spacing:.1em;
+  text-transform:uppercase;color:rgba(43,33,24,.5);margin-top:1px}
+#nomJour.chome{color:#C8892B}
+.badge .prix.prime{background:#FF8A3D;animation:monte .5s ease-in-out infinite}
+.badge.prime{background:#FFF0C2}
 
 /* ---- HUD BAS ---- */
 #force{position:fixed;left:8px;bottom:calc(10px + env(safe-area-inset-bottom));z-index:40;
@@ -432,10 +443,21 @@ html,body{height:100%;overflow:hidden;background:#1B2A1B;font-family:var(--ui);c
 #recordBox.neuf #record{color:var(--trait)}
 @keyframes recordNeuf{0%,100%{transform:scale(1) rotate(-2deg)}
   50%{transform:scale(1.1) rotate(2deg)}}
+#menuBtn{pointer-events:auto;width:34px;height:34px;border-radius:12px;
+  background:var(--blanc);border:3px solid var(--trait);box-shadow:var(--ombre);
+  font-family:var(--ui);font-size:17px;line-height:1;color:var(--trait);cursor:pointer;
+  padding:0;flex:0 0 auto}
+#menuBtn:active{transform:translateY(2px);box-shadow:0 1px 0 var(--trait)}
+
 #jourBox{background:var(--blanc);border:3px solid var(--trait);border-radius:18px;
   padding:3px 10px;box-shadow:var(--ombre);text-align:center}
 #jourBox small{display:block;font-size:7.5px;font-weight:900;letter-spacing:.14em;opacity:.55}
 #jour{font-size:16px;font-weight:900;line-height:1}
+#nomJour{display:block;font-size:6.5px;font-weight:900;letter-spacing:.1em;
+  text-transform:uppercase;color:rgba(43,33,24,.5);margin-top:1px}
+#nomJour.chome{color:#C8892B}
+.badge .prix.prime{background:#FF8A3D;animation:monte .5s ease-in-out infinite}
+.badge.prime{background:#FFF0C2}
 
 /* ---- HUD BAS ---- */
 #force{position:fixed;left:8px;bottom:calc(10px + env(safe-area-inset-bottom));z-index:40;
@@ -639,6 +661,10 @@ button.cta.hide{display:none}
 button.cta small{display:block;font-size:8px;font-weight:700;letter-spacing:.06em;
   text-transform:none;opacity:.7;margin-top:2px}
 button.cta.petit{padding:8px 18px;font-size:10px;opacity:.75}
+#bordAcces{margin-top:14px;background:transparent;border:0;cursor:pointer;
+  color:rgba(255,246,228,.14);font-family:var(--ui);font-size:15px;line-height:1;
+  padding:14px 26px}
+#bordAcces:active{color:rgba(255,246,228,.3)}
 button.cta{touch-action:manipulation;position:relative;z-index:2}
 .screen{touch-action:manipulation}
 #portrait{width:min(34vh,210px);height:min(40vh,248px);flex:0 0 auto;
@@ -669,6 +695,16 @@ button.cta{touch-action:manipulation;position:relative;z-index:2}
 .jrow.fort .jt{color:#FF9EB4;font-weight:900}
 .jrow.entete{font-size:8px;letter-spacing:.16em;opacity:.45;margin-bottom:2px}
 .jrow.entete .jj,.jrow.entete .jt{color:rgba(255,246,228,.6);font-weight:900}
+#niveaux{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
+.niveauBtn{background:rgba(255,255,255,.07);color:rgba(255,246,228,.65);
+  border:2.5px solid rgba(255,246,228,.22);border-radius:20px;
+  padding:7px 14px;font-size:10.5px;font-weight:900;letter-spacing:.08em;
+  text-transform:uppercase;font-family:var(--ui);cursor:pointer}
+.niveauBtn.actif{background:var(--or);color:var(--trait);border-color:var(--trait);
+  box-shadow:0 3px 0 var(--trait)}
+.niveauBtn:active{transform:translateY(2px)}
+#niveauDit{font-size:11px;font-weight:600;color:rgba(255,246,228,.5);margin-top:-4px}
+
 #recordAccueil{display:none;font-size:12.5px;font-weight:900;color:var(--creme);
   background:rgba(255,197,61,.14);border:2.5px solid rgba(255,197,61,.5);
   border-radius:20px;padding:7px 16px;margin-bottom:2px}
@@ -741,12 +777,14 @@ button.cta{touch-action:manipulation;position:relative;z-index:2}
 
 <div id="scene"><div id="board"><div id="layer"></div></div></div>
 <div id="flash"></div>
+<div id="tuto"></div>
 
 <div id="top">
   <div id="jauges"></div>
   <div id="droite">
+    <button id="menuBtn">⌂</button>
     <div id="sous"><span class="pic">&#128176;</span><span id="sousVal">0</span></div>
-    <div id="jourBox"><small>JOUR</small><div id="jour">1</div></div>
+    <div id="jourBox"><small>JOUR</small><div id="jour">1</div><b id="nomJour">Lundi</b></div>
     <div id="recordBox"><small>RECORD</small><div id="record">0</div></div>
   </div>
 </div>
@@ -775,11 +813,19 @@ button.cta{touch-action:manipulation;position:relative;z-index:2}
   Une Dame dont la jauge tombe à zéro <b>quitte le cercle pour de bon</b>. La partie ne s'arrête qu'à la troisième qui part.<br><br>
   <b>Ton score, c'est le nombre de jours tenus.</b><br><br>
   Joystick pour marcher. Entre dans un cercle et l'affaire se fait toute seule.</p>
+  <div id="niveaux">
+    <button class="niveauBtn" id="niv0">Facile</button>
+    <button class="niveauBtn actif" id="niv1">Difficile</button>
+    <button class="niveauBtn" id="niv2">Très difficile</button>
+  </div>
+  <div id="niveauDit"></div>
   <div id="recordAccueil"></div>
   <button class="cta ghost hide" id="btnReprendre">Reprendre</button>
   <button class="cta hide" id="btnProgres">Continuer</button>
   <button class="cta" id="btnStart">Réveiller Modou</button>
+  <button class="cta ghost petit" id="btnTuto">Revoir le tutoriel</button>
   <button class="cta ghost petit" id="btnZero">Repartir de zéro</button>
+  <button id="bordAcces" aria-label="•">&#8226;</button>
 </div>
 
 <div class="screen hide" id="scrFin">
@@ -1096,7 +1142,7 @@ function dameSVG(i){
    ========================================================= */
 'use strict';
 
-var BUILD_TAG = 'LQD-v8.1';
+var BUILD_TAG = 'LQD-v8.8';
 document.getElementById('build').textContent = BUILD_TAG;
 
 /* ---------- affichage des erreurs, pour pouvoir diagnostiquer ---------- */
@@ -1133,6 +1179,12 @@ function surAppui(e){
     }
     if (n.id === 'bordVider'){
       if (confirm('Effacer tout l\u2019historique des parties ?')){ effacerStats(); construireTableau(); }
+      return;
+    }
+    if (n.id && n.id.indexOf('niv') === 0 && n.id.length === 4){
+      if (e.cancelable) e.preventDefault();
+      try { choisirNiveau(parseInt(n.id.slice(3), 10)); majBoutonProgres(); majBoutonReprendre(); }
+      catch (err) {}
       return;
     }
     if (n.id === 'btnProgres' || n.id === 'btnProgres2'){
@@ -1177,6 +1229,29 @@ function surAppui(e){
     if (n.id === 'voixBtn'){ try { basculerVoix(); } catch (err) {} return; }
     if (n.id === 'chContinuer'){ try { sonBouton(); fermerLeChapitre(true); } catch (err) {} return; }
     if (n.id === 'chRejouer'){   try { sonBouton(); fermerLeChapitre(false); } catch (err) {} return; }
+    if (n.id === 'tutoPasser'){
+      if (e.cancelable) e.preventDefault();
+      try { sonBouton(); arreterLeTuto(); } catch (err) {}
+      return;
+    }
+    if (n.id === 'btnTuto'){
+      if (e.cancelable) e.preventDefault();
+      try { sonBouton(); try { localStorage.removeItem('lqd_tuto_vu'); } catch (x) {} demarrer(); }
+      catch (err){ montrerErreur('tuto : ' + (err && err.message ? err.message : err)); }
+      return;
+    }
+    if (n.id === 'bordAcces'){
+      if (e.cancelable) e.preventDefault();
+      try { sonBouton(); ouvrirLeBord(); }
+      catch (err){ montrerErreur('tableau : ' + (err && err.message ? err.message : err)); }
+      return;
+    }
+    if (n.id === 'menuBtn'){
+      if (e.cancelable) e.preventDefault();
+      try { sonBouton(); retourAuMenu(); }
+      catch (err){ montrerErreur('menu : ' + (err && err.message ? err.message : err)); }
+      return;
+    }
     if (n.id === 'enfantBtn'){
       try { sonBouton(); envoyerLEnfantSeul(); }
       catch (err){ montrerErreur('enfant : ' + (err && err.message ? err.message : err)); }
@@ -1248,7 +1323,8 @@ var CFG = {
   MOTO_JOUR: 121,        // cinquième partie
   MOTO_PRIX: 3000,
   MOTO_RETENUE: 0.35,     // le patron retient ce tiers sur chaque paye
-  MOTO_VITESSE: 4.0,     // quatre fois plus rapide qu'à pied
+  MOTO_VITESSE: 4.0,
+  PRIME_REPOS: 2.0,      // samedi, dimanche et jours fériés : la paye double     // quatre fois plus rapide qu'à pied
 
   ANE_JOUR: 61,           // troisième mois : le gardien du temple le propose
   PRIX_ANE: 800,
@@ -1280,6 +1356,61 @@ var CFG = {
   Z_SORTIE: 1.35,
   CAM_SOUPLESSE: 4.2
 };
+
+/* =========================================================
+   LA SEMAINE, LE WEEK-END ET LES JOURS FÉRIÉS
+   Le jour 1 est un lundi. Samedi, dimanche et fêtes : paye doublée.
+   ========================================================= */
+var JOURS_SEMAINE = ['Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi','Dimanche'];
+var FETES = ['Korit\u00e9','Tabaski','Gamou','Magal','Tamkharit','F\u00eate du travail'];
+
+function nomDuJour(j){ return JOURS_SEMAINE[(j - 1) % 7]; }
+function estWeekend(j){ return ((j - 1) % 7) >= 5; }
+function ferieDuJour(j){
+  if (j < 22) return null;
+  if ((j - 22) % 26 !== 0) return null;
+  return FETES[Math.floor((j - 22) / 26) % FETES.length];
+}
+function payeDoublee(j){ return estWeekend(j) || !!ferieDuJour(j); }
+
+/* =========================================================
+   LES TROIS NIVEAUX
+   Ce qui change : le coût de la vie, l'usure des Dames,
+   la paye du chantier et le mandat du fils.
+   ========================================================= */
+var NIVEAUX = [
+  { cle:'facile',  nom:'Facile',
+    inflation:0.20, pressionMax:1.00, usure:0.80, paye:1.20, mandat:0.70,
+    dit:'Les prix montent doucement, Modou tient mieux.' },
+  { cle:'dur',     nom:'Difficile',
+    inflation:0.30, pressionMax:1.60, usure:1.00, paye:1.00, mandat:1.00,
+    dit:'L\u2019équilibre d\u2019origine.' },
+  { cle:'tresdur', nom:'Très difficile',
+    inflation:0.40, pressionMax:2.20, usure:1.20, paye:0.85, mandat:1.30,
+    dit:'La vie ne fait aucun cadeau.' }
+];
+var iNiveau = 1;
+try {
+  var sauve = localStorage.getItem('lqd_niveau');
+  for (var q=0;q<NIVEAUX.length;q++) if (NIVEAUX[q].cle === sauve) iNiveau = q;
+} catch (e) {}
+function NIV(){ return NIVEAUX[iNiveau]; }
+function choisirNiveau(i){
+  iNiveau = Math.max(0, Math.min(NIVEAUX.length - 1, i));
+  try { localStorage.setItem('lqd_niveau', NIV().cle); } catch (e) {}
+  majBoutonsNiveau();
+  chargerRecord();
+  afficherRecordAccueil();
+  sonBouton();
+}
+function majBoutonsNiveau(){
+  for (var i=0;i<NIVEAUX.length;i++){
+    var b = document.getElementById('niv' + i);
+    if (b) b.className = 'niveauBtn' + (i === iNiveau ? ' actif' : '');
+  }
+  var d = document.getElementById('niveauDit');
+  if (d) d.textContent = NIV().dit;
+}
 
 /* ---------- LES QUATRE DAMES ---------- */
 var DAMES = [
@@ -1490,6 +1621,7 @@ function nouvelEtat(){
     vu:{}, rappels:{},
     fete:null, chapitre:null, derniereFete:0, fetes:0, prochainJalon:1, rachats:0,
     recordBattu:false, recordVu:false, moisSalue:false,
+    tuto:null, achats:0,
     enfant:null, coursesEnfant:0,
     ane:false, aneOffert:false, rappelAne:0,
     filsParti:false, mandat:null, mandatsEnvoyes:0, mandatsRates:0,
@@ -1538,7 +1670,7 @@ function palierActuel(jour){
 }
 function prixDuJour(cle){
   var base = LIEUX[cle].prix;
-  var k = Math.pow(1 + CFG.PALIER_HAUSSE, palierActuel());
+  var k = Math.pow(1 + NIV().inflation, palierActuel());
   return Math.round(base * k);
 }
 
@@ -2009,7 +2141,12 @@ function noter(jour, texte, fort){
   S.journal.push({ jour:jour, texte:texte, fort:!!fort });
 }
 var MEILLEUR = 0;
-try { MEILLEUR = parseInt(localStorage.getItem('lqd_record_v27') || '0', 10) || 0; } catch (e) { MEILLEUR = 0; }
+function cleRecord(){ return 'lqd_record_v27_' + NIV().cle; }
+function chargerRecord(){
+  try { MEILLEUR = parseInt(localStorage.getItem(cleRecord()) || '0', 10) || 0; }
+  catch (e) { MEILLEUR = 0; }
+  majRecord();
+}
 /* le record n'est plus un chiffre mort : il pousse le joueur pendant la partie */
 function veillerLeRecord(jour){
   var boite = document.getElementById('recordBox');
@@ -2017,7 +2154,7 @@ function veillerLeRecord(jour){
   if (!S.recordBattu && MEILLEUR > 0 && jour > MEILLEUR){
     S.recordBattu = true;
     MEILLEUR = jour;
-    try { localStorage.setItem('lqd_record_v27', String(MEILLEUR)); } catch (e) {}
+    try { localStorage.setItem(cleRecord(), String(MEILLEUR)); } catch (e) {}
     if (boite) boite.classList.add('neuf');
     flash('NOUVEAU RECORD \u2014 ' + jour + ' jours !', 3200);
     modouDit('C\u2019est mon meilleur !', 2600);
@@ -2027,7 +2164,7 @@ function veillerLeRecord(jour){
   }
   else if (S.recordBattu){
     MEILLEUR = jour;
-    try { localStorage.setItem('lqd_record_v27', String(MEILLEUR)); } catch (e) {}
+    try { localStorage.setItem(cleRecord(), String(MEILLEUR)); } catch (e) {}
   }
   else if (MEILLEUR > 0 && !S.recordVu){
     var reste = MEILLEUR - jour + 1;
@@ -2042,9 +2179,9 @@ function veillerLeRecord(jour){
 }
 
 function majRecord(){
-  if (S.jour > MEILLEUR){
+  if (S && S.jour > MEILLEUR){
     MEILLEUR = S.jour;
-    try { localStorage.setItem('lqd_record_v27', String(MEILLEUR)); } catch (e) {}
+    try { localStorage.setItem(cleRecord(), String(MEILLEUR)); } catch (e) {}
   }
   var el = document.getElementById('record');
   if (el) el.textContent = MEILLEUR;
@@ -2236,6 +2373,103 @@ function majPensees(dt){
   prochainePensee = 28 + Math.random() * 22;
   var p = PENSEES[Math.floor(Math.random() * PENSEES.length)];
   modouDit(p, 3000);
+}
+
+/* =========================================================
+   LE TUTORIEL — on apprend en faisant, pas en lisant.
+   Chaque étape attend que le joueur ait vraiment agi.
+   ========================================================= */
+var TUTO = [
+  { cible:'CHANTIER',
+    txt:'Touche le chantier, en haut. Modou ira tout seul.',
+    voix:'Je monte au chantier.',
+    ok:function(){ return S.zone === 'CHANTIER'; } },
+
+  { cible:'CHANTIER',
+    txt:'Reste dans le cercle : l\u2019argent monte tant que tu ne bouges pas.',
+    voix:'Tant que je reste, je gagne.',
+    ok:function(){ return S.argent >= CFG.ARGENT_DEPART + 260; } },
+
+  { cible:'DAME',
+    txt:'Une Dame r\u00e9clame. Va chez elle et l\u2019affaire se fait toute seule.',
+    voix:'Elle a besoin de quelque chose. J\u2019y vais.',
+    ok:function(){ return S.achats >= 1; } },
+
+  { cible:'CENTRE',
+    txt:'Avant la course suivante, repasse toujours par le foyer.',
+    voix:'Je dois repasser au foyer.',
+    ok:function(){ return S.zone === 'CENTRE'; } },
+
+  { cible:'CENTRE',
+    txt:'Ici, et nulle part ailleurs, Modou reprend des forces.',
+    voix:'Ici je souffle.',
+    ok:function(){ return S.force >= 88; } },
+
+  { cible:null,
+    txt:'C\u2019est tout. La jauge la plus basse d\u00e9cide de tout : tiens le plus longtemps possible.',
+    voix:'Quatre femmes, un seul dos. On y va.',
+    ok:function(){ return S.tuto.t > 5.5; } }
+];
+
+function lancerLeTuto(){
+  S.tuto = { etape:0, t:0, montre:false };
+  majPanneauTuto();
+}
+function arreterLeTuto(){
+  S.tuto = null;
+  var z = document.getElementById('tuto');
+  if (z) z.className = '';
+  try { localStorage.setItem('lqd_tuto_vu', '1'); } catch (e) {}
+}
+function tutoDejaVu(){
+  try { return localStorage.getItem('lqd_tuto_vu') === '1'; } catch (e) { return true; }
+}
+
+function majPanneauTuto(){
+  var z = document.getElementById('tuto');
+  if (!z || !S.tuto) return;
+  var e = TUTO[S.tuto.etape];
+  if (!e) return;
+  z.className = 'on';
+  z.innerHTML = '<span class="tpas">' + (S.tuto.etape + 1) + '/' + TUTO.length + '</span>' +
+                '<span class="ttxt">' + e.txt + '</span>' +
+                '<button id="tutoPasser">Passer</button>';
+  if (e.voix) modouDit(e.voix, 3000);
+}
+
+function majTuto(dt){
+  if (!S || !S.tuto) return;
+  S.tuto.t += dt;
+  var e = TUTO[S.tuto.etape];
+  if (!e) { arreterLeTuto(); return; }
+  var fait = false;
+  try { fait = e.ok(); } catch (err) { fait = false; }
+  if (fait && S.tuto.t > 0.8){
+    S.tuto.etape++;
+    S.tuto.t = 0;
+    if (S.tuto.etape >= TUTO.length){
+      sonFoyer();
+      flash('Tutoriel termin\u00e9. \u00c0 toi de jouer.', 2600);
+      arreterLeTuto();
+    } else {
+      sonEntree();
+      majPanneauTuto();
+    }
+  }
+}
+
+/* la cible du moment clignote */
+function cibleDuTuto(){
+  if (!S || !S.tuto) return null;
+  var e = TUTO[S.tuto.etape];
+  if (!e || !e.cible) return null;
+  if (e.cible !== 'DAME') return e.cible;
+  var iv = -1, mn = 1e9;
+  for (var i=0;i<DAMES.length;i++){
+    if (S.parties[i]) continue;
+    if (S.jauges[i] < mn){ mn = S.jauges[i]; iv = i; }
+  }
+  return iv >= 0 ? DAMES[iv].lieu : null;
 }
 
 /* ---------- LE GUIDAGE : chaque règle une seule fois, au bon moment ---------- */
@@ -2887,7 +3121,8 @@ function acheterLAne(){
    Chaque semaine, Modou doit lui envoyer de l'argent depuis la banque.
    ========================================================= */
 function montantDuMandat(){
-  return Math.round(CFG.MANDAT_BASE * Math.pow(1 + CFG.PALIER_HAUSSE, palierActuel()));
+  return Math.round(CFG.MANDAT_BASE * NIV().mandat *
+                    Math.pow(1 + NIV().inflation, palierActuel()));
 }
 
 function leFilsPart(){
@@ -3396,8 +3631,21 @@ function rendre(){
   badgesEl.CHANTIER.classList.toggle('nuit', nuitPleine);
   var bc2 = badgesEl.CHANTIER.querySelector('.prix');
   var bt2 = badgesEl.CHANTIER.querySelector('.txt');
-  if (bc2) bc2.textContent = nuitPleine ? '\uD83C\uDF19' : ('+' + CFG.GAIN_CHANTIER + '/s');
-  if (bt2) bt2.textContent = nuitPleine ? 'FERMÉ' : 'CHANTIER';
+  var doubles = payeDoublee(S.jour);
+  var taux = Math.round(CFG.GAIN_CHANTIER * NIV().paye * (doubles ? CFG.PRIME_REPOS : 1));
+  if (bc2){
+    bc2.textContent = nuitPleine ? '\uD83C\uDF19' : ('+' + taux + '/s');
+    bc2.classList.toggle('prime', doubles && !nuitPleine);
+  }
+  if (bt2) bt2.textContent = nuitPleine ? 'FERMÉ' : (doubles ? 'CHANTIER \u00d72' : 'CHANTIER');
+  badgesEl.CHANTIER.classList.toggle('prime', doubles && !nuitPleine);
+
+  var nomJ = document.getElementById('nomJour');
+  if (nomJ){
+    var f = ferieDuJour(S.jour);
+    nomJ.textContent = f ? f : nomDuJour(S.jour);
+    nomJ.className = (f || estWeekend(S.jour)) ? 'chome' : '';
+  }
   zonesEl.CENTRE.classList.toggle('foyerdu', !S.foyer && S.zone !== 'CENTRE');
   badgesEl.CENTRE.classList.toggle('foyerdu', !S.foyer);
   var bp = badgesEl.CENTRE.querySelector('.txt');
@@ -3440,6 +3688,7 @@ function rendre(){
   }
   if (enfantEl && S.enfant) enfantEl.style.zIndex = 20 + Math.round(S.enfant.y * 2);
 
+  var cibleTuto = cibleDuTuto();
   var cles = Object.keys(zonesEl);
   for (var c=0;c<cles.length;c++){
     var k2 = cles[c];
@@ -3447,6 +3696,7 @@ function rendre(){
     var proche = distPx(S.modou.x, S.modou.y, P.x, P.y) < CFG.RAYON_ZONE * BW * 3.4;
     zonesEl[k2].classList.toggle('actif', S.zone === k2);
     zonesEl[k2].classList.toggle('proche', proche);
+    zonesEl[k2].classList.toggle('tuto', cibleTuto === k2);
     badgesEl[k2].classList.toggle('proche', proche);
     if (k2 === 'CENTRE') zonesEl[k2].classList.toggle('appel', niv > 0 && S.zone !== 'CENTRE');
   }
@@ -3502,8 +3752,8 @@ function tourDeBoucle(ts){
     S.jour = jour;
     sonJour();
     if (palierActuel(jour) > palierAvant){
-      var hausse = Math.round(CFG.PALIER_HAUSSE * 100);
-      var total = Math.round((Math.pow(1 + CFG.PALIER_HAUSSE, palierActuel(jour)) - 1) * 100);
+      var hausse = Math.round(NIV().inflation * 100);
+      var total = Math.round((Math.pow(1 + NIV().inflation, palierActuel(jour)) - 1) * 100);
       flash('Jour ' + jour + ' \u2014 la vie augmente de ' + hausse + ' %.', 3000);
       noter(jour, 'Les prix montent de ' + hausse + ' % (' + total + ' % depuis le d\u00e9but).');
       sonDebout();
@@ -3514,6 +3764,18 @@ function tourDeBoucle(ts){
     if (jour === CFG.ENFANT_JOUR && !S.enfant) faireVenirLEnfant();
     if (jour >= CFG.ANE_JOUR && !S.aneOffert && !S.ane) proposerLAne();
     if (jour >= CFG.ANE_JOUR && !S.filsParti) leFilsPart();
+    var fete = ferieDuJour(jour);
+    if (fete){
+      flash(fete + ' \u2014 jour f\u00e9ri\u00e9. La paye est doubl\u00e9e au chantier.', 3600);
+      parler('C\u2019est ' + fete + ' ! Le patron paie double aujourd\u2019hui.', VOIX_MODOU);
+      noter(jour, fete + ' : paye doubl\u00e9e.');
+      sonSerie();
+    } else if (estWeekend(jour) && !estWeekend(jour - 1)){
+      flash('Samedi \u2014 le patron paie double tout le week-end.', 3000);
+      parler('Le week-end, on paie double. Je travaille.', VOIX_MODOU);
+      sonSerie();
+    }
+
     if (jour >= CFG.PLUIE_JOUR && !S.saisonPluies) ouvrirLaSaison();
     if (jour >= CFG.PLUIE_JOUR + 1 && S.saisonPluies && !S.toitRepare) proposerLeToit();
     if (jour === CFG.VACANCES_JOUR && S.filsParti && !S.vacances) leFilsRevient();
@@ -3562,7 +3824,7 @@ function tourDeBoucle(ts){
   var lampes = document.getElementById('lampes');
   if (lampes) lampes.style.opacity = S.nuit.toFixed(3);
 
-  var pression = 1 + Math.min(1.6, (S.jour - 1) * 0.022);
+  var pression = 1 + Math.min(NIV().pressionMax, (S.jour - 1) * 0.022);
   // quand Modou flanche, le foyer se vide plus vite
   var manque = Math.max(0, (CFG.SEUIL_FATIGUE - S.force) / CFG.SEUIL_FATIGUE);
   var abandon = 1 + manque * CFG.USURE_EPUISE;
@@ -3572,7 +3834,7 @@ function tourDeBoucle(ts){
     var nuitFacteur = 1 - (1 - CFG.NUIT_USURE) * S.nuit;
     var pluieFacteur = (S.pluie > 0 && !S.toitRepare) ? CFG.PLUIE_USURE : 1;
     S.jauges[i] = Math.max(0, S.jauges[i] -
-      DAMES[i].usure * pression * abandon * deuil * nuitFacteur * pluieFacteur * dt);
+      DAMES[i].usure * NIV().usure * pression * abandon * deuil * nuitFacteur * pluieFacteur * dt);
   }
 
   // déplacement
@@ -3685,7 +3947,8 @@ function tourDeBoucle(ts){
     if (S.force > 0){
       S.serie += dt;
       var bonus = 1 + Math.min(CFG.SERIE_MAX, S.serie * CFG.SERIE_BONUS);
-      var paye = CFG.GAIN_CHANTIER * rendT * bonus * dt;
+      var prime = payeDoublee(S.jour) ? CFG.PRIME_REPOS : 1;
+      var paye = CFG.GAIN_CHANTIER * NIV().paye * rendT * bonus * prime * dt;
       if (S.moto && S.dette > 0){
         var retenue = Math.min(S.dette, paye * CFG.MOTO_RETENUE);
         S.dette -= retenue;
@@ -3778,6 +4041,7 @@ function tourDeBoucle(ts){
   majEnfant(dt);
   majPluie(dt);
   majPensees(dt);
+  majTuto(dt);
   animerJambes(S.temps, bouge);
   majCrises();
   rendre();
@@ -4478,6 +4742,26 @@ function ouvrirLeBord(){
   construireTableau();
   document.getElementById('scrBord').classList.remove('hide');
 }
+/* revenir au menu sans rien perdre : la partie est sauvegardée */
+function retourAuMenu(){
+  if (!S) return;
+  sauvegarder();
+  ecrireProgres();
+  S.enCours = false;
+  S.fete = null;
+  couperLaParole();
+  couperLeDialogue();
+  joyFin(); doigtFin(); stopperAuto(); finirLaFete();
+  document.body.classList.remove('playing');
+  if (AC) monter(BUS_MUS, 0, 0.6);
+  majBoutonReprendre();
+  majBoutonProgres();
+  majBoutonsNiveau();
+  afficherRecordAccueil();
+  document.getElementById('scrFin').classList.add('hide');
+  document.getElementById('scrIntro').classList.remove('hide');
+}
+
 function fermerLeBord(){
   document.getElementById('scrBord').classList.add('hide');
   majBoutonReprendre();
@@ -4534,11 +4818,11 @@ var DUREE_PORTE = 10000, DELAI_INDICE = 4000;
    LA PROGRESSION — ce que Modou a atteint, et ce qu'il possède.
    Elle survit à la fin de partie : on ne recommence pas tout à zéro.
    ========================================================= */
-var CLE_PROGRES = 'lqd_progres_v1';
+function CLE_PROGRES(){ return 'lqd_progres_v1_' + NIV().cle; }
 
 function lireProgres(){
   try {
-    var d = JSON.parse(localStorage.getItem(CLE_PROGRES) || 'null');
+    var d = JSON.parse(localStorage.getItem(CLE_PROGRES()) || 'null');
     if (!d || !d.partie) return null;
     return d;
   } catch (e) { return null; }
@@ -4554,10 +4838,10 @@ function ecrireProgres(){
     toit: !!(S.toitRepare || ancien.toit),
     jours: Math.max(ancien.jours || 0, S.jour)
   };
-  try { localStorage.setItem(CLE_PROGRES, JSON.stringify(d)); } catch (e) {}
+  try { localStorage.setItem(CLE_PROGRES(), JSON.stringify(d)); } catch (e) {}
 }
 function effacerProgres(){
-  try { localStorage.removeItem(CLE_PROGRES); } catch (e) {}
+  try { localStorage.removeItem(CLE_PROGRES()); } catch (e) {}
 }
 
 /* on remet Modou dans l'état où il était au début de cette partie-là */
@@ -4570,7 +4854,7 @@ function appliquerLaProgression(pr){
   S.moisSalue = S.jour > 30;
 
   // l'argent de départ suit le coût de la vie
-  S.argent = Math.round(CFG.ARGENT_DEPART * Math.pow(1 + CFG.PALIER_HAUSSE, palierActuel()));
+  S.argent = Math.round(CFG.ARGENT_DEPART * Math.pow(1 + NIV().inflation, palierActuel()));
 
   if (n >= 3){
     S.filsParti = true;
@@ -4735,6 +5019,8 @@ function majBoutonReprendre(){
     b.classList.add('hide');
   }
 }
+majBoutonsNiveau();
+chargerRecord();
 majBoutonReprendre();
 majBoutonProgres();
 afficherRecordAccueil();
