@@ -726,6 +726,37 @@ button.cta{touch-action:manipulation;position:relative;z-index:2}
 #score{font-size:58px;font-weight:900;line-height:1;color:var(--blanc);text-shadow:0 4px 0 var(--trait)}
 #titre{font-size:13px;font-weight:900;letter-spacing:.18em;text-transform:uppercase;color:var(--or)}
 
+/* ---- L'INSTALLATION ---- */
+#installer{display:none;flex-direction:column;align-items:center;gap:5px;margin:2px 0}
+#installer.on{display:flex}
+#installer button{background:#5FD98A;color:var(--trait);border:3px solid var(--trait);
+  border-radius:22px;padding:11px 24px;font-family:var(--ui);font-size:11.5px;
+  font-weight:900;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;
+  box-shadow:0 4px 0 var(--trait)}
+#installer.ios button{background:#7BD3F7}
+#installer button:active{transform:translateY(3px);box-shadow:0 1px 0 var(--trait)}
+#installer .isous{font-size:10px;font-weight:600;color:rgba(255,246,228,.5)}
+
+#modeEmploi{position:fixed;inset:0;z-index:160;display:none;align-items:center;
+  justify-content:center;padding:22px;background:rgba(12,20,12,.82)}
+#modeEmploi.on{display:flex}
+.meBoite{background:#1B2A1B;border:4px solid var(--trait);border-radius:24px;
+  box-shadow:0 6px 0 var(--trait);padding:20px 18px;max-width:min(420px,92vw);
+  display:flex;flex-direction:column;gap:11px;text-align:left}
+.meTitre{font-size:15px;font-weight:900;color:var(--or);letter-spacing:.06em;
+  text-align:center;margin-bottom:2px}
+.meEtape{display:flex;align-items:flex-start;gap:10px;font-size:12.5px;
+  color:rgba(255,246,228,.85);line-height:1.4}
+.meEtape b{color:#fff}
+.meNum{flex:0 0 auto;width:22px;height:22px;border-radius:50%;background:var(--or);
+  border:2.5px solid var(--trait);color:var(--trait);font-size:11px;font-weight:900;
+  display:flex;align-items:center;justify-content:center}
+.mePart{display:inline-flex;align-items:center;justify-content:center;
+  width:19px;height:19px;border:2px solid #7BD3F7;border-radius:5px;color:#7BD3F7;
+  font-style:normal;font-size:12px;font-weight:900;vertical-align:-4px;margin-left:3px}
+.meNote{font-size:10.5px;color:rgba(255,246,228,.5);line-height:1.45;
+  border-top:2px solid rgba(255,246,228,.14);padding-top:9px}
+
 /* ---- TABLEAU DE BORD ---- */
 #scrBord{z-index:140;justify-content:flex-start;padding-top:22px}
 #bordCorps{width:min(520px,94vw);display:flex;flex-direction:column;gap:12px}
@@ -823,6 +854,7 @@ button.cta{touch-action:manipulation;position:relative;z-index:2}
   <button class="cta ghost hide" id="btnReprendre">Reprendre</button>
   <button class="cta hide" id="btnProgres">Continuer</button>
   <button class="cta" id="btnStart">Réveiller Modou</button>
+  <div id="installer"></div>
   <button class="cta ghost petit" id="btnTuto">Revoir le tutoriel</button>
   <button class="cta ghost petit" id="btnZero">Repartir de zéro</button>
   <button id="bordAcces" aria-label="•">&#8226;</button>
@@ -854,6 +886,7 @@ button.cta{touch-action:manipulation;position:relative;z-index:2}
 </div>
 
 <div id="chapitre"></div>
+<div id="modeEmploi"></div>
 
 <div id="rot"><p class="lede">Tourne ton téléphone.<br>Le domaine se regarde du ciel.</p></div>
 <div id="build"></div>
@@ -1142,7 +1175,7 @@ function dameSVG(i){
    ========================================================= */
 'use strict';
 
-var BUILD_TAG = 'LQD-v8.9';
+var BUILD_TAG = 'LQD-v9.1';
 document.getElementById('build').textContent = BUILD_TAG;
 
 /* ---------- affichage des erreurs, pour pouvoir diagnostiquer ---------- */
@@ -1232,6 +1265,21 @@ function surAppui(e){
     if (n.id === 'tutoPasser'){
       if (e.cancelable) e.preventDefault();
       try { sonBouton(); arreterLeTuto(); } catch (err) {}
+      return;
+    }
+    if (n.id === 'btnInstall'){
+      if (e.cancelable) e.preventDefault();
+      try { sonBouton(); lancerInstallation(); } catch (err) {}
+      return;
+    }
+    if (n.id === 'btnInstallIOS'){
+      if (e.cancelable) e.preventDefault();
+      try { sonBouton(); expliquerIOS(); } catch (err) {}
+      return;
+    }
+    if (n.id === 'meFermer'){
+      if (e.cancelable) e.preventDefault();
+      try { sonBouton(); fermerModeEmploi(); } catch (err) {}
       return;
     }
     if (n.id === 'btnTuto'){
@@ -2413,6 +2461,8 @@ var TUTO = [
 function lancerLeTuto(){
   S.tuto = { etape:0, t:0, montre:false };
   majPanneauTuto();
+  flash('Tutoriel \u2014 suis les indications en bas de l\u2019\u00e9cran.', 3000);
+  sonFoyer();
 }
 function arreterLeTuto(){
   S.tuto = null;
@@ -5013,10 +5063,89 @@ function majBoutonReprendre(){
   }
 }
 majBoutonsNiveau();
+majBlocInstall();
 chargerRecord();
 majBoutonReprendre();
 majBoutonProgres();
 afficherRecordAccueil();
+
+/* =========================================================
+   L'INSTALLATION
+   Android : le navigateur propose lui-même, on relaie sa proposition.
+   iPhone : Safari ne propose rien, on explique les deux gestes.
+   ========================================================= */
+var offreInstall = null;
+
+function estIOS(){
+  var u = navigator.userAgent || '';
+  return /iPad|iPhone|iPod/.test(u) ||
+         (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+
+window.addEventListener('beforeinstallprompt', function(e){
+  e.preventDefault();
+  offreInstall = e;
+  majBlocInstall();
+});
+window.addEventListener('appinstalled', function(){
+  offreInstall = null;
+  majBlocInstall();
+  flash('Le jeu est install\u00e9. Retrouve-le sur ton \u00e9cran d\u2019accueil.', 3600);
+});
+
+function majBlocInstall(){
+  var z = document.getElementById('installer');
+  if (!z) return;
+  if (estInstalle()){ z.className = ''; return; }      // déjà installé : rien à proposer
+
+  if (offreInstall){
+    z.className = 'on';
+    z.innerHTML = '<button id="btnInstall">\uD83D\uDCF2 Installer le jeu</button>' +
+                  '<span class="isous">Il s\u2019ouvrira en plein \u00e9cran, m\u00eame sans r\u00e9seau.</span>';
+  } else if (estIOS()){
+    z.className = 'on ios';
+    z.innerHTML = '<button id="btnInstallIOS">\uD83D\uDCF2 Installer sur iPhone</button>' +
+                  '<span class="isous">Deux gestes dans Safari.</span>';
+  } else {
+    z.className = '';
+  }
+}
+
+function lancerInstallation(){
+  if (!offreInstall) return;
+  offreInstall.prompt();
+  offreInstall.userChoice.then(function(r){
+    if (r && r.outcome === 'accepted'){
+      flash('Installation en cours\u2026', 2400);
+    }
+    offreInstall = null;
+    majBlocInstall();
+  }).catch(function(){});
+}
+
+function expliquerIOS(){
+  var z = document.getElementById('modeEmploi');
+  if (!z) return;
+  z.className = 'on';
+  z.innerHTML =
+    '<div class="meBoite">' +
+      '<div class="meTitre">Installer sur iPhone</div>' +
+      '<div class="meEtape"><span class="meNum">1</span>' +
+        '<span>Touche le bouton <b>Partager</b> en bas de Safari ' +
+        '<i class="mePart">\u2191</i></span></div>' +
+      '<div class="meEtape"><span class="meNum">2</span>' +
+        '<span>Descends et choisis <b>Sur l\u2019\u00e9cran d\u2019accueil</b></span></div>' +
+      '<div class="meEtape"><span class="meNum">3</span>' +
+        '<span>Touche <b>Ajouter</b>. Modou appara\u00eet avec les quatre Dames.</span></div>' +
+      '<div class="meNote">Si tu ne vois pas le bouton Partager, ouvre la page dans ' +
+        '<b>Safari</b> \u2014 les autres navigateurs iPhone ne savent pas installer.</div>' +
+      '<button class="cta" id="meFermer">J\u2019ai compris</button>' +
+    '</div>';
+}
+function fermerModeEmploi(){
+  var z = document.getElementById('modeEmploi');
+  if (z){ z.className = ''; z.innerHTML = ''; }
+}
 
 /* ---------- MISE À L'ÉCHELLE ---------- */
 function redimensionner(){
