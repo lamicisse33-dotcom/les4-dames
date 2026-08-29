@@ -764,6 +764,21 @@ button.cta{touch-action:manipulation;position:relative;z-index:2}
 .meNote{font-size:10.5px;color:rgba(255,246,228,.5);line-height:1.45;
   border-top:2px solid rgba(255,246,228,.14);padding-top:9px}
 
+/* ---- L'AIDE ---- */
+#aide{position:fixed;inset:0;z-index:170;display:none;align-items:flex-start;
+  justify-content:center;padding:16px;background:rgba(12,20,12,.9);overflow-y:auto}
+#aide.on{display:flex}
+.aBoite{background:#1B2A1B;border:4px solid var(--trait);border-radius:24px;
+  box-shadow:0 6px 0 var(--trait);padding:18px 16px;max-width:min(520px,94vw);
+  display:flex;flex-direction:column;gap:13px;margin:auto 0}
+.aTitre{font-size:16px;font-weight:900;color:var(--or);letter-spacing:.1em;
+  text-transform:uppercase;text-align:center}
+.aSujet{font-size:11px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;
+  color:#fff;margin-bottom:5px}
+.aSection ul{margin:0;padding-left:16px;display:flex;flex-direction:column;gap:4px}
+.aSection li{font-size:12px;line-height:1.45;color:rgba(255,246,228,.72)}
+.aSection{border-left:3px solid rgba(255,197,61,.4);padding-left:11px}
+
 /* ---- TABLEAU DE BORD ---- */
 #scrBord{z-index:140;justify-content:flex-start;padding-top:22px}
 #bordCorps{width:min(520px,94vw);display:flex;flex-direction:column;gap:12px}
@@ -851,7 +866,8 @@ button.cta{touch-action:manipulation;position:relative;z-index:2}
   Une Dame dont la jauge tombe à zéro <b>s'en va</b>. Rattrape-la avant la sortie, ou ramène-la plus tard pour <b>1 000 F</b>.<br><br>
   À la <b>troisième</b> qui est partie, tout s'arrête.<br><br>
   <b>Ton score, c'est le nombre de jours tenus.</b><br><br>
-  Joystick pour marcher. Entre dans un cercle et l'affaire se fait toute seule.</p>
+  <b>Touche un endroit</b> et Modou y va tout seul. Ou sers-toi du <b>joystick</b>.<br>
+  Entre dans un cercle et l'affaire se fait toute seule.</p>
   <div id="niveaux">
     <button class="niveauBtn" id="niv0">Facile</button>
     <button class="niveauBtn actif" id="niv1">Difficile</button>
@@ -863,6 +879,7 @@ button.cta{touch-action:manipulation;position:relative;z-index:2}
   <button class="cta hide" id="btnProgres">Continuer</button>
   <button class="cta" id="btnStart">Réveiller Modou</button>
   <div id="installer"></div>
+  <button class="cta ghost petit" id="btnAide">Comment jouer</button>
   <button class="cta ghost petit" id="btnTuto">Revoir le tutoriel</button>
   <button class="cta ghost petit" id="btnZero">Repartir de zéro</button>
   <button id="bordAcces" aria-label="•">&#8226;</button>
@@ -895,6 +912,7 @@ button.cta{touch-action:manipulation;position:relative;z-index:2}
 
 <div id="chapitre"></div>
 <div id="modeEmploi"></div>
+<div id="aide"></div>
 
 <div id="rot"><p class="lede">Tourne ton téléphone.<br>Le domaine se regarde du ciel.</p></div>
 <div id="build"></div>
@@ -1183,7 +1201,7 @@ function dameSVG(i){
    ========================================================= */
 'use strict';
 
-var BUILD_TAG = 'LQD-v9.6';
+var BUILD_TAG = 'LQD-v9.8';
 document.getElementById('build').textContent = BUILD_TAG;
 var vIntro = document.getElementById('versionIntro');
 if (vIntro) vIntro.textContent = BUILD_TAG;
@@ -1209,11 +1227,14 @@ window.addEventListener('error', function(e){
   var m = e.message || 'erreur';
   var ou = (e.filename || '') + ':' + (e.lineno || '?');
   // Safari masque souvent le détail : on donne au moins la dernière action tentée
-  if (m.indexOf('Script error') === 0 || ou === ':?'){
-    montrerErreur(m + ' — pendant : ' + derniereAction);
-  } else {
-    montrerErreur(m + ' — ' + ou);
+  var anonyme = (m.indexOf('Script error') === 0) && !e.filename && !e.lineno;
+  if (anonyme){
+    // le navigateur ne dit rien : on le signale discrètement, sans alarmer
+    var d = document.getElementById('build');
+    if (d) d.textContent = BUILD_TAG + ' \u00b7 ' + derniereAction;
+    return;
   }
+  montrerErreur(m + ' — ' + ou + ' \u2014 pendant : ' + derniereAction);
 });
 window.addEventListener('unhandledrejection', function(e){
   montrerErreur('promesse : ' + (e.reason && e.reason.message ? e.reason.message : e.reason));
@@ -1317,6 +1338,14 @@ function traiterAppui(e, n){
       if (e.cancelable) e.preventDefault();
       try { sonBouton(); fermerModeEmploi(); } catch (err) {}
       return;
+    }
+    if (n.id === 'btnAide'){
+      if (e.cancelable) e.preventDefault();
+      sonBouton(); ouvrirLAide(); return;
+    }
+    if (n.id === 'aideFermer'){
+      if (e.cancelable) e.preventDefault();
+      sonBouton(); fermerLAide(); return;
     }
     if (n.id === 'btnTuto'){
       if (e.cancelable) e.preventDefault();
@@ -2993,7 +3022,7 @@ function faireVenirLEnfant(){
   layer.appendChild(e);
   enfantEl = e;
   dimensionnerEnfant();
-  flash('Ton fils est assez grand. Il peut faire une course.', 3600);
+  flash('Ton fils peut t\u2019aider : appuie sur son visage, \u00e0 droite, et il part.', 4600);
   parler('Mon fils peut m\u2019aider maintenant.', VOIX_MODOU);
   noter(S.jour, 'L\u2019enfant arrive au foyer.');
   majBoutonEnfant();
@@ -3177,7 +3206,8 @@ function proposerLAne(){
   if (S.aneOffert) return;
   S.aneOffert = true;
   S.rappelAne = 0;
-  flash('Le Vieux Serigne te propose son \u00e2ne pour ' + CFG.PRIX_ANE + ' F.', 3600);
+  flash('L\u2019\u00e2ne du Vieux Serigne : ' + CFG.PRIX_ANE +
+        ' F. Va au temple avec la somme, il est \u00e0 toi.', 4600);
   parler('Un \u00e2ne\u2026 je n\u2019aurais plus mal aux jambes.', VOIX_MODOU);
   noter(S.jour, 'Le gardien du temple propose son \u00e2ne.');
   var b = badgesEl.TEMPLE;
@@ -3309,8 +3339,7 @@ function motoSVG(){
 function proposerLaMoto(){
   if (S.motoOfferte) return;
   S.motoOfferte = true;
-  flash('Le patron te propose une moto \u00e0 ' + CFG.MOTO_PRIX +
-        ' F, \u00e0 cr\u00e9dit. Passe au chantier.', 4200);
+  flash('Moto \u00e0 cr\u00e9dit : rien \u00e0 payer d\u2019avance. Passe au chantier pour la prendre.', 4600);
   parler('Une moto\u2026 \u00e0 cr\u00e9dit. Est-ce que j\u2019ose ?', VOIX_MODOU);
   noter(S.jour, 'Le patron propose une moto \u00e0 cr\u00e9dit.');
   var b = badgesEl.CHANTIER;
@@ -3359,7 +3388,8 @@ function ouvrirLaSaison(){
 function proposerLeToit(){
   if (S.toitPropose) return;
   S.toitPropose = true;
-  flash('Prends des t\u00f4les au chantier pour ' + CFG.TOIT_PRIX + ' F et r\u00e9pare le toit.', 4000);
+  flash('Le toit fuit. Passe au chantier avec ' + CFG.TOIT_PRIX +
+        ' F pour prendre des t\u00f4les.', 4600);
   var b = badgesEl.CHANTIER;
   if (b) b.classList.add('dernier');
 }
@@ -3883,8 +3913,8 @@ function deplacerModou(dt){
 }
 
 function tourDeBoucle(ts){
-  noterAction('boucle de jeu');
   if (!S || !S.enCours) return;
+  noterAction('boucle de jeu');
   if (!last) last = ts;
   var dt = Math.min(0.05, (ts - last)/1000);
   last = ts;
@@ -3919,8 +3949,14 @@ function tourDeBoucle(ts){
         flash('Le patron n\u2019attend plus. La journ\u00e9e est lanc\u00e9e.', 2400);
       }
     } else {
-      // le temps ne passe pas : ni les jauges, ni le jour
+      // le temps ne passe pas pour les Dames, mais Modou vit normalement :
+      // il marche, il se fatigue, et il récupère au foyer comme d'habitude.
       deplacerModou(dt);
+      if (S.zone === 'CENTRE'){
+        var bonusN = 1 + (CFG.NUIT_SOUFFLE - 1) * S.nuit;
+        var fuiteN = (S.pluie > 0 && !S.toitRepare) ? CFG.FOYER_FUITE : 1;
+        S.force = Math.min(100, S.force + CFG.SOUFFLE_PAR_SEC * bonusN * fuiteN * dt);
+      }
       animerJambes(performance.now() / 1000, S.modou.marche);
       var z0 = zoneSous();
       if (z0 !== S.zone){ if (z0) sonEntree(); else sonSortie(); S.zone = z0; }
@@ -5140,7 +5176,7 @@ function majBoutonReprendre(){
   var b = document.getElementById('btnReprendre');
   if (!b) return;
   var d = partieEnAttente();
-  if (d){
+  if (d && d.jour > 1){          // au premier jour, il n'y a rien à reprendre
     b.classList.remove('hide');
     b.textContent = 'Reprendre \u2014 jour ' + d.jour;
   } else {
@@ -5229,6 +5265,87 @@ function expliquerIOS(){
 }
 function fermerModeEmploi(){
   var z = document.getElementById('modeEmploi');
+  if (z){ z.className = ''; z.innerHTML = ''; }
+}
+
+/* =========================================================
+   L'AIDE — tout ce que le jeu attend du joueur, en clair
+   ========================================================= */
+var AIDE = [
+  { t:'Se d\u00e9placer', l:[
+    'Touche un endroit de la carte : Modou y va tout seul, en suivant les all\u00e9es.',
+    'Ou pose le doigt n\u2019importe o\u00f9 et tire : un joystick appara\u00eet sous ton doigt.',
+    'Ou sers-toi du joystick fixe, en bas \u00e0 droite.',
+    'N\u2019importe lequel des trois annule un trajet en cours.'
+  ]},
+  { t:'Les cercles', l:[
+    'Chaque lieu a un cercle au sol. Entre dedans et l\u2019affaire se fait toute seule.',
+    'Au chantier, reste dans le cercle : l\u2019argent monte tant que tu ne bouges pas.',
+    'Chez une Dame, l\u2019h\u00f4te sort, tend l\u2019objet, Modou paie.',
+    'Une coche verte sur le badge veut dire qu\u2019elle n\u2019a besoin de rien.'
+  ]},
+  { t:'Le foyer', l:[
+    'Le centre des quatre lits. Le seul endroit o\u00f9 Modou reprend des forces.',
+    'Partout ailleurs, le temps l\u2019use, m\u00eame immobile.',
+    'Apr\u00e8s chaque achat, il doit y repasser avant la course suivante.'
+  ]},
+  { t:'Ton fils \u2014 \u00e0 partir du jour 31', l:[
+    'Son visage appara\u00eet dans un rond vert, \u00e0 droite de l\u2019\u00e9cran.',
+    'Un appui dessus et il part faire la course la plus urgente, tout seul.',
+    'Tu peux \u00eatre n\u2019importe o\u00f9 : au chantier, chez une Dame, en chemin.',
+    'Il est plus lent que son p\u00e8re et rend un peu moins. Une course \u00e0 la fois.',
+    'L\u2019argent est pris au moment o\u00f9 tu l\u2019envoies.'
+  ]},
+  { t:'L\u2019\u00e2ne \u2014 \u00e0 partir du jour 61', l:[
+    'Le Vieux Serigne le propose : le badge du temple se met \u00e0 clignoter.',
+    'Va au temple avec 800 F en poche. L\u2019achat se fait en entrant dans le cercle.',
+    'Ensuite Modou monte dessus : tous ses trajets sont deux fois plus rapides.',
+    'Cet achat ne demande pas de passer par le foyer.'
+  ]},
+  { t:'Le mandat du fils \u2014 jour 61', l:[
+    'Ton fils part \u00e9tudier. Chaque semaine, il faut lui envoyer de l\u2019argent.',
+    'Le bandeau bleu en haut indique la somme et les jours qu\u2019il te reste.',
+    'Va \u00e0 la banque pour l\u2019envoyer. L\u2019envoi se fait en entrant dans le cercle.',
+    'Un mandat oubli\u00e9 co\u00fbte de la force \u00e0 Modou et se reporte sur le suivant.'
+  ]},
+  { t:'La saison des pluies \u2014 jour 91', l:[
+    'Le toit du foyer fuit : sous l\u2019averse, Modou r\u00e9cup\u00e8re deux fois moins bien.',
+    'Prends des t\u00f4les au chantier pour 1 200 F et le toit est refait.'
+  ]},
+  { t:'La moto \u2014 jour 121', l:[
+    'Le patron la propose \u00e0 cr\u00e9dit : rien \u00e0 payer d\u2019avance.',
+    'Passe au chantier et elle est \u00e0 toi. Quatre fois plus rapide qu\u2019\u00e0 pied.',
+    'Il retiendra 35 % de chaque paye jusqu\u2019au remboursement des 3 000 F.'
+  ]},
+  { t:'Le week-end et les f\u00eates', l:[
+    'Samedi, dimanche et jours de f\u00eate, le chantier paie double.',
+    'Ces jours-l\u00e0, la journ\u00e9e attend que Modou arrive au chantier pour commencer.',
+    'Cours : tu touches alors la journ\u00e9e enti\u00e8re au tarif double.'
+  ]},
+  { t:'Quand une Dame s\u2019en va', l:[
+    'Sous 30 %, elle r\u00e9clame. \u00c0 z\u00e9ro, elle se l\u00e8ve et marche vers la sortie.',
+    'Tant qu\u2019elle marche, ach\u00e8te ce qu\u2019elle demande : elle fait demi-tour.',
+    'Sortie du domaine, il faut 1 000 F pour la ramener.',
+    'Trois Dames parties, la partie s\u2019arr\u00eate.'
+  ]}
+];
+
+function ouvrirLAide(){
+  noterAction('ouverture de l aide');
+  var z = document.getElementById('aide');
+  if (!z) return;
+  var h = '<div class="aBoite"><div class="aTitre">Comment jouer</div>';
+  for (var i=0;i<AIDE.length;i++){
+    h += '<div class="aSection"><div class="aSujet">' + AIDE[i].t + '</div><ul>';
+    for (var j=0;j<AIDE[i].l.length;j++) h += '<li>' + AIDE[i].l[j] + '</li>';
+    h += '</ul></div>';
+  }
+  h += '<button class="cta" id="aideFermer">Fermer</button></div>';
+  z.innerHTML = h;
+  z.className = 'on';
+}
+function fermerLAide(){
+  var z = document.getElementById('aide');
   if (z){ z.className = ''; z.innerHTML = ''; }
 }
 
