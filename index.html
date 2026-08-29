@@ -648,13 +648,15 @@ html,body{height:100%;overflow:hidden;background:#1B2A1B;font-family:var(--ui);c
 /* ---- ÉCRANS ---- */
 .screen{position:fixed;inset:0;z-index:90;background:#1B2A1B;display:flex;flex-direction:column;
   align-items:center;justify-content:center;text-align:center;padding:18px 20px;gap:9px;color:var(--creme);
-  overflow-y:auto}
+  overflow-y:auto;overflow-x:hidden;box-sizing:border-box}
+.screen > *{max-width:100%}
 .screen.hide{display:none}
 .eyebrow{font-size:9.5px;font-weight:900;letter-spacing:.34em;text-transform:uppercase;color:var(--or)}
 h1{font-size:clamp(22px,6vw,42px);font-weight:900;letter-spacing:.04em;line-height:.98;
   color:var(--blanc);text-shadow:0 4px 0 var(--trait)}
 h1 span{display:block;font-size:.32em;letter-spacing:.2em;color:var(--or);margin-top:10px;text-shadow:none}
-.lede{font-size:12.5px;line-height:1.55;color:rgba(255,246,228,.78);max-width:34em;font-weight:600}
+.lede{font-size:12.5px;line-height:1.55;color:rgba(255,246,228,.78);
+  max-width:min(34em,100%);font-weight:600;overflow-wrap:break-word}
 .lede b{color:var(--blanc);font-weight:900}
 button.cta{margin-top:4px;background:var(--or);color:var(--trait);border:3px solid var(--trait);
   border-radius:22px;padding:12px 28px;font-size:12px;font-weight:900;letter-spacing:.14em;
@@ -845,7 +847,8 @@ button.cta{touch-action:manipulation;position:relative;z-index:2}
   <h1>LES QUATRE DAMES<span>L'Équilibre de Modou</span></h1>
   <p class="lede">Modou est maçon. Il monte sur le <b>chantier</b> pour gagner, puis il court payer ce que ses quatre Dames réclament : des fleurs, des soins, des prières, de l'argent.<br><br>
   <b>Tout coûte. Et chaque jour, tout coûte plus cher.</b><br><br>
-  Une Dame dont la jauge tombe à zéro <b>quitte le cercle pour de bon</b>. La partie ne s'arrête qu'à la troisième qui part.<br><br>
+  Une Dame dont la jauge tombe à zéro <b>s'en va</b>. Rattrape-la avant la sortie, ou ramène-la plus tard pour <b>1 000 F</b>.<br><br>
+  À la <b>troisième</b> qui est partie, tout s'arrête.<br><br>
   <b>Ton score, c'est le nombre de jours tenus.</b><br><br>
   Joystick pour marcher. Entre dans un cercle et l'affaire se fait toute seule.</p>
   <div id="niveaux">
@@ -1179,7 +1182,7 @@ function dameSVG(i){
    ========================================================= */
 'use strict';
 
-var BUILD_TAG = 'LQD-v9.2';
+var BUILD_TAG = 'LQD-v9.3';
 document.getElementById('build').textContent = BUILD_TAG;
 
 /* ---------- affichage des erreurs, pour pouvoir diagnostiquer ---------- */
@@ -1434,13 +1437,13 @@ function payeDoublee(j){ return estWeekend(j) || !!ferieDuJour(j); }
 var NIVEAUX = [
   { cle:'facile',  nom:'Facile',
     inflation:0.20, pressionMax:1.00, usure:0.80, paye:1.20, mandat:0.70,
-    dit:'Les prix montent doucement, Modou tient mieux.' },
+    dit:'Les prix montent moins vite et Modou s\u2019use moins. Pour d\u00e9couvrir.' },
   { cle:'dur',     nom:'Difficile',
     inflation:0.30, pressionMax:1.60, usure:1.00, paye:1.00, mandat:1.00,
-    dit:'L\u2019équilibre d\u2019origine.' },
+    dit:'Le r\u00e9glage normal du jeu. Les scores de r\u00e9f\u00e9rence.' },
   { cle:'tresdur', nom:'Très difficile',
     inflation:0.40, pressionMax:2.20, usure:1.20, paye:0.85, mandat:1.30,
-    dit:'La vie ne fait aucun cadeau.' }
+    dit:'Tout co\u00fbte plus cher, la paye baisse. La vie ne fait aucun cadeau.' }
 ];
 var iNiveau = 1;
 try {
