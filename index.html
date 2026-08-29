@@ -1202,7 +1202,7 @@ function dameSVG(i){
    ========================================================= */
 'use strict';
 
-var BUILD_TAG = 'LQD-v10.0';
+var BUILD_TAG = 'LQD-v10.3';
 document.getElementById('build').textContent = BUILD_TAG;
 var vIntro = document.getElementById('versionIntro');
 if (vIntro) vIntro.textContent = BUILD_TAG;
@@ -1530,28 +1530,40 @@ var DAMES = [
     demande:'Modou, ach\u00e8te-moi mes m\u00e9dicaments.',
     suite:'Ach\u00e8te-moi mes m\u00e9dicaments.',
     dernier:'Modou ! Mes m\u00e9dicaments, ou je m\u2019en vais.',
+    besoin:'ses m\u00e9dicaments',
     replique:'Tant que tu ne m\u2019apportes pas mes m\u00e9dicaments, tu ne me verras plus.',
+    retour:'La polygamie, ce n\u2019est pas pour tout le monde. Maintenant tu le sais.',
+    adieu:'La polygamie n\u2019est pas pour tout le monde.',
     voix:{ hauteur:0.92, vitesse:0.84 },
     usure:0.58, muette:false, bed:{x:43.5,y:58.0}, col:'--sante'  },
   { id:2, nom:'Deuxième Dame',  lieu:'AMOUR',  cri:'Tu ne me vois plus.',
     demande:'Modou, am\u00e8ne-moi des fleurs.',
     suite:'Am\u00e8ne-moi des fleurs.',
     dernier:'Modou ! Mes fleurs, ou je m\u2019en vais.',
+    besoin:'ses fleurs',
     replique:'Tant que tu ne m\u2019apportes pas mes fleurs, tu ne me verras plus.',
+    retour:'Je n\u2019ai rien fait, moi. C\u2019est toi qui avais promis des fleurs chaque jour. Tiens parole.',
+    adieu:'Tu avais promis des fleurs.',
     voix:{ hauteur:1.22, vitesse:0.98 },
     usure:0.68, muette:false, bed:{x:56.5,y:58.0}, col:'--amour'  },
   { id:3, nom:'Troisième Dame', lieu:'TEMPLE', cri:'…',
     demande:'Modou, j\u2019ai besoin de pri\u00e8res.',
     suite:'J\u2019ai besoin de pri\u00e8res.',
     dernier:'Modou\u2026 mes pri\u00e8res. Je ne demanderai plus.',
+    besoin:'ses pri\u00e8res',
     replique:'Tant que tu ne pries pas pour moi, tu ne me verras plus.',
+    retour:'C\u2019est mieux pour toi que je sois \u00e0 tes c\u00f4t\u00e9s. Tu le verras.',
+    adieu:'Tu verras ce que c\u2019est, sans moi.',
     voix:{ hauteur:1.08, vitesse:0.76 },
     usure:0.48, muette:true,  bed:{x:43.5,y:77.0}, col:'--spirit' },
   { id:4, nom:'Quatrième Dame', lieu:'BANQUE', cri:'Il me faut ça demain.',
     demande:'Modou, j\u2019ai besoin d\u2019argent.',
     suite:'J\u2019ai besoin d\u2019argent.',
     dernier:'Modou ! Mon argent, ou je m\u2019en vais !',
+    besoin:'son argent',
     replique:'Tant que tu ne me donnes pas mon argent, tu ne me verras plus.',
+    retour:'Tu as dit \u00e0 mes parents que tu ferais de moi une princesse. Respecte ta parole.',
+    adieu:'Tu avais donn\u00e9 ta parole \u00e0 mes parents.',
     voix:{ hauteur:1.42, vitesse:1.12 },
     usure:0.84, muette:false, bed:{x:56.5,y:77.0}, col:'--argent' }
 ];
@@ -2468,16 +2480,47 @@ function lancerLeDialogue(i){
 }
 
 /* ---------- CE QUE MODOU SE DIT QUAND PERSONNE NE PARLE ---------- */
-var PENSEES = [
+/* Ce que Modou se dit tout seul. Trois humeurs, selon ce qu'il vit. */
+var PENSEES_DUR = [
+  'Je n\u2019y arriverai pas.',
+  'C\u2019est trop pour un seul homme.',
+  'Mes jambes ne me suivent plus.',
+  'Chaque jour, tout co\u00fbte plus cher\u2026',
   'C\u2019est quel genre de vie \u00e7a\u2026 oh Allah.',
-  'Quatre femmes\u2026 et un seul dos.',
-  'Je cours, je cours, et l\u2019argent ne suit pas.',
-  'Un jour je dormirai. Un jour.',
-  'Mon p\u00e8re ne m\u2019avait pas pr\u00e9venu.',
-  'Chacune veut sa part. Et moi ?',
-  'Oh Allah\u2026 donne-moi la force.',
-  'Le chantier, la maison, le chantier\u2026'
+  'Quatre femmes\u2026 et un seul dos.'
 ];
+var PENSEES_COURAGE = [
+  'Non. Modou ne plie pas.',
+  'Encore un jour. Un seul.',
+  'Elles comptent sur moi. \u00c7a suffit.',
+  'Doucement, Modou. Doucement.',
+  'Tant que je marche, la maison tient.',
+  'Oh Allah\u2026 donne-moi la force.'
+];
+var PENSEES_CHANTIER = [
+  'Comment nos grands-p\u00e8res faisaient, avec quatre \u00e9pouses ?',
+  'Grand-p\u00e8re en avait quatre. Il ne courait pas comme moi.',
+  'De leur temps, la maison suffisait. Aujourd\u2019hui il faut de l\u2019argent.',
+  'Eux avaient la terre. Moi je n\u2019ai que mes bras.',
+  'Mon p\u00e8re ne m\u2019avait pas pr\u00e9venu.',
+  'Le chantier, la maison, le chantier\u2026',
+  'Je cours, je cours, et l\u2019argent ne suit pas.'
+];
+
+function choisirUnePensee(){
+  if (S.zone === 'CHANTIER' && Math.random() < 0.7)
+    return PENSEES_CHANTIER[Math.floor(Math.random() * PENSEES_CHANTIER.length)];
+
+  // le moral suit l'état du foyer : la Dame la plus basse et sa propre force
+  var bas = 100;
+  for (var i=0;i<DAMES.length;i++){
+    if (!S.parties[i] && S.jauges[i] < bas) bas = S.jauges[i];
+  }
+  var mauvais = (S.force < 40) || (bas < CFG.SEUIL_APPELLE) || (S.sorties > 0);
+  var pot = mauvais ? PENSEES_DUR : PENSEES_COURAGE;
+  return pot[Math.floor(Math.random() * pot.length)];
+}
+
 var prochainePensee = 26 + Math.random() * 18;
 
 function majPensees(dt){
@@ -2485,9 +2528,8 @@ function majPensees(dt){
   if (enTrainDeParler || FILE_VOIX.length){ return; }
   prochainePensee -= dt;
   if (prochainePensee > 0) return;
-  prochainePensee = 28 + Math.random() * 22;
-  var p = PENSEES[Math.floor(Math.random() * PENSEES.length)];
-  modouDit(p, 3000);
+  prochainePensee = (S.zone === 'CHANTIER' ? 16 : 28) + Math.random() * 18;
+  modouDit(choisirUnePensee(), 3200);
 }
 
 /* =========================================================
@@ -3547,11 +3589,12 @@ function commencerExode(i){
   parler('Ne t\u2019en va pas ! Ne t\u2019en va pas !', VOIX_MODOU, function(){
     modouDit('Ne t\u2019en va pas !', 2400, true);
   });
-  parleDame(i, D.replique, function(){
+  parleDame(i, D.adieu, function(){
     var b = damesEl[i] ? damesEl[i].querySelector('.cri') : null;
-    if (b) b.textContent = D.replique;
+    if (b) b.textContent = D.adieu;
     if (damesEl[i]) damesEl[i].classList.add('parle');
-    flash(D.nom + ' : « ' + D.replique + ' »', 3600);
+    // la consigne s'écrit, elle ne se dit pas : une voix de moins à attendre
+    flash('Ach\u00e8te-lui ' + D.besoin + ' avant la sortie, ou 1 000 F pour la ramener.', 4200);
     setTimeout(function(){
       if (b && S && S.exode[i]) b.textContent = 'Je m\u2019en vais\u2026';
     }, 4600);
@@ -3592,10 +3635,17 @@ function majExode(dt){
         if (revenait){
           var complet = true;
           for (var w2=0;w2<DAMES.length;w2++){ if (S.parties[w2]) complet = false; }
-          flash(DAMES[i].nom + ' a retrouv\u00e9 son lit.' +
-                (complet ? ' Le cercle est complet.' : ''), 2400);
-          parleDame(i, 'Je suis \u00e0 la maison.');
           sonFoyer();
+          var b2 = damesEl[i] ? damesEl[i].querySelector('.cri') : null;
+          if (b2) b2.textContent = DAMES[i].retour;
+          if (damesEl[i]) damesEl[i].classList.add('parle');
+          parleDame(i, DAMES[i].retour, function(){
+            flash(DAMES[i].nom + ' : \u00ab ' + DAMES[i].retour + ' \u00bb', 4200);
+          });
+          setTimeout(function(){
+            if (damesEl[i]) damesEl[i].classList.remove('parle');
+          }, 5200);
+          noter(S.jour, DAMES[i].nom + ' est revenue.');
         }
       } else {
         faitPartir(i);                    // sortie franchie : c'est définitif
@@ -3948,15 +3998,24 @@ function tourDeBoucle(ts){
     } else {
       // le temps ne passe pas pour les Dames, mais Modou vit normalement :
       // il marche, il se fatigue, et il récupère au foyer comme d'habitude.
+      // seul le calendrier est suspendu. Tout le monde continue de vivre :
+      // Modou marche et récupère, l'enfant fait sa course, une Dame qui
+      // s'en allait continue son chemin.
       deplacerModou(dt);
       if (S.zone === 'CENTRE'){
         var bonusN = 1 + (CFG.NUIT_SOUFFLE - 1) * S.nuit;
         var fuiteN = (S.pluie > 0 && !S.toitRepare) ? CFG.FOYER_FUITE : 1;
         S.force = Math.min(100, S.force + CFG.SOUFFLE_PAR_SEC * bonusN * fuiteN * dt);
       }
-      animerJambes(performance.now() / 1000, S.modou.marche);
       var z0 = zoneSous();
       if (z0 !== S.zone){ if (z0) sonEntree(); else sonSortie(); S.zone = z0; }
+      if (S.cool > 0) S.cool -= dt;
+      majScene(dt);
+      majExode(dt);
+      majEnfant(dt);
+      animerJambes(performance.now() / 1000, S.modou.marche);
+      majCrises();
+      musique();
       rendre();
       majCamera(dt);
       return;
