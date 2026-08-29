@@ -1142,7 +1142,7 @@ function dameSVG(i){
    ========================================================= */
 'use strict';
 
-var BUILD_TAG = 'LQD-v8.8';
+var BUILD_TAG = 'LQD-v8.9';
 document.getElementById('build').textContent = BUILD_TAG;
 
 /* ---------- affichage des erreurs, pour pouvoir diagnostiquer ---------- */
@@ -1998,7 +1998,6 @@ function souffleBruit(dur, vol, coupe, quand, bus){
     src.start(t); src.stop(t + dur + 0.02);
   } catch (e) {}
 }
-function bip(f, d, type, v){ note(f, d, type, v); }
 
 /* ---------- MUSIQUE : boucle pentatonique ---------- */
 var MUS = { depart:0, pas:0, temps:0.155, tension:0, fete:0 };
@@ -4306,12 +4305,6 @@ function finirLaFete(){
   if (S) S.fete = null;
 }
 var minuteurFete = null;
-function filetDeSecurite(duree){
-  if (minuteurFete) clearTimeout(minuteurFete);
-  minuteurFete = setTimeout(function(){
-    if (S && S.fete) finirLaFete();     // si quoi que ce soit a bloqué, on rend la main
-  }, (duree + 1.5) * 1000);
-}
 
 function uneSalve(niveau, couleurImposee){
   var couche = document.getElementById('feux');
@@ -5121,9 +5114,15 @@ function demarrer(){
   document.getElementById('scrFin').classList.add('hide');
   majRecord();
   couperLaParole();
-  setTimeout(function(){
-    modouDit('Je vais d\u2019abord travailler au chantier.', 3200);
-  }, 500);
+  majBoutonEnfant();
+
+  if (!tutoDejaVu()){
+    lancerLeTuto();
+  } else {
+    setTimeout(function(){
+      modouDit('Je vais d\u2019abord travailler au chantier.', 3200);
+    }, 500);
+  }
 }
 /* les boutons sont déjà branchés par délégation en haut du script */
 requestAnimationFrame(boucle);
