@@ -778,6 +778,8 @@ button.cta{touch-action:manipulation;position:relative;z-index:2}
 .aSection ul{margin:0;padding-left:16px;display:flex;flex-direction:column;gap:4px}
 .aSection li{font-size:12px;line-height:1.45;color:rgba(255,246,228,.72)}
 .aSection{border-left:3px solid rgba(255,197,61,.4);padding-left:11px}
+.aBoutons{display:flex;flex-direction:column;gap:9px;align-items:center;
+  border-top:2px solid rgba(255,246,228,.14);padding-top:14px;margin-top:2px}
 
 /* ---- TABLEAU DE BORD ---- */
 #scrBord{z-index:140;justify-content:flex-start;padding-top:22px}
@@ -880,7 +882,6 @@ button.cta{touch-action:manipulation;position:relative;z-index:2}
   <button class="cta" id="btnStart">Réveiller Modou</button>
   <div id="installer"></div>
   <button class="cta ghost petit" id="btnAide">Comment jouer</button>
-  <button class="cta ghost petit" id="btnTuto">Revoir le tutoriel</button>
   <button class="cta ghost petit" id="btnZero">Repartir de zéro</button>
   <button id="bordAcces" aria-label="•">&#8226;</button>
 </div>
@@ -1201,7 +1202,7 @@ function dameSVG(i){
    ========================================================= */
 'use strict';
 
-var BUILD_TAG = 'LQD-v9.8';
+var BUILD_TAG = 'LQD-v10.0';
 document.getElementById('build').textContent = BUILD_TAG;
 var vIntro = document.getElementById('versionIntro');
 if (vIntro) vIntro.textContent = BUILD_TAG;
@@ -1349,16 +1350,12 @@ function traiterAppui(e, n){
     }
     if (n.id === 'btnTuto'){
       if (e.cancelable) e.preventDefault();
-      try { sonBouton(); try { localStorage.removeItem('lqd_tuto_vu'); } catch (x) {} demarrer(); }
+      try { sonBouton(); fermerLAide();
+            try { localStorage.removeItem('lqd_tuto_vu'); } catch (x) {} demarrer(); }
       catch (err){ montrerErreur('tuto : ' + (err && err.message ? err.message : err)); }
       return;
     }
-    if (n.id === 'bordAcces'){
-      if (e.cancelable) e.preventDefault();
-      try { sonBouton(); ouvrirLeBord(); }
-      catch (err){ montrerErreur('tableau : ' + (err && err.message ? err.message : err)); }
-      return;
-    }
+    if (n.id === 'bordAcces'){ return; }   // il faut dix secondes d'appui, pas un tapotement
     if (n.id === 'menuBtn'){
       if (e.cancelable) e.preventDefault();
       try { sonBouton(); retourAuMenu(); }
@@ -1434,7 +1431,7 @@ var CFG = {
   VACANCES_DUREE: 7,
 
   MOTO_JOUR: 121,        // cinquième partie
-  MOTO_PRIX: 3000,
+  MOTO_PRIX: 1000,
   MOTO_RETENUE: 0.35,     // le patron retient ce tiers sur chaque paye
   MOTO_VITESSE: 4.0,
   PRIME_REPOS: 2.0,      // samedi, dimanche et jours fériés : la paye double
@@ -4930,30 +4927,28 @@ function fermerLeBord(){
   majBoutonReprendre();
 }
 
-/* la porte : appui long de 10 secondes sur le numéro de version, en bas à gauche.
-   Rien ne se voit pendant les 4 premières secondes : un curieux qui appuie
-   par hasard n'apprend rien. Ensuite une jauge discrète confirme le décompte. */
+/* la porte du tableau de bord : dix secondes d'appui, sur le numéro de version
+   comme sur le point discret du menu. Rien ne se voit pendant quatre secondes :
+   un curieux qui appuie par hasard n'apprend rien. */
 var DUREE_PORTE = 10000, DELAI_INDICE = 4000;
-(function(){
-  var cible = document.getElementById('build');
+function poserLaPorte(cible){
   if (!cible) return;
   var minuteur = null, indice = null, animation = null, debutAppui = 0;
+  var fondOrigine = cible.style.background || 'transparent';
 
   function jauge(){
     var passe = Date.now() - debutAppui;
     var part = Math.max(0, Math.min(1, (passe - DELAI_INDICE) / (DUREE_PORTE - DELAI_INDICE)));
-    cible.style.background = 'linear-gradient(90deg,rgba(255,197,61,.85) ' +
+    cible.style.background = 'linear-gradient(90deg,rgba(255,197,61,.8) ' +
                              (part * 100).toFixed(1) + '%,transparent ' +
                              (part * 100).toFixed(1) + '%)';
-    cible.style.color = 'rgba(255,255,255,' + (0.28 + part * 0.7).toFixed(2) + ')';
     animation = requestAnimationFrame(jauge);
   }
   function nettoyer(){
     if (minuteur){ clearTimeout(minuteur); minuteur = null; }
     if (indice){ clearTimeout(indice); indice = null; }
     if (animation){ cancelAnimationFrame(animation); animation = null; }
-    cible.style.background = 'transparent';
-    cible.style.color = 'rgba(255,255,255,.28)';
+    cible.style.background = fondOrigine;
   }
   function debut(){
     nettoyer();
@@ -4966,8 +4961,7 @@ var DUREE_PORTE = 10000, DELAI_INDICE = 4000;
     }, DUREE_PORTE);
   }
   cible.style.pointerEvents = 'auto';
-  cible.style.padding = '2px 5px';
-  cible.style.borderRadius = '4px';
+  cible.style.borderRadius = '8px';
   cible.addEventListener('touchstart', debut, {passive:true});
   cible.addEventListener('touchend', nettoyer);
   cible.addEventListener('touchcancel', nettoyer);
@@ -4975,7 +4969,9 @@ var DUREE_PORTE = 10000, DELAI_INDICE = 4000;
   cible.addEventListener('mousedown', debut);
   cible.addEventListener('mouseup', nettoyer);
   cible.addEventListener('mouseleave', nettoyer);
-})();
+}
+poserLaPorte(document.getElementById('build'));
+poserLaPorte(document.getElementById('bordAcces'));
 
 /* =========================================================
    LA PROGRESSION — ce que Modou a atteint, et ce qu'il possède.
@@ -5315,7 +5311,7 @@ var AIDE = [
   { t:'La moto \u2014 jour 121', l:[
     'Le patron la propose \u00e0 cr\u00e9dit : rien \u00e0 payer d\u2019avance.',
     'Passe au chantier et elle est \u00e0 toi. Quatre fois plus rapide qu\u2019\u00e0 pied.',
-    'Il retiendra 35 % de chaque paye jusqu\u2019au remboursement des 3 000 F.'
+    'Il retiendra 35 % de chaque paye jusqu\u2019au remboursement des 1 000 F.'
   ]},
   { t:'Le week-end et les f\u00eates', l:[
     'Samedi, dimanche et jours de f\u00eate, le chantier paie double.',
@@ -5340,7 +5336,10 @@ function ouvrirLAide(){
     for (var j=0;j<AIDE[i].l.length;j++) h += '<li>' + AIDE[i].l[j] + '</li>';
     h += '</ul></div>';
   }
-  h += '<button class="cta" id="aideFermer">Fermer</button></div>';
+  h += '<div class="aBoutons">' +
+         '<button class="cta" id="btnTuto">Revoir le tutoriel</button>' +
+         '<button class="cta ghost" id="aideFermer">Fermer</button>' +
+       '</div></div>';
   z.innerHTML = h;
   z.className = 'on';
 }
