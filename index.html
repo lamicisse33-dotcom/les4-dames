@@ -1183,12 +1183,15 @@ function dameSVG(i){
    ========================================================= */
 'use strict';
 
-var BUILD_TAG = 'LQD-v9.5';
+var BUILD_TAG = 'LQD-v9.6';
 document.getElementById('build').textContent = BUILD_TAG;
 var vIntro = document.getElementById('versionIntro');
 if (vIntro) vIntro.textContent = BUILD_TAG;
 
 /* ---------- affichage des erreurs, pour pouvoir diagnostiquer ---------- */
+var derniereAction = 'chargement';
+function noterAction(quoi){ derniereAction = quoi; }
+
 var dejaSignale = false;
 function montrerErreur(txt){
   if (dejaSignale) return;      // on garde la première erreur : c'est la cause
@@ -1203,7 +1206,14 @@ function montrerErreur(txt){
   d.style.display = 'block';
 }
 window.addEventListener('error', function(e){
-  montrerErreur((e.message || 'erreur') + ' — ' + (e.filename || '') + ':' + (e.lineno || '?'));
+  var m = e.message || 'erreur';
+  var ou = (e.filename || '') + ':' + (e.lineno || '?');
+  // Safari masque souvent le détail : on donne au moins la dernière action tentée
+  if (m.indexOf('Script error') === 0 || ou === ':?'){
+    montrerErreur(m + ' — pendant : ' + derniereAction);
+  } else {
+    montrerErreur(m + ' — ' + ou);
+  }
 });
 window.addEventListener('unhandledrejection', function(e){
   montrerErreur('promesse : ' + (e.reason && e.reason.message ? e.reason.message : e.reason));
@@ -1221,7 +1231,13 @@ function surAppui(e){
   var quand = Date.now();
   var cible = n && n.id ? n.id : (n && n.parentNode && n.parentNode.id ? n.parentNode.id : '');
   if (cible && cible === dernierId && quand - dernierAppui < 400) return;
-  if (cible){ dernierId = cible; dernierAppui = quand; }
+  if (cible){ dernierId = cible; dernierAppui = quand; noterAction('appui sur ' + cible); }
+
+  try { return traiterAppui(e, n); }
+  catch (err){ montrerErreur('appui ' + cible + ' : ' + (err && err.message ? err.message : err)); }
+}
+
+function traiterAppui(e, n){
 
   while (n && n !== document.body){
     if (n.id === 'bordFermer'){ if (e.cancelable) e.preventDefault(); sonBouton(); fermerLeBord(); return; }
@@ -1465,6 +1481,7 @@ try {
 } catch (e) {}
 function NIV(){ return NIVEAUX[iNiveau]; }
 function choisirNiveau(i){
+  noterAction('changement de niveau');
   iNiveau = Math.max(0, Math.min(NIVEAUX.length - 1, i));
   try { localStorage.setItem('lqd_niveau', NIV().cle); } catch (e) {}
   majBoutonsNiveau();
@@ -1746,6 +1763,7 @@ function prixDuJour(cle){
 
 /* ---------- CONSTRUCTION ---------- */
 function construire(){
+  noterAction('construction du plateau');
   board.innerHTML = carteSVG() +
     '<div id="nuit"></div><div id="crepuscule"></div><div id="lampes"></div>' +
     '<div id="layer"></div><div id="cible"></div>';
@@ -2483,6 +2501,7 @@ var TUTO = [
 ];
 
 function lancerLeTuto(){
+  noterAction('lancement du tutoriel');
   S.tuto = { etape:0, t:0, montre:false };
   majPanneauTuto();
   flash('Tutoriel \u2014 suis les indications en bas de l\u2019\u00e9cran.', 3000);
@@ -3864,6 +3883,7 @@ function deplacerModou(dt){
 }
 
 function tourDeBoucle(ts){
+  noterAction('boucle de jeu');
   if (!S || !S.enCours) return;
   if (!last) last = ts;
   var dt = Math.min(0.05, (ts - last)/1000);
@@ -4300,6 +4320,7 @@ var CHAPITRES = [
 ];
 
 function ouvrirLeChapitre(){
+  noterAction('ouverture d un chapitre');
   var n = S.fetes;                       // 1 = fin du premier mois
   var niveau = Math.min(CHAPITRES.length, Math.max(1, n));
   var C = CHAPITRES[niveau - 1];
@@ -5031,6 +5052,7 @@ function restaurerLeDecor(){
 }
 
 function reprendreLaPartie(){
+  noterAction('reprise de la partie sauvegardée');
   var d = partieEnAttente();
   if (!d) { demarrer(); return; }
   audioInit();
@@ -5212,6 +5234,7 @@ function fermerModeEmploi(){
 
 /* ---------- MISE À L'ÉCHELLE ---------- */
 function redimensionner(){
+  noterAction('mise à l échelle');
   VW = window.innerWidth;
   VH = window.innerHeight - TOP_PAD;
   var w = VW, h = w / RATIO;
@@ -5254,6 +5277,7 @@ window.addEventListener('orientationchange', function(){ setTimeout(redimensionn
 
 /* ---------- DÉMARRAGE ---------- */
 function demarrerA(pr){
+  noterAction('reprise de la progression');
   effacerPartie();
   couperLeDialogue();
   audioInit();
@@ -5283,6 +5307,7 @@ function demarrerA(pr){
 }
 
 function demarrer(){
+  noterAction('démarrage d une partie');
   effacerPartie();
   couperLeDialogue();
   audioInit();
