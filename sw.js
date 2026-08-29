@@ -2,7 +2,7 @@
    Règle d'or : le HTML passe TOUJOURS par le réseau d'abord.
    Sinon une mise à jour du jeu ne remonte jamais sur l'appareil. */
 
-var CACHE = 'lqd-v9.3';
+var CACHE = 'lqd-v9.5';
 var FICHIERS = [
   './',
   './index.html',
@@ -50,7 +50,7 @@ self.addEventListener('fetch', function (e) {
   if (estPage) {
     // réseau d'abord : la dernière version gagne toujours
     e.respondWith(
-      fetch(req).then(function (rep) {
+      fetch(new Request(req.url, { cache: 'no-store' })).then(function (rep) {
         var copie = rep.clone();
         caches.open(CACHE).then(function (c) { c.put(req, copie); });
         return rep;

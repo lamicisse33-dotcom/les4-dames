@@ -652,6 +652,7 @@ html,body{height:100%;overflow:hidden;background:#1B2A1B;font-family:var(--ui);c
 .screen > *{max-width:100%}
 .screen.hide{display:none}
 .eyebrow{font-size:9.5px;font-weight:900;letter-spacing:.34em;text-transform:uppercase;color:var(--or)}
+#versionIntro{color:rgba(255,246,228,.45);letter-spacing:.1em;margin-left:6px}
 h1{font-size:clamp(22px,6vw,42px);font-weight:900;letter-spacing:.04em;line-height:.98;
   color:var(--blanc);text-shadow:0 4px 0 var(--trait)}
 h1 span{display:block;font-size:.32em;letter-spacing:.2em;color:var(--or);margin-top:10px;text-shadow:none}
@@ -843,7 +844,7 @@ button.cta{touch-action:manipulation;position:relative;z-index:2}
 <div id="fete"></div>
 
 <div class="screen" id="scrIntro">
-  <div class="eyebrow">KHALAM</div>
+  <div class="eyebrow">KHALAM <span id="versionIntro"></span></div>
   <h1>LES QUATRE DAMES<span>L'Équilibre de Modou</span></h1>
   <p class="lede">Modou est maçon. Il monte sur le <b>chantier</b> pour gagner, puis il court payer ce que ses quatre Dames réclament : des fleurs, des soins, des prières, de l'argent.<br><br>
   <b>Tout coûte. Et chaque jour, tout coûte plus cher.</b><br><br>
@@ -1182,8 +1183,10 @@ function dameSVG(i){
    ========================================================= */
 'use strict';
 
-var BUILD_TAG = 'LQD-v9.3';
+var BUILD_TAG = 'LQD-v9.5';
 document.getElementById('build').textContent = BUILD_TAG;
+var vIntro = document.getElementById('versionIntro');
+if (vIntro) vIntro.textContent = BUILD_TAG;
 
 /* ---------- affichage des erreurs, pour pouvoir diagnostiquer ---------- */
 var dejaSignale = false;
@@ -1208,10 +1211,20 @@ window.addEventListener('unhandledrejection', function(e){
 
 /* ---------- les boutons sont branchés TOUT DE SUITE, par délégation.
    Ainsi ils marchent même si une erreur survient plus bas dans le script. ---------- */
+var dernierAppui = 0, dernierId = '';
 function surAppui(e){
   var n = e.target;
+
+  // un doigt qui se lève déclenche touchend PUIS un click : sans cette garde,
+  // chaque bouton s'activait deux fois. Le bouton des voix se coupait et se
+  // rallumait aussitôt, ce qui donnait l'impression qu'il ne faisait rien.
+  var quand = Date.now();
+  var cible = n && n.id ? n.id : (n && n.parentNode && n.parentNode.id ? n.parentNode.id : '');
+  if (cible && cible === dernierId && quand - dernierAppui < 400) return;
+  if (cible){ dernierId = cible; dernierAppui = quand; }
+
   while (n && n !== document.body){
-    if (n.id === 'bordFermer'){ sonBouton(); fermerLeBord(); return; }
+    if (n.id === 'bordFermer'){ if (e.cancelable) e.preventDefault(); sonBouton(); fermerLeBord(); return; }
     if (n.id === 'bordVerrou'){
       try { localStorage.removeItem(CLE_ACCES); } catch (e) {}
       fermerLeBord();
@@ -1265,8 +1278,8 @@ function surAppui(e){
       }
       return;
     }
-    if (n.id === 'sonBtn'){ try { basculerSon(); } catch (err) {} return; }
-    if (n.id === 'voixBtn'){ try { basculerVoix(); } catch (err) {} return; }
+    if (n.id === 'sonBtn'){ if (e.cancelable) e.preventDefault(); try { basculerSon(); } catch (err) {} return; }
+    if (n.id === 'voixBtn'){ if (e.cancelable) e.preventDefault(); try { basculerVoix(); } catch (err) {} return; }
     if (n.id === 'chContinuer'){ try { sonBouton(); fermerLeChapitre(true); } catch (err) {} return; }
     if (n.id === 'chRejouer'){   try { sonBouton(); fermerLeChapitre(false); } catch (err) {} return; }
     if (n.id === 'tutoPasser'){
@@ -2189,6 +2202,7 @@ function basculerSon(){
     monter(BUS_MUS, SON_ON ? cible : 0, 0.3);
     monter(BUS_EFF, SON_ON ? 0.34 : 0, 0.2);
   }
+  flash(SON_ON ? 'Musique et bruitages activ\u00e9s.' : 'Musique et bruitages coup\u00e9s.', 1600);
   if (SON_ON) sonBouton();
 }
 
@@ -2354,6 +2368,7 @@ function basculerVoix(){
   if (!VOIX_ON) couperLaParole();
   var b = document.getElementById('voixBtn');
   if (b){ b.textContent = VOIX_ON ? '\uD83D\uDDE3' : '\uD83D\uDD07'; b.classList.toggle('coupe', !VOIX_ON); }
+  flash(VOIX_ON ? 'Voix activ\u00e9es.' : 'Voix coup\u00e9es.', 1600);
   if (VOIX_ON) parler('Je t\u2019\u00e9coute.', VOIX_MODOU);
 }
 
