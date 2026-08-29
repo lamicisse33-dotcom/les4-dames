@@ -1202,7 +1202,7 @@ function dameSVG(i){
    ========================================================= */
 'use strict';
 
-var BUILD_TAG = 'LQD-v10.3';
+var BUILD_TAG = 'LQD-v10.4';
 document.getElementById('build').textContent = BUILD_TAG;
 var vIntro = document.getElementById('versionIntro');
 if (vIntro) vIntro.textContent = BUILD_TAG;
@@ -3959,169 +3959,9 @@ function deplacerModou(dt){
   }
 }
 
-function tourDeBoucle(ts){
-  if (!S || !S.enCours) return;
-  noterAction('boucle de jeu');
-  if (!last) last = ts;
-  var dt = Math.min(0.05, (ts - last)/1000);
-  last = ts;
-
-  // pendant la fête, tout est suspendu : aucune jauge ne descend
-  if (S.chapitre){
-    majChapitre(dt);
-    return;
-  }
-  if (S.fete){
-    majFete(dt);
-    musique();
-    animerJambes(performance.now() / 1000, false);
-    majCrises();
-    rendre();
-    majCamera(dt);
-    return;
-  }
-  if (peutFeter()){ lancerLaFete(); return; }
-
-  // un jour chômé retient son souffle : rien ne bouge tant que Modou
-  // n'est pas arrivé au chantier. Il ne perd pas sa journée à marcher.
-  if (S.attente > 0){
-    S.attente -= dt;
-    if (S.zone === 'CHANTIER' || S.attente <= 0){
-      var gagne = S.attente > 0;
-      S.attente = 0;
-      if (gagne){
-        flash('La journ\u00e9e commence. Paye doubl\u00e9e.', 2400);
-        sonSerie();
-      } else {
-        flash('Le patron n\u2019attend plus. La journ\u00e9e est lanc\u00e9e.', 2400);
-      }
-    } else {
-      // le temps ne passe pas pour les Dames, mais Modou vit normalement :
-      // il marche, il se fatigue, et il récupère au foyer comme d'habitude.
-      // seul le calendrier est suspendu. Tout le monde continue de vivre :
-      // Modou marche et récupère, l'enfant fait sa course, une Dame qui
-      // s'en allait continue son chemin.
-      deplacerModou(dt);
-      if (S.zone === 'CENTRE'){
-        var bonusN = 1 + (CFG.NUIT_SOUFFLE - 1) * S.nuit;
-        var fuiteN = (S.pluie > 0 && !S.toitRepare) ? CFG.FOYER_FUITE : 1;
-        S.force = Math.min(100, S.force + CFG.SOUFFLE_PAR_SEC * bonusN * fuiteN * dt);
-      }
-      var z0 = zoneSous();
-      if (z0 !== S.zone){ if (z0) sonEntree(); else sonSortie(); S.zone = z0; }
-      if (S.cool > 0) S.cool -= dt;
-      majScene(dt);
-      majExode(dt);
-      majEnfant(dt);
-      animerJambes(performance.now() / 1000, S.modou.marche);
-      majCrises();
-      musique();
-      rendre();
-      majCamera(dt);
-      return;
-    }
-  }
-
-  S.temps += dt;
-
-  var jour = Math.floor(S.temps / CFG.SEC_PAR_JOUR) + 1;
-  if (jour !== S.jour){
-    var palierAvant = palierActuel(S.jour);
-    S.jour = jour;
-    sonJour();
-    if (palierActuel(jour) > palierAvant){
-      var hausse = Math.round(NIV().inflation * 100);
-      var total = Math.round((Math.pow(1 + NIV().inflation, palierActuel(jour)) - 1) * 100);
-      flash('Jour ' + jour + ' \u2014 la vie augmente de ' + hausse + ' %.', 3000);
-      noter(jour, 'Les prix montent de ' + hausse + ' % (' + total + ' % depuis le d\u00e9but).');
-      sonDebout();
-      marquerHausse();
-    }
-    veillerLeRecord(jour);
-
-    if (jour === CFG.ENFANT_JOUR && !S.enfant) faireVenirLEnfant();
-    if (jour >= CFG.ANE_JOUR && !S.aneOffert && !S.ane) proposerLAne();
-    if (jour >= CFG.ANE_JOUR && !S.filsParti) leFilsPart();
-    var fete = ferieDuJour(jour);
-    if (fete){
-      flash(fete + ' \u2014 jour f\u00e9ri\u00e9. La paye est doubl\u00e9e au chantier.', 3600);
-      parler('C\u2019est ' + fete + ' ! Le patron paie double aujourd\u2019hui.', VOIX_MODOU);
-      noter(jour, fete + ' : paye doubl\u00e9e.');
-      sonSerie();
-    } else if (estWeekend(jour) && !estWeekend(jour - 1)){
-      flash('Samedi \u2014 le patron paie double tout le week-end.', 3000);
-      parler('Le week-end, on paie double. Je travaille.', VOIX_MODOU);
-      sonSerie();
-    }
-    if (payeDoublee(jour) && S.zone !== 'CHANTIER'){
-      S.attente = CFG.ATTENTE_MAX;
-      flash('Le jour t\u2019attend au chantier. Cours.', 3000);
-    }
-
-    if (jour >= CFG.PLUIE_JOUR && !S.saisonPluies) ouvrirLaSaison();
-    if (jour >= CFG.PLUIE_JOUR + 1 && S.saisonPluies && !S.toitRepare) proposerLeToit();
-    if (jour === CFG.VACANCES_JOUR && S.filsParti && !S.vacances) leFilsRevient();
-    if (S.vacances && jour >= S.vacancesFin) leFilsRepart();
-    if (jour >= CFG.MOTO_JOUR && !S.motoOfferte && !S.moto) proposerLaMoto();
-    if (S.filsParti && !S.mandat &&
-        (jour - CFG.ANE_JOUR) % CFG.MANDAT_JOURS === 0 && jour > CFG.ANE_JOUR){
-      ouvrirUnMandat(false);
-    }
-    majMandat();
-    majBandeauMandat();
-
-    // tant que l'âne n'est pas pris, on le rappelle tous les cinq jours
-    if (S.aneOffert && !S.ane && !S.moto){
-      S.rappelAne = (S.rappelAne || 0) + 1;
-      if (S.rappelAne % 5 === 0){
-        flash('L\u2019\u00e2ne du Vieux Serigne t\u2019attend au temple \u2014 ' +
-              CFG.PRIX_ANE + ' F.', 3000);
-        var bt = badgesEl.TEMPLE;
-        if (bt) bt.classList.add('dernier');
-      }
-    }
-
-    if (jour === 30 && !S.moisSalue){
-      S.moisSalue = true;
-      noter(30, 'Un mois tenu.');
-      var complet = true;
-      for (var w3=0;w3<DAMES.length;w3++){ if (S.parties[w3]) complet = false; }
-      if (!complet){
-        flash('Un mois tenu, malgr\u00e9 tout. Continue.', 3200);
-        modouDit('Un mois. Je tiens encore.', 3000);
-      }
-    }
-  }
-
-  // cycle jour / nuit
-  S.nuit = calculerNuit();
-  var estNuit = S.nuit > 0.5;
-  if (estNuit !== S.etaitNuit){
-    S.etaitNuit = estNuit;
-    if (estNuit){ note(220,0.8,'sine',0.2,0,BUS_EFF,165); flash('La nuit tombe. Le chantier ferme.', 2000); }
-    else { note(392,0.7,'sine',0.2,0,BUS_EFF,523); flash('Le jour se l\u00e8ve. Le chantier rouvre.', 2000); }
-  }
-  if (voileNuit) voileNuit.style.opacity = (0.62 * S.nuit).toFixed(3);
-  if (voileCrep) voileCrep.style.opacity = (0.5 * Math.sin(Math.PI * S.nuit)).toFixed(3);
-  var lampes = document.getElementById('lampes');
-  if (lampes) lampes.style.opacity = S.nuit.toFixed(3);
-
-  var pression = 1 + Math.min(NIV().pressionMax, (S.jour - 1) * 0.022);
-  // quand Modou flanche, le foyer se vide plus vite
-  var manque = Math.max(0, (CFG.SEUIL_FATIGUE - S.force) / CFG.SEUIL_FATIGUE);
-  var abandon = 1 + manque * CFG.USURE_EPUISE;
-  var deuil = CFG.DEUIL[Math.min(CFG.DEUIL.length - 1, S.sorties)];
-  S.abandon = abandon;
-  for (var i=0;i<DAMES.length;i++){
-    var nuitFacteur = 1 - (1 - CFG.NUIT_USURE) * S.nuit;
-    var pluieFacteur = (S.pluie > 0 && !S.toitRepare) ? CFG.PLUIE_USURE : 1;
-    S.jauges[i] = Math.max(0, S.jauges[i] -
-      DAMES[i].usure * NIV().usure * pression * abandon * deuil * nuitFacteur * pluieFacteur * dt);
-  }
-
-  // déplacement
-  deplacerModou(dt);
-
+/* tout ce qui se passe dans un lieu : entrer, acheter, payer, réparer.
+   Isolé pour que ça marche aussi pendant l'attente d'un jour chômé. */
+function vivreDansLaZone(dt){
   // zone
   var z = zoneSous();
   if (z !== S.zone){
@@ -4251,6 +4091,171 @@ function tourDeBoucle(ts){
     var pc = 100 * S.jauges[w] / CFG.MAX_JAUGE;
     if (pc < plusBasse) plusBasse = pc;
   }
+  return plusBasse;
+}
+
+function tourDeBoucle(ts){
+  if (!S || !S.enCours) return;
+  noterAction('boucle de jeu');
+  if (!last) last = ts;
+  var dt = Math.min(0.05, (ts - last)/1000);
+  last = ts;
+
+  // pendant la fête, tout est suspendu : aucune jauge ne descend
+  if (S.chapitre){
+    majChapitre(dt);
+    return;
+  }
+  if (S.fete){
+    majFete(dt);
+    musique();
+    animerJambes(performance.now() / 1000, false);
+    majCrises();
+    rendre();
+    majCamera(dt);
+    return;
+  }
+  if (peutFeter()){ lancerLaFete(); return; }
+
+  // un jour chômé retient son souffle : rien ne bouge tant que Modou
+  // n'est pas arrivé au chantier. Il ne perd pas sa journée à marcher.
+  if (S.attente > 0){
+    S.attente -= dt;
+    if (S.zone === 'CHANTIER' || S.attente <= 0){
+      var gagne = S.attente > 0;
+      S.attente = 0;
+      if (gagne){
+        flash('La journ\u00e9e commence. Paye doubl\u00e9e.', 2400);
+        sonSerie();
+      } else {
+        flash('Le patron n\u2019attend plus. La journ\u00e9e est lanc\u00e9e.', 2400);
+      }
+    } else {
+      // le temps ne passe pas pour les Dames, mais Modou vit normalement :
+      // il marche, il se fatigue, et il récupère au foyer comme d'habitude.
+      // seul le calendrier est suspendu. Tout le monde continue de vivre :
+      // Modou marche et récupère, l'enfant fait sa course, une Dame qui
+      // s'en allait continue son chemin.
+      deplacerModou(dt);
+      if (S.zone === 'CENTRE'){
+        var bonusN = 1 + (CFG.NUIT_SOUFFLE - 1) * S.nuit;
+        var fuiteN = (S.pluie > 0 && !S.toitRepare) ? CFG.FOYER_FUITE : 1;
+        S.force = Math.min(100, S.force + CFG.SOUFFLE_PAR_SEC * bonusN * fuiteN * dt);
+      }
+      vivreDansLaZone(dt);
+      majExode(dt);
+      majEnfant(dt);
+      animerJambes(performance.now() / 1000, S.modou.marche);
+      majCrises();
+      musique();
+      rendre();
+      majCamera(dt);
+      return;
+    }
+  }
+
+  S.temps += dt;
+
+  var jour = Math.floor(S.temps / CFG.SEC_PAR_JOUR) + 1;
+  if (jour !== S.jour){
+    var palierAvant = palierActuel(S.jour);
+    S.jour = jour;
+    sonJour();
+    if (palierActuel(jour) > palierAvant){
+      var hausse = Math.round(NIV().inflation * 100);
+      var total = Math.round((Math.pow(1 + NIV().inflation, palierActuel(jour)) - 1) * 100);
+      flash('Jour ' + jour + ' \u2014 la vie augmente de ' + hausse + ' %.', 3000);
+      noter(jour, 'Les prix montent de ' + hausse + ' % (' + total + ' % depuis le d\u00e9but).');
+      sonDebout();
+      marquerHausse();
+    }
+    veillerLeRecord(jour);
+
+    if (jour === CFG.ENFANT_JOUR && !S.enfant) faireVenirLEnfant();
+    if (jour >= CFG.ANE_JOUR && !S.aneOffert && !S.ane) proposerLAne();
+    if (jour >= CFG.ANE_JOUR && !S.filsParti) leFilsPart();
+    var fete = ferieDuJour(jour);
+    if (fete){
+      flash(fete + ' \u2014 jour f\u00e9ri\u00e9. La paye est doubl\u00e9e au chantier.', 3600);
+      parler('C\u2019est ' + fete + ' ! Le patron paie double aujourd\u2019hui.', VOIX_MODOU);
+      noter(jour, fete + ' : paye doubl\u00e9e.');
+      sonSerie();
+    } else if (estWeekend(jour) && !estWeekend(jour - 1)){
+      flash('Samedi \u2014 le patron paie double tout le week-end.', 3000);
+      parler('Le week-end, on paie double. Je travaille.', VOIX_MODOU);
+      sonSerie();
+    }
+    if (payeDoublee(jour) && S.zone !== 'CHANTIER'){
+      S.attente = CFG.ATTENTE_MAX;
+      flash('Le jour t\u2019attend au chantier. Cours.', 3000);
+    }
+
+    if (jour >= CFG.PLUIE_JOUR && !S.saisonPluies) ouvrirLaSaison();
+    if (jour >= CFG.PLUIE_JOUR + 1 && S.saisonPluies && !S.toitRepare) proposerLeToit();
+    if (jour === CFG.VACANCES_JOUR && S.filsParti && !S.vacances) leFilsRevient();
+    if (S.vacances && jour >= S.vacancesFin) leFilsRepart();
+    if (jour >= CFG.MOTO_JOUR && !S.motoOfferte && !S.moto) proposerLaMoto();
+    if (S.filsParti && !S.mandat &&
+        (jour - CFG.ANE_JOUR) % CFG.MANDAT_JOURS === 0 && jour > CFG.ANE_JOUR){
+      ouvrirUnMandat(false);
+    }
+    majMandat();
+    majBandeauMandat();
+
+    // tant que l'âne n'est pas pris, on le rappelle tous les cinq jours
+    if (S.aneOffert && !S.ane && !S.moto){
+      S.rappelAne = (S.rappelAne || 0) + 1;
+      if (S.rappelAne % 5 === 0){
+        flash('L\u2019\u00e2ne du Vieux Serigne t\u2019attend au temple \u2014 ' +
+              CFG.PRIX_ANE + ' F.', 3000);
+        var bt = badgesEl.TEMPLE;
+        if (bt) bt.classList.add('dernier');
+      }
+    }
+
+    if (jour === 30 && !S.moisSalue){
+      S.moisSalue = true;
+      noter(30, 'Un mois tenu.');
+      var complet = true;
+      for (var w3=0;w3<DAMES.length;w3++){ if (S.parties[w3]) complet = false; }
+      if (!complet){
+        flash('Un mois tenu, malgr\u00e9 tout. Continue.', 3200);
+        modouDit('Un mois. Je tiens encore.', 3000);
+      }
+    }
+  }
+
+  // cycle jour / nuit
+  S.nuit = calculerNuit();
+  var estNuit = S.nuit > 0.5;
+  if (estNuit !== S.etaitNuit){
+    S.etaitNuit = estNuit;
+    if (estNuit){ note(220,0.8,'sine',0.2,0,BUS_EFF,165); flash('La nuit tombe. Le chantier ferme.', 2000); }
+    else { note(392,0.7,'sine',0.2,0,BUS_EFF,523); flash('Le jour se l\u00e8ve. Le chantier rouvre.', 2000); }
+  }
+  if (voileNuit) voileNuit.style.opacity = (0.62 * S.nuit).toFixed(3);
+  if (voileCrep) voileCrep.style.opacity = (0.5 * Math.sin(Math.PI * S.nuit)).toFixed(3);
+  var lampes = document.getElementById('lampes');
+  if (lampes) lampes.style.opacity = S.nuit.toFixed(3);
+
+  var pression = 1 + Math.min(NIV().pressionMax, (S.jour - 1) * 0.022);
+  // quand Modou flanche, le foyer se vide plus vite
+  var manque = Math.max(0, (CFG.SEUIL_FATIGUE - S.force) / CFG.SEUIL_FATIGUE);
+  var abandon = 1 + manque * CFG.USURE_EPUISE;
+  var deuil = CFG.DEUIL[Math.min(CFG.DEUIL.length - 1, S.sorties)];
+  S.abandon = abandon;
+  for (var i=0;i<DAMES.length;i++){
+    var nuitFacteur = 1 - (1 - CFG.NUIT_USURE) * S.nuit;
+    var pluieFacteur = (S.pluie > 0 && !S.toitRepare) ? CFG.PLUIE_USURE : 1;
+    S.jauges[i] = Math.max(0, S.jauges[i] -
+      DAMES[i].usure * NIV().usure * pression * abandon * deuil * nuitFacteur * pluieFacteur * dt);
+  }
+
+  // déplacement
+  deplacerModou(dt);
+
+  var plusBasse = vivreDansLaZone(dt);
+
   MUS.tension = Math.max(0, Math.min(1, (45 - plusBasse) / 45));
   musique();
 
