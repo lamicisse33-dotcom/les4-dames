@@ -601,6 +601,8 @@ html,body{height:100%;overflow:hidden;background:#1B2A1B;font-family:var(--ui);c
 .mbar i{display:block;height:100%;background:#FF8A3D}
 
 /* ---- L'ÂNE ET LA MOTO ---- */
+#modou.telephone #mBody{animation:tel .5s ease-in-out infinite}
+@keyframes tel{0%,100%{transform:rotate(-3deg)}50%{transform:rotate(3deg)}}
 #modou .monture{position:absolute;left:50%;bottom:-6%;width:118%;height:62%;
   transform:translateX(-50%);opacity:0;transition:opacity .3s;pointer-events:none}
 #modou.surLane .mAne{opacity:1}
@@ -867,7 +869,7 @@ button.cta{touch-action:manipulation;position:relative;z-index:2}
   <h1>LES QUATRE DAMES<span>L'Équilibre de Modou</span></h1>
   <p class="lede">Modou est maçon. Il monte sur le <b>chantier</b> pour gagner, puis il court payer ce que ses quatre Dames réclament : des fleurs, des soins, des prières, de l'argent.<br><br>
   <b>Tout coûte. Et chaque jour, tout coûte plus cher.</b><br><br>
-  Une Dame dont la jauge tombe à zéro <b>s'en va</b>. Rattrape-la avant la sortie, ou ramène-la plus tard pour <b>1 000 F</b>.<br><br>
+  Une Dame dont la jauge tombe à zéro <b>s'en va</b>. Rattrape-la avant la sortie, ou ramène-la plus tard pour <b>500 F</b>.<br><br>
   À la <b>troisième</b> qui est partie, tout s'arrête.<br><br>
   <b>Ton score, c'est le nombre de jours tenus.</b><br><br>
   <b>Touche un endroit</b> et Modou y va tout seul. Ou sers-toi du <b>joystick</b>.<br>
@@ -1204,7 +1206,7 @@ function dameSVG(i){
    ========================================================= */
 'use strict';
 
-var BUILD_TAG = 'LQD-v10.9';
+var BUILD_TAG = 'LQD-v11.3';
 document.getElementById('build').textContent = BUILD_TAG;
 var vIntro = document.getElementById('versionIntro');
 if (vIntro) vIntro.textContent = BUILD_TAG;
@@ -1415,14 +1417,14 @@ var CFG = {
   SORTIES_FATALES: 3,     // trois départs et la partie est perdue
 
   MANDAT_JOURS: 7,        // le fils attend son argent chaque semaine
-  MANDAT_BASE: 260,
+  MANDAT_BASE: 100,      // somme fixe, envoyée toute seule chaque semaine
   MANDAT_DELAI: 3,        // il a trois jours pour l'envoyer
   MANDAT_PEINE: 22,       // ce que lui coûte un mandat oublié
 
   PLUIE_JOUR: 91,         // quatrième partie : la saison des pluies
   PLUIE_PERIODE: 26,      // une averse toutes les vingt-six secondes
   PLUIE_DUREE: 9,
-  TOIT_PRIX: 1200,        // réparer le toit du foyer
+  TOIT_PRIX: 500,        // réparer le toit du foyer
   FOYER_FUITE: 0.5,       // sous la pluie, un toit percé ne repose qu'à moitié
   PLUIE_USURE: 1.25,      // et les Dames supportent mal l'humidité
 
@@ -1430,21 +1432,22 @@ var CFG = {
   VACANCES_DUREE: 7,
 
   MOTO_JOUR: 121,        // cinquième partie
-  MOTO_PRIX: 1000,
+  MOTO_PRIX: 450,
   MOTO_RETENUE: 0.35,     // le patron retient ce tiers sur chaque paye
   MOTO_VITESSE: 4.0,
+  PRIME_CONGE: 4.0,      // un mois sur six, la paye est multipliée par quatre
   PRIME_REPOS: 2.0,      // samedi, dimanche et jours fériés : la paye double
   ATTENTE_MAX: 15,       // le jour chômé attend Modou au chantier, au plus quinze secondes      // samedi, dimanche et jours fériés : la paye double     // quatre fois plus rapide qu'à pied
 
   ANE_JOUR: 61,           // troisième mois : le gardien du temple le propose
-  PRIX_ANE: 800,
+  PRIX_ANE: 200,
   ANE_VITESSE: 2.0,       // Modou monte dessus, les trajets sont deux fois plus courts
 
   ENFANT_JOUR: 31,        // il arrive au deuxième mois
   ENFANT_VITESSE: 0.52,   // il marche à la moitié du pas de Modou
   ENFANT_RENDEMENT: 0.75, // un enfant s'y prend moins bien que son père
 
-  PRIX_RETOUR: 1000,      // avec cette somme, Modou fait revenir une Dame partie
+  PRIX_RETOUR: 500,      // avec cette somme, Modou fait revenir une Dame partie
   JAUGE_RETOUR: 55,       // dans quel état elle revient
   VIT_RETOUR: 2.4,        // elle revient plus vite qu'elle n'est partie
   VIT_DAME: 3.5,          // elle s'en va lentement : Modou peut encore la rattraper
@@ -1506,6 +1509,10 @@ function ferieDuJour(j){
   return FETES[Math.floor((j - 22) / 26) % FETES.length];
 }
 function payeDoublee(j){ return estWeekend(j) || !!ferieDuJour(j); }
+
+/* Le sixième mois est un mois de congé payé : Modou travaille toujours,
+   mais le patron lui verse quatre fois sa paye. Puis tous les six mois. */
+function estConge(j){ return Math.floor((j - 1) / CFG.MOIS) % 6 === 5; }
 
 /* =========================================================
    LES TROIS NIVEAUX
@@ -1764,7 +1771,7 @@ function nouvelEtat(){
     attente:0,
     enfant:null, coursesEnfant:0,
     ane:false, aneOffert:false, rappelAne:0,
-    filsParti:false, mandat:null, mandatsEnvoyes:0, mandatsRates:0,
+    filsParti:false, arriere:0, mandatsEnvoyes:0, mandatsRates:0,
     moto:false, motoOfferte:false, dette:0,
     saisonPluies:false, pluie:0, prochaineAverse:0, toitRepare:false, toitPropose:false,
     vacances:false, vacancesFin:0,
@@ -2428,6 +2435,7 @@ function couperLaParole(){
   try { if ('speechSynthesis' in window) window.speechSynthesis.cancel(); } catch (e) {}
 }
 
+var VOIX_FILS = { homme:false, hauteur:1.55, vitesse:1.05 };
 var VOIX_MODOU = { homme:true, hauteur:0.62, vitesse:0.96 };
 var VOIX_MODOU_DROLE = { homme:true, hauteur:1.38, vitesse:1.26 };   // quand il panique
 function parleDame(i, texte, avant){
@@ -3256,7 +3264,7 @@ function majBoutonEnfant(){
 }
 
 /* =========================================================
-   L'ÂNE — troisième mois. Le gardien du temple le vend 800 F.
+   L'ÂNE — troisième mois. Le gardien du temple le vend.
    Modou monte dessus : les trajets sont deux fois plus courts.
    ========================================================= */
 function aneSVG(){
@@ -3317,10 +3325,7 @@ function acheterLAne(){
    LE FILS PARTI ÉTUDIER — troisième mois
    Chaque semaine, Modou doit lui envoyer de l'argent depuis la banque.
    ========================================================= */
-function montantDuMandat(){
-  return Math.round(CFG.MANDAT_BASE * NIV().mandat *
-                    Math.pow(1 + NIV().inflation, palierActuel()));
-}
+function montantDuMandat(){ return CFG.MANDAT_BASE; }
 
 function leFilsPart(){
   if (S.filsParti) return;
@@ -3331,68 +3336,72 @@ function leFilsPart(){
   }
   S.enfant = null;
   majBoutonEnfant();
-  flash('Ton fils part \u00e9tudier en ville. Il ne fera plus les courses.', 4000);
+  flash('Ton fils part \u00e9tudier en ville. Tu lui enverras ' + CFG.MANDAT_BASE +
+        ' F chaque semaine, automatiquement.', 4600);
   parler('Mon fils s\u2019en va \u00e9tudier. Qu\u2019Allah le garde.', VOIX_MODOU);
   noter(S.jour, 'Le fils part \u00e9tudier.');
-  ouvrirUnMandat(true);
 }
 
-function ouvrirUnMandat(premier){
-  var m = montantDuMandat();
-  if (S.mandat) m += S.mandat.montant;          // le mandat oublié s'ajoute au suivant
-  S.mandat = { montant:m, echeance:S.jour + CFG.MANDAT_DELAI };
-  flash((premier ? 'Premier mandat : ' : 'Mandat de la semaine : ') + m +
-        ' F \u00e0 envoyer depuis la banque.', 3600);
-  if (!premier) parler('Il faut envoyer l\u2019argent \u00e0 mon fils.', VOIX_MODOU);
-  noter(S.jour, 'Mandat de ' + m + ' F \u00e0 envoyer.');
-  majBandeauMandat();
-}
+/* L'argent part tout seul. Modou l'appelle ensuite pour s'assurer qu'il est arrivé. */
+var REPONSES_FILS = [
+  'Oui papa, je l\u2019ai re\u00e7u. Merci beaucoup.',
+  'C\u2019est bien arriv\u00e9 papa. Que Dieu te le rende.',
+  'Je l\u2019ai re\u00e7u ce matin. Tout va bien ici.',
+  'Oui papa. J\u2019ai pay\u00e9 mes livres avec.'
+];
+var SUITES_MODOU = [
+  'Travaille bien. Ne pense qu\u2019\u00e0 tes \u00e9tudes.',
+  'C\u2019est tout ce que j\u2019ai, mon fils. Fais-en quelque chose.',
+  'Ne manque de rien. Je m\u2019arrange ici.',
+  'Que ta m\u00e8re soit fi\u00e8re de toi.'
+];
 
-function envoyerLeMandat(){
-  if (!S.mandat) return false;
-  if (S.argent < S.mandat.montant){
-    if (S.cool <= 0){
-      flash('Il te manque ' + (S.mandat.montant - Math.floor(S.argent)) +
-            ' F pour le mandat.', 2600);
-      S.cool = 3;
-    }
-    return false;
-  }
-  S.argent -= S.mandat.montant;
-  volant('-' + S.mandat.montant + ' F', '#7FE0A8');
-  sonCaisse();
-  S.mandatsEnvoyes++;
-  noter(S.jour, 'Mandat envoy\u00e9 : ' + S.mandat.montant + ' F.');
-  S.mandat = null;
-  majBandeauMandat();
-  flash('Mandat envoy\u00e9. Ton fils pourra manger.', 2800);
-  parler('Mon fils aura de quoi vivre.', VOIX_MODOU);
-  return true;
-}
-
-function majMandat(){
-  if (!S.filsParti || !S.mandat) return;
-  if (S.vacances){ S.mandat.echeance = S.jour + CFG.MANDAT_DELAI; return; }
-  if (S.jour > S.mandat.echeance){
+function envoyerLeMandatSeul(){
+  var m = montantDuMandat() + (S.arriere || 0);
+  if (S.argent < m){
+    S.arriere = m;
+    flash('Pas assez pour le mandat. ' + m + ' F report\u00e9s \u00e0 la semaine prochaine.', 3400);
+    parler('Pardonne-moi mon fils\u2026 la semaine prochaine.', VOIX_MODOU);
+    noter(S.jour, 'Mandat report\u00e9 : ' + m + ' F.');
     S.mandatsRates++;
-    S.force = Math.max(0, S.force - CFG.MANDAT_PEINE);
-    flash('Mandat en retard. Ton fils a manqu\u2019\u00e9cole.', 3400);
-    parler('Pardonne-moi mon fils\u2026', VOIX_MODOU);
-    noter(S.jour, 'Mandat en retard : ' + S.mandat.montant + ' F report\u00e9s.');
-    ouvrirUnMandat(false);
+    return;
   }
+  S.argent -= m;
+  S.arriere = 0;
+  S.mandatsEnvoyes++;
+  volant('-' + m + ' F', '#7BD3F7');
+  sonCaisse();
+  noter(S.jour, 'Mandat envoy\u00e9 : ' + m + ' F.');
+  montrerLeMandat(m);
+  appelerLeFils();
 }
 
-function majBandeauMandat(){
+function appelerLeFils(){
+  parler('All\u00f4 mon fils. Est-ce que tu as re\u00e7u l\u2019argent que je t\u2019ai envoy\u00e9 ?',
+         VOIX_MODOU, function(){
+    if (modouEl) modouEl.classList.add('telephone');
+    afficherBulleModou('\uD83D\uDCDE All\u00f4 mon fils\u2026', 3600);
+  });
+  var rep = REPONSES_FILS[Math.floor(Math.random() * REPONSES_FILS.length)];
+  parler(rep, VOIX_FILS, function(){
+    flash('Ton fils : \u00ab ' + rep + ' \u00bb', 3600);
+  });
+  var suite = SUITES_MODOU[Math.floor(Math.random() * SUITES_MODOU.length)];
+  parler(suite, VOIX_MODOU, function(){
+    afficherBulleModou(suite, 3200);
+    setTimeout(function(){ if (modouEl) modouEl.classList.remove('telephone'); }, 3200);
+  });
+}
+
+function montrerLeMandat(m){
   var z = document.getElementById('mandat');
   if (!z) return;
-  if (!S || !S.mandat){ z.className = ''; return; }
-  var reste = Math.max(0, S.mandat.echeance - S.jour);
-  z.className = 'on' + (reste <= 1 ? ' urgent' : '');
+  z.className = 'on';
   z.innerHTML = '<span class="mpic">\uD83C\uDF93</span>' +
-                '<span class="mtxt">' + S.mandat.montant + ' F \u2014 ' +
-                (reste > 0 ? reste + ' j' : 'aujourd\u2019hui') + '</span>';
+                '<span class="mtxt">' + m + ' F envoy\u00e9s \u00e0 ton fils</span>';
+  setTimeout(function(){ if (z) z.className = ''; }, 4200);
 }
+
 
 /* =========================================================
    LA MOTO — quatrième mois, à crédit chez le patron
@@ -3522,11 +3531,7 @@ function leFilsRevient(){
   S.vacancesFin = S.jour + CFG.VACANCES_DUREE;
   S.enfant = null;
   faireVenirLEnfant();
-  if (S.mandat){
-    S.mandat = null;
-    majBandeauMandat();
-    flash('Ton fils est l\u00e0 : plus de mandat \u00e0 envoyer cette semaine.', 3600);
-  }
+  flash('Ton fils est l\u00e0 : rien \u00e0 lui envoyer cette semaine.', 3600);
   flash('Ton fils rentre en vacances. Il t\u2019aide pendant une semaine.', 4200);
   parler('Mon fils est rentr\u00e9 ! Al\u2019hamdoulillah !', VOIX_MODOU);
   noter(S.jour, 'Le fils revient en vacances.');
@@ -3541,7 +3546,6 @@ function leFilsRepart(){
   majBoutonEnfant();
   flash('Les vacances sont finies. Ton fils repart en ville.', 3600);
   parler('Travaille bien, mon fils.', VOIX_MODOU);
-  ouvrirUnMandat(false);
   noter(S.jour, 'Fin des vacances du fils.');
 }
 
@@ -3637,7 +3641,8 @@ function commencerExode(i){
     if (b) b.textContent = D.adieu;
     if (damesEl[i]) damesEl[i].classList.add('parle');
     // la consigne s'écrit, elle ne se dit pas : une voix de moins à attendre
-    flash('Ach\u00e8te-lui ' + D.besoin + ' avant la sortie, ou 1 000 F pour la ramener.', 4200);
+    flash('Ach\u00e8te-lui ' + D.besoin + ' avant la sortie, ou ' + CFG.PRIX_RETOUR +
+          ' F pour la ramener.', 4200);
     setTimeout(function(){
       if (b && S && S.exode[i]) b.textContent = 'Je m\u2019en vais\u2026';
     }, 4600);
@@ -3844,14 +3849,16 @@ function rendre(){
   var bc2 = badgesEl.CHANTIER.querySelector('.prix');
   var bt2 = badgesEl.CHANTIER.querySelector('.txt');
   var doubles = payeDoublee(S.jour);
-  var taux = Math.round(CFG.GAIN_CHANTIER * statutActuel().paye * NIV().paye *
-                        (doubles ? CFG.PRIME_REPOS : 1));
+  var prime2 = Math.max(doubles ? CFG.PRIME_REPOS : 1,
+                        estConge(S.jour) ? CFG.PRIME_CONGE : 1);
+  var taux = Math.round(CFG.GAIN_CHANTIER * statutActuel().paye * NIV().paye * prime2);
   if (bc2){
     bc2.textContent = nuitPleine ? '\uD83C\uDF19' : ('+' + taux + '/s');
     bc2.classList.toggle('prime', doubles && !nuitPleine);
   }
-  if (bt2) bt2.textContent = nuitPleine ? 'FERMÉ' : (doubles ? 'CHANTIER \u00d72' : 'CHANTIER');
-  badgesEl.CHANTIER.classList.toggle('prime', doubles && !nuitPleine);
+  if (bt2) bt2.textContent = nuitPleine ? 'FERMÉ'
+    : (estConge(S.jour) ? 'CONG\u00c9 \u00d74' : (doubles ? 'CHANTIER \u00d72' : 'CHANTIER'));
+  badgesEl.CHANTIER.classList.toggle('prime', (doubles || estConge(S.jour)) && !nuitPleine);
 
   var nomJ = document.getElementById('nomJour');
   if (nomJ){
@@ -4056,7 +4063,8 @@ function vivreDansLaZone(dt){
     if (S.force > 0){
       S.serie += dt;
       var bonus = 1 + Math.min(CFG.SERIE_MAX, S.serie * CFG.SERIE_BONUS);
-      var prime = payeDoublee(S.jour) ? CFG.PRIME_REPOS : 1;
+      var prime = Math.max(payeDoublee(S.jour) ? CFG.PRIME_REPOS : 1,
+                           estConge(S.jour) ? CFG.PRIME_CONGE : 1);
       var paye = CFG.GAIN_CHANTIER * statutActuel().paye * NIV().paye * rendT * bonus * prime * dt;
       if (S.moto && S.dette > 0){
         var retenue = Math.min(S.dette, paye * CFG.MOTO_RETENUE);
@@ -4094,10 +4102,6 @@ function vivreDansLaZone(dt){
     if (S.zone === 'TEMPLE' && S.aneOffert && !S.ane && S.argent >= CFG.PRIX_ANE){
       if (acheterLAne()){ S.cool = 2; affaireFaite = true; }
     }
-    if (!affaireFaite && S.zone === 'BANQUE' && S.mandat &&
-        S.argent >= S.mandat.montant){
-      if (envoyerLeMandat()){ S.cool = 2; affaireFaite = true; }
-    }
 
     if (affaireFaite){
       // rien de plus cette fois-ci
@@ -4111,9 +4115,21 @@ function vivreDansLaZone(dt){
         if (n2 === 1){
           flash('Retourne au foyer, au centre des quatre lits, avant d\u2019entrer ici.', 3000);
           montrerLaRoute();
+        } else {
+          // même la centième fois, on dit pourquoi : sinon la maison
+          // a l'air cassée alors qu'elle applique simplement la règle.
+          flash('Passe d\u2019abord au foyer.', 1800);
+          montrerLaRoute();
         }
-        if (n2) sonRefus();
-        S.cool = n2 ? 3.2 : 5;
+        sonRefus();
+        if (zonesEl[S.zone]) {
+          zonesEl[S.zone].classList.add('refuse');
+          var zr = S.zone;
+          setTimeout(function(){
+            if (zonesEl[zr]) zonesEl[zr].classList.remove('refuse');
+          }, 700);
+        }
+        S.cool = 2.4;
       }
     } else if (iZ >= 0 && S.exode[iZ] && S.exode[iZ].retour){
       // elle rentre déjà : inutile de repayer
@@ -4227,6 +4243,16 @@ function tourDeBoucle(ts){
     if (jour === CFG.ENFANT_JOUR && !S.enfant) faireVenirLEnfant();
     if (jour >= CFG.ANE_JOUR && !S.aneOffert && !S.ane) proposerLAne();
     if (jour >= CFG.ANE_JOUR && !S.filsParti) leFilsPart();
+    if (estConge(jour) && !estConge(jour - 1)){
+      flash('Mois de cong\u00e9 pay\u00e9 ! Le patron verse quatre fois ta paye.', 4600);
+      parler('Le patron me met en cong\u00e9 pay\u00e9. Quatre fois la paye !', VOIX_MODOU);
+      noter(jour, 'D\u00e9but du cong\u00e9 pay\u00e9 : paye \u00d74.');
+      fanfare(2);
+    } else if (!estConge(jour) && estConge(jour - 1)){
+      flash('Le cong\u00e9 est fini. La paye revient \u00e0 la normale.', 3200);
+      noter(jour, 'Fin du cong\u00e9 pay\u00e9.');
+    }
+
     var fete = ferieDuJour(jour);
     if (fete){
       flash(fete + ' \u2014 jour f\u00e9ri\u00e9. La paye est doubl\u00e9e au chantier.', 3600);
@@ -4248,12 +4274,10 @@ function tourDeBoucle(ts){
     if (jour === CFG.VACANCES_JOUR && S.filsParti && !S.vacances) leFilsRevient();
     if (S.vacances && jour >= S.vacancesFin) leFilsRepart();
     if (jour >= CFG.MOTO_JOUR && !S.motoOfferte && !S.moto) proposerLaMoto();
-    if (S.filsParti && !S.vacances && !S.mandat &&
+    if (S.filsParti && !S.vacances &&
         (jour - CFG.ANE_JOUR) % CFG.MANDAT_JOURS === 0 && jour > CFG.ANE_JOUR){
-      ouvrirUnMandat(false);
+      envoyerLeMandatSeul();
     }
-    majMandat();
-    majBandeauMandat();
 
     // tant que l'âne n'est pas pris, on le rappelle tous les cinq jours
     if (S.aneOffert && !S.ane && !S.moto){
@@ -4291,7 +4315,11 @@ function tourDeBoucle(ts){
   var lampes = document.getElementById('lampes');
   if (lampes) lampes.style.opacity = S.nuit.toFixed(3);
 
-  var pression = 1 + Math.min(NIV().pressionMax, (S.jour - 1) * 0.022);
+  // L'étau ne se desserre jamais tout à fait : passé le palier, la pression
+  // continue de monter, dix fois plus lentement. Le record finit par tomber.
+  var brut = (S.jour - 1) * 0.022;
+  var plafond = NIV().pressionMax;
+  var pression = 1 + (brut <= plafond ? brut : plafond + (brut - plafond) * 0.10);
   // quand Modou flanche, le foyer se vide plus vite
   var manque = Math.max(0, (CFG.SEUIL_FATIGUE - S.force) / CFG.SEUIL_FATIGUE);
   var abandon = 1 + manque * CFG.USURE_EPUISE;
@@ -5217,6 +5245,10 @@ function reprendreLaPartie(){
     S.enfant.phase = 'libre';          // on ne reprend pas une course en cours
     majBoutonEnfant();
   }
+  if (modouEl){
+    if (S.moto) modouEl.classList.add('surLaMoto');
+    else if (S.ane) modouEl.classList.add('surLane');
+  }
   redimensionner();
 
   CAM.x = S.modou.x; CAM.y = S.modou.y; CAM.z = CFG.Z_LIBRE;
@@ -5406,26 +5438,25 @@ var AIDE = [
   ]},
   { t:'L\u2019\u00e2ne \u2014 \u00e0 partir du jour 61', l:[
     'Le Vieux Serigne le propose : le badge du temple se met \u00e0 clignoter.',
-    'Va au temple avec 800 F en poche. L\u2019achat se fait en entrant dans le cercle.',
+    'Va au temple avec 200 F en poche. L\u2019achat se fait en entrant dans le cercle.',
     'Ensuite Modou monte dessus : tous ses trajets sont deux fois plus rapides.',
     'Cet achat ne demande pas de passer par le foyer.'
   ]},
-  { t:'Le mandat du fils \u2014 jour 61', l:[
-    'Ton fils part \u00e9tudier. Chaque semaine, il faut lui envoyer de l\u2019argent.',
-    'Le bandeau bleu en haut indique la somme et les jours qu\u2019il te reste.',
-    'Va \u00e0 la banque pour l\u2019envoyer. L\u2019envoi se fait en entrant dans le cercle.',
-    'Un mandat oubli\u00e9 co\u00fbte de la force \u00e0 Modou et se reporte sur le suivant.',
+  { t:'Ton fils \u00e9tudie \u2014 \u00e0 partir du jour 61', l:[
+    'Il part en ville. Chaque semaine, ' + 100 + ' F partent tout seuls pour lui.',
+    'Tu n\u2019as rien \u00e0 faire : l\u2019argent est pr\u00e9lev\u00e9 et Modou l\u2019appelle ensuite.',
+    'Si la caisse est vide ce jour-l\u00e0, la somme est report\u00e9e \u00e0 la semaine suivante.',
     'Au jour 106 il rentre une semaine en vacances : il refait les courses,',
-    'et tant qu\u2019il est \u00e0 la maison, il n\u2019y a plus de mandat \u00e0 envoyer.'
+    'et tant qu\u2019il est \u00e0 la maison, rien n\u2019est pr\u00e9lev\u00e9.'
   ]},
   { t:'La saison des pluies \u2014 jour 91', l:[
     'Le toit du foyer fuit : sous l\u2019averse, Modou r\u00e9cup\u00e8re deux fois moins bien.',
-    'Prends des t\u00f4les au chantier pour 1 200 F et le toit est refait.'
+    'Prends des t\u00f4les au chantier pour 500 F et le toit est refait.'
   ]},
   { t:'La moto \u2014 jour 121', l:[
     'Le patron la propose \u00e0 cr\u00e9dit : rien \u00e0 payer d\u2019avance.',
     'Passe au chantier et elle est \u00e0 toi. Quatre fois plus rapide qu\u2019\u00e0 pied.',
-    'Il retiendra 35 % de chaque paye jusqu\u2019au remboursement des 1 000 F.'
+    'Il retiendra 35 % de chaque paye jusqu\u2019au remboursement des 450 F.'
   ]},
   { t:'Le grade de Modou', l:[
     'Chaque mois tenu, le patron le monte en grade et sa paye augmente.',
@@ -5436,12 +5467,14 @@ var AIDE = [
   { t:'Le week-end et les f\u00eates', l:[
     'Samedi, dimanche et jours de f\u00eate, le chantier paie double.',
     'Ces jours-l\u00e0, la journ\u00e9e attend que Modou arrive au chantier pour commencer.',
-    'Cours : tu touches alors la journ\u00e9e enti\u00e8re au tarif double.'
+    'Cours : tu touches alors la journ\u00e9e enti\u00e8re au tarif double.',
+    'Et un mois sur six est un cong\u00e9 pay\u00e9 : la paye est multipli\u00e9e par quatre',
+    'pendant trente jours. Le premier tombe au jour 151.'
   ]},
   { t:'Quand une Dame s\u2019en va', l:[
     'Sous 30 %, elle r\u00e9clame. \u00c0 z\u00e9ro, elle se l\u00e8ve et marche vers la sortie.',
     'Tant qu\u2019elle marche, ach\u00e8te ce qu\u2019elle demande : elle fait demi-tour.',
-    'Sortie du domaine, il faut 1 000 F pour la ramener.',
+    'Sortie du domaine, il faut 500 F pour la ramener.',
     'Trois Dames parties, la partie s\u2019arr\u00eate.'
   ]}
 ];
@@ -5540,7 +5573,7 @@ function demarrerA(pr){
   majRecord(); majBoutonEnfant(); majBoutonReprendre(); afficherRecordAccueil();
   flash('Partie ' + pr.partie + ' \u2014 jour ' + S.jour + '. On reprend.', 3200);
   setTimeout(function(){ if (S && S.enCours) annoncerLePromotion(); }, 3400);
-  if (S.filsParti) ouvrirUnMandat(true);
+
 }
 
 function demarrer(){
