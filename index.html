@@ -635,6 +635,8 @@ html,body{height:100%;overflow:hidden;background:#1B2A1B;font-family:var(--ui);c
   filter:drop-shadow(0 8px 12px rgba(0,0,0,.5));animation:chBond .55s ease-in-out infinite}
 @keyframes chBond{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
 .chPartie{font-size:9.5px;font-weight:900;letter-spacing:.3em;color:var(--or)}
+.chGrade{font-size:11px;font-weight:900;letter-spacing:.1em;color:#5FD98A;margin-top:4px;
+  border:2.5px solid rgba(95,217,138,.5);border-radius:16px;padding:4px 12px;display:inline-block}
 .chTitre{font-size:clamp(30px,8.5vw,62px);font-weight:900;letter-spacing:.05em;color:#fff;
   text-shadow:0 6px 0 var(--trait),0 0 34px rgba(255,197,61,.9);margin:6px 0}
 .chSous{font-size:13px;font-weight:700;color:rgba(255,246,228,.8);max-width:32em}
@@ -1202,7 +1204,7 @@ function dameSVG(i){
    ========================================================= */
 'use strict';
 
-var BUILD_TAG = 'LQD-v10.7';
+var BUILD_TAG = 'LQD-v10.9';
 document.getElementById('build').textContent = BUILD_TAG;
 var vIntro = document.getElementById('versionIntro');
 if (vIntro) vIntro.textContent = BUILD_TAG;
@@ -1463,6 +1465,31 @@ var CFG = {
   Z_SORTIE: 1.35,
   CAM_SOUPLESSE: 4.2
 };
+
+/* =========================================================
+   LE MÉTIER DE MODOU — il monte en grade à chaque mois tenu,
+   et sa paye suit. Sans ça, l'inflation finit par tout écraser.
+   ========================================================= */
+var STATUTS = [
+  { nom:'Man\u0153uvre',          paye:1.00 },
+  { nom:'Ma\u00e7on',             paye:1.35 },
+  { nom:'Chef d\u2019\u00e9quipe',     paye:1.80 },
+  { nom:'Contrema\u00eetre',       paye:2.40 },
+  { nom:'Chef de chantier',   paye:3.20 },
+  { nom:'Ma\u00eetre b\u00e2tisseur',   paye:4.20 }
+];
+function statutActuel(){
+  if (!S) return STATUTS[0];
+  return STATUTS[Math.min(STATUTS.length - 1, S.fetes)];
+}
+function annoncerLePromotion(){
+  var st = statutActuel();
+  if (!S || S.fetes <= 0) return;
+  flash('Le patron te nomme ' + st.nom + '. Ta paye monte de ' +
+        Math.round((st.paye - 1) * 100) + ' %.', 4600);
+  parler('Je suis ' + st.nom + ' maintenant.', VOIX_MODOU);
+  noter(S.jour, 'Modou devient ' + st.nom + '.');
+}
 
 /* =========================================================
    LA SEMAINE, LE WEEK-END ET LES JOURS FÉRIÉS
@@ -3817,7 +3844,8 @@ function rendre(){
   var bc2 = badgesEl.CHANTIER.querySelector('.prix');
   var bt2 = badgesEl.CHANTIER.querySelector('.txt');
   var doubles = payeDoublee(S.jour);
-  var taux = Math.round(CFG.GAIN_CHANTIER * NIV().paye * (doubles ? CFG.PRIME_REPOS : 1));
+  var taux = Math.round(CFG.GAIN_CHANTIER * statutActuel().paye * NIV().paye *
+                        (doubles ? CFG.PRIME_REPOS : 1));
   if (bc2){
     bc2.textContent = nuitPleine ? '\uD83C\uDF19' : ('+' + taux + '/s');
     bc2.classList.toggle('prime', doubles && !nuitPleine);
@@ -4029,7 +4057,7 @@ function vivreDansLaZone(dt){
       S.serie += dt;
       var bonus = 1 + Math.min(CFG.SERIE_MAX, S.serie * CFG.SERIE_BONUS);
       var prime = payeDoublee(S.jour) ? CFG.PRIME_REPOS : 1;
-      var paye = CFG.GAIN_CHANTIER * NIV().paye * rendT * bonus * prime * dt;
+      var paye = CFG.GAIN_CHANTIER * statutActuel().paye * NIV().paye * rendT * bonus * prime * dt;
       if (S.moto && S.dette > 0){
         var retenue = Math.min(S.dette, paye * CFG.MOTO_RETENUE);
         S.dette -= retenue;
@@ -4059,12 +4087,20 @@ function vivreDansLaZone(dt){
   } else if (S.zone){
     var iZ = -1;
     for (var z2=0;z2<DAMES.length;z2++){ if (DAMES[z2].lieu === S.zone) iZ = z2; }
-    // l'âne et le mandat ne dépendent ni du foyer ni de l'état de la maison :
-    // ce sont des affaires d'homme à homme, pas des courses pour les Dames.
-    if (S.zone === 'TEMPLE' && S.aneOffert && !S.ane){
-      if (acheterLAne()) S.cool = 2;
-    } else if (S.zone === 'BANQUE' && S.mandat){
-      if (envoyerLeMandat()) S.cool = 2;
+    // L'âne et le mandat sont des affaires d'homme à homme : ni le foyer ni
+    // l'état de la maison ne les concernent. Mais s'ils ne sont pas payables,
+    // ils ne doivent JAMAIS empêcher de servir la Dame qui habite là.
+    var affaireFaite = false;
+    if (S.zone === 'TEMPLE' && S.aneOffert && !S.ane && S.argent >= CFG.PRIX_ANE){
+      if (acheterLAne()){ S.cool = 2; affaireFaite = true; }
+    }
+    if (!affaireFaite && S.zone === 'BANQUE' && S.mandat &&
+        S.argent >= S.mandat.montant){
+      if (envoyerLeMandat()){ S.cool = 2; affaireFaite = true; }
+    }
+
+    if (affaireFaite){
+      // rien de plus cette fois-ci
     } else if (iZ >= 0 && S.parties[iZ]){
       // maison fermée : rien ne se passe
     } else if (iZ >= 0 && !S.foyer){
@@ -4447,6 +4483,8 @@ function ouvrirLeChapitre(){
     '</div>' +
     '<div class="chTexte">' +
       '<div class="chPartie">PARTIE ' + niveau + ' TERMIN\u00c9E \u2014 JOUR ' + S.jour + '</div>' +
+      '<div class="chGrade">' + statutActuel().nom + ' \u00b7 paye \u00d7' +
+        statutActuel().paye.toFixed(2).replace('.', ',') + '</div>' +
       '<div class="chTitre">' + C.t + '</div>' +
       '<div class="chSous">' + C.s + '</div>' +
     '</div>' +
@@ -4488,6 +4526,7 @@ function fermerLeChapitre(continuer){
     document.body.classList.add('playing');
     last = 0;
     flash('Partie ' + (S.fetes + 1) + '. \u00c7a continue.', 2600);
+    setTimeout(function(){ if (S && S.enCours) annoncerLePromotion(); }, 2800);
   } else {
     finir('abandon');
   }
@@ -5388,6 +5427,12 @@ var AIDE = [
     'Passe au chantier et elle est \u00e0 toi. Quatre fois plus rapide qu\u2019\u00e0 pied.',
     'Il retiendra 35 % de chaque paye jusqu\u2019au remboursement des 1 000 F.'
   ]},
+  { t:'Le grade de Modou', l:[
+    'Chaque mois tenu, le patron le monte en grade et sa paye augmente.',
+    'Man\u0153uvre, puis Ma\u00e7on, Chef d\u2019\u00e9quipe, Contrema\u00eetre, Chef de chantier.',
+    'Au cinqui\u00e8me mois il gagne plus de trois fois sa paye du premier jour.',
+    'Le taux affich\u00e9 sur le badge du chantier tient compte de tout : grade, niveau, week-end.'
+  ]},
   { t:'Le week-end et les f\u00eates', l:[
     'Samedi, dimanche et jours de f\u00eate, le chantier paie double.',
     'Ces jours-l\u00e0, la journ\u00e9e attend que Modou arrive au chantier pour commencer.',
@@ -5494,6 +5539,7 @@ function demarrerA(pr){
            monter(BUS_MUS, SON_ON ? 0.15 : 0, 2.0); }
   majRecord(); majBoutonEnfant(); majBoutonReprendre(); afficherRecordAccueil();
   flash('Partie ' + pr.partie + ' \u2014 jour ' + S.jour + '. On reprend.', 3200);
+  setTimeout(function(){ if (S && S.enCours) annoncerLePromotion(); }, 3400);
   if (S.filsParti) ouvrirUnMandat(true);
 }
 
