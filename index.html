@@ -366,6 +366,13 @@ html,body{height:100%;overflow:hidden;background:#1B2A1B;font-family:var(--ui);c
   border:3px solid var(--trait);box-shadow:var(--ombre);font-family:var(--ui);
   font-size:15px;line-height:1;color:var(--trait);cursor:pointer}
 #voixBtn.coupe{background:#D8D2C6}
+#pauseBtn{position:fixed;right:44px;bottom:calc(78px + env(safe-area-inset-bottom));
+  z-index:46;width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.85);
+  border:3px solid var(--trait);box-shadow:var(--ombre);font-family:var(--ui);
+  font-size:16px;font-weight:900;line-height:1;color:var(--trait);cursor:pointer;display:none}
+#pauseBtn.en-jeu{display:block}
+#pauseBtn.en-pause{background:var(--or)}
+#pauseBtn:active{transform:translateY(2px);box-shadow:0 1px 0 var(--trait)}
 /* ---- INTÉRIEUR DES BÂTIMENTS ---- */
 .vignette{width:186px;height:120px;z-index:26;pointer-events:none;
   transform:translate(-50%,-50%) scale(.4,0.571);opacity:0;
@@ -490,6 +497,13 @@ html,body{height:100%;overflow:hidden;background:#1B2A1B;font-family:var(--ui);c
   border:3px solid var(--trait);box-shadow:var(--ombre);font-family:var(--ui);
   font-size:15px;line-height:1;color:var(--trait);cursor:pointer}
 #voixBtn.coupe{background:#D8D2C6}
+#pauseBtn{position:fixed;right:44px;bottom:calc(78px + env(safe-area-inset-bottom));
+  z-index:46;width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.85);
+  border:3px solid var(--trait);box-shadow:var(--ombre);font-family:var(--ui);
+  font-size:16px;font-weight:900;line-height:1;color:var(--trait);cursor:pointer;display:none}
+#pauseBtn.en-jeu{display:block}
+#pauseBtn.en-pause{background:var(--or)}
+#pauseBtn:active{transform:translateY(2px);box-shadow:0 1px 0 var(--trait)}
 
 
 
@@ -857,6 +871,7 @@ button.cta{touch-action:manipulation;position:relative;z-index:2}
 <button id="camBtn">⊕</button>
 <button id="sonBtn">♪</button>
 <button id="voixBtn">🗣</button>
+<button id="pauseBtn" aria-label="Pause / Démarrer"></button>
 <button id="enfantBtn"></button>
 
 <div id="stick"><div id="knob"></div></div>
@@ -1248,6 +1263,18 @@ window.addEventListener('unhandledrejection', function(e){
 /* ---------- les boutons sont branchés TOUT DE SUITE, par délégation.
    Ainsi ils marchent même si une erreur survient plus bas dans le script. ---------- */
 var dernierAppui = 0, dernierId = '';
+var gamePaused = false;
+
+function majPauseBtn(){
+  var btn = document.getElementById('pauseBtn');
+  if (!btn) return;
+  var actif = S && S.enCours;
+  if (!actif){ btn.classList.remove('en-jeu'); btn.classList.remove('en-pause'); return; }
+  btn.classList.add('en-jeu');
+  btn.textContent = gamePaused ? '▶' : '⏸';
+  if (gamePaused){ btn.classList.add('en-pause'); }
+  else { btn.classList.remove('en-pause'); }
+}
 function surAppui(e){
   var n = e.target;
 
@@ -1364,6 +1391,14 @@ function traiterAppui(e, n){
       if (e.cancelable) e.preventDefault();
       try { sonBouton(); retourAuMenu(); }
       catch (err){ montrerErreur('menu : ' + (err && err.message ? err.message : err)); }
+      return;
+    }
+    if (n.id === 'pauseBtn'){
+      if (e.cancelable) e.preventDefault();
+      if (!S || !S.enCours) return;
+      gamePaused = !gamePaused;
+      if (gamePaused) last = 0;
+      majPauseBtn();
       return;
     }
     if (n.id === 'enfantBtn'){
@@ -3944,7 +3979,7 @@ function boucle(ts){
   catch (err){
     montrerErreur('boucle : ' + (err && err.message ? err.message : err) +
                   (err && err.stack ? ' | ' + String(err.stack).split('\n')[1] : ''));
-    if (S) S.enCours = false;   // on arrête au lieu de planter soixante fois par seconde
+    if (S){ S.enCours = false; gamePaused = false; majPauseBtn(); }   // on arrête au lieu de planter soixante fois par seconde
   }
 }
 /* le déplacement de Modou, isolé : il sert aussi pendant l'attente du jour chômé */
@@ -4165,6 +4200,7 @@ function vivreDansLaZone(dt){
 
 function tourDeBoucle(ts){
   if (!S || !S.enCours) return;
+  if (gamePaused){ last = 0; return; }
   noterAction('boucle de jeu');
   if (!last) last = ts;
   var dt = Math.min(0.05, (ts - last)/1000);
@@ -4372,6 +4408,8 @@ var TITRES = [
 ];
 function finir(cause){
   S.enCours = false;
+  gamePaused = false;
+  majPauseBtn();
   ecrireProgres();
   enregistrerPartie();
   envoyerAudience();
@@ -5048,6 +5086,8 @@ function retourAuMenu(){
   sauvegarder();
   ecrireProgres();
   S.enCours = false;
+  gamePaused = false;
+  majPauseBtn();
   S.fete = null;
   couperLaParole();
   couperLeDialogue();
@@ -5255,6 +5295,7 @@ function reprendreLaPartie(){
   CAM.tx = CAM.x; CAM.ty = CAM.y; CAM.tz = CFG.Z_LIBRE;
 
   S.enCours = true;
+  gamePaused = true;
   last = 0;
   document.body.classList.add('playing');
   document.getElementById('scrIntro').classList.add('hide');
@@ -5263,6 +5304,7 @@ function reprendreLaPartie(){
            monter(BUS_MUS, SON_ON ? 0.15 : 0, 2.0); }
   majRecord();
   flash('Jour ' + S.jour + ' \u2014 on reprend o\u00f9 tu t\u2019\u00e9tais arr\u00eat\u00e9.', 2600);
+  majPauseBtn();
 }
 
 /* on sauvegarde à chaque interruption possible */
@@ -5564,6 +5606,7 @@ function demarrerA(pr){
   }
   redimensionner();
   S.enCours = true;
+  gamePaused = true;
   last = 0;
   document.body.classList.add('playing');
   document.getElementById('scrIntro').classList.add('hide');
@@ -5572,6 +5615,7 @@ function demarrerA(pr){
            monter(BUS_MUS, SON_ON ? 0.15 : 0, 2.0); }
   majRecord(); majBoutonEnfant(); majBoutonReprendre(); afficherRecordAccueil();
   flash('Partie ' + pr.partie + ' \u2014 jour ' + S.jour + '. On reprend.', 3200);
+  majPauseBtn();
   setTimeout(function(){ if (S && S.enCours) annoncerLePromotion(); }, 3400);
 
 }
@@ -5593,6 +5637,7 @@ function demarrer(){
   }
   redimensionner();
   S.enCours = true;
+  gamePaused = true;
   last = 0;
   if (AC){ MUS.depart = AC.currentTime + 0.2; MUS.pas = 0; MUS.tension = 0; MUS.fete = 0;
            monter(BUS_MUS, SON_ON ? 0.15 : 0, 2.0); }
@@ -5602,6 +5647,7 @@ function demarrer(){
   majRecord();
   couperLaParole();
   majBoutonEnfant();
+  majPauseBtn();
 
   if (!tutoDejaVu()){
     lancerLeTuto();
