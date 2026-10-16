@@ -1321,7 +1321,7 @@ function dameSVG(i){
    ========================================================= */
 'use strict';
 
-var BUILD_TAG = 'LQD-v12.3';
+var BUILD_TAG = 'LQD-v12.4';
 document.getElementById('build').textContent = BUILD_TAG;
 var vIntro = document.getElementById('versionIntro');
 if (vIntro) vIntro.textContent = BUILD_TAG;
@@ -1698,7 +1698,6 @@ function fermerChoixPartie(){
 function demarrerDifficulte(i){
   if (i < 0 || i >= NIVEAUX.length || i !== Math.floor(i)) return;
   if (document.getElementById('scrDifficulte').classList.contains('hide')) return;
-  if (partieEnAttente() && !window.confirm('Commencer une nouvelle partie en mode ' + NIVEAUX[i].nom + ' ? La partie en cours sera remplacée.')) return;
   choisirNiveau(i);
   fermerChoixPartie();
   demarrer();
