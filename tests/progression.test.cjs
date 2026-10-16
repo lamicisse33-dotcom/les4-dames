@@ -141,3 +141,99 @@ test('The actual game loop introduces features at the announced levels',()=>{
   assert.ok(nodes.get('chapitre').innerHTML.includes('Continuer en survie libre'));
 });
 console.log(`TOTAL: ${checks} tests passed.`);
+test('Every Dame grants only her own benefit while she is at the foyer',()=>{
+  state();
+  assert.equal(g.soutienSante(),1.2);assert.equal(g.soutienAmour(),.85);
+  assert.equal(g.soutienSpiritualite(0),.9);assert.equal(g.soutienSpiritualite(2),1);
+  assert.equal(g.soutienArgent(),.9);
+  g.S.parties[0]=true;assert.equal(g.soutienSante(),1);assert.equal(g.soutienAmour(),.85);
+  g.S.parties[1]=true;assert.equal(g.soutienAmour(),1);
+  g.S.parties[2]=true;assert.equal(g.soutienSpiritualite(0),1);
+  g.S.parties[3]=true;assert.equal(g.soutienArgent(),1);
+  g.S.parties=[false,false,false,false];g.S.exode[0]={retour:true,rachat:true};assert.equal(g.soutienSante(),1);
+});
+test('Benefits affect actual recovery, walking fatigue and shopping prices',()=>{
+  g.demarrer();g.S.force=40;g.S.modou.x=g.CENTRE.x;g.S.modou.y=g.CENTRE.y;
+  g.vivreDansLaZone(.1);const withHealth=g.S.force-40;
+  g.S.parties[0]=true;g.S.force=40;g.vivreDansLaZone(.1);const withoutHealth=g.S.force-40;
+  assert.ok(Math.abs(withHealth/withoutHealth-1.2)<1e-9);
+  g.S.zone=null;g.S.force=100;g.S.modou.x=50;g.S.modou.y=51.9;g.JOY.dx=1;g.JOY.dy=0;
+  g.deplacerModou(.05);const withLove=100-g.S.force;
+  g.S.parties[1]=true;g.S.force=100;g.S.modou.x=50;g.S.modou.y=51.9;
+  g.deplacerModou(.05);const withoutLove=100-g.S.force;
+  assert.ok(withLove>0);assert.ok(Math.abs(withLove/withoutLove-.85)<1e-9);g.joyFin();
+  const discounted=g.prixDuJour('AMOUR');g.S.parties[3]=true;
+  assert.equal(discounted,36);assert.equal(g.prixDuJour('AMOUR'),40);
+});
+test('Recall costs at least half the exact balance, rounded up, with a 100 F minimum',()=>{
+  state();
+  for(const [balance,cost] of [[0,100],[99,100],[100,100],[150,100],[800,400],[1001,501],[2000,1000],[200.5,101]]){
+    g.S.argent=balance;assert.equal(g.prixRappel(),cost);
+  }
+  g.S.argent=1000;g.S.parties[3]=false;assert.equal(g.prixRappel(),500); // No shopping discount on recall.
+});
+function departed(indices,balance=1000){
+  g.demarrer();g.gamePaused=false;g.S.argent=balance;
+  for(const i of indices){g.S.parties[i]=true;g.S.jauges[i]=0;g.S.ordreDepart.push(i);g.fermerLeFoyer(i);}
+  g.S.sorties=indices.length;return g.S;
+}
+test('Having money never triggers an automatic return',()=>{
+  departed([3],100000);g.last=1000;
+  for(let t=1000;t<1250;t+=50)g.tourDeBoucle(t);
+  assert.equal(g.S.parties[3],true);assert.equal(g.S.rachats,0);assert.equal(g.S.exode[3],null);
+});
+test('Canceling a quote freezes the game and does not spend or recall',()=>{
+  departed([0]);const before=JSON.stringify(g.S);
+  let prompted=false;g.confirm=message=>{
+    prompted=true;assert.equal(g.gamePaused,true);assert.ok(message.includes('500 F'));
+    const time=g.S.temps;g.tourDeBoucle(9999);assert.equal(g.S.temps,time);return false;
+  };
+  assert.equal(g.demanderRappel(0),false);assert.equal(prompted,true);
+  assert.equal(JSON.stringify(g.S),before);assert.equal(g.gamePaused,false);
+});
+test('Insufficient money disables recall and never prompts or charges',()=>{
+  departed([3],99);g.majRappels();assert.equal(nodes.get('rappelDame3').disabled,true);
+  g.confirm=()=>{throw Error('Should not prompt');};assert.equal(g.demanderRappel(3),false);
+  assert.equal(g.S.argent,99);assert.equal(g.S.parties[3],true);
+});
+test('The selected Dame returns once; other absent Dames stay away',()=>{
+  departed([0,3]);g.confirm=()=>true;
+  assert.equal(g.demanderRappel(3),true);assert.equal(g.S.argent,500);assert.equal(g.S.parties[0],true);
+  assert.equal(g.S.parties[3],false);assert.equal(g.S.exode[3].rachat,true);assert.equal(g.S.rachats,1);
+  assert.equal(g.demanderRappel(3),false);assert.equal(g.S.argent,500);
+  assert.equal(g.soutienArgent(),1); // Returning is not the same as arrived.
+  const saved=JSON.parse(data.get(g.CLE_PARTIE));
+  assert.equal(saved.argent,500);assert.equal(saved.exode[3].rachat,true);
+  g.S=g.migrerSauvegarde(saved);assert.equal(g.soutienArgent(),1);
+  for(let i=0;i<2000 && g.S.exode[3];i++)g.majExode(.1);
+  assert.equal(g.S.exode[3],null);assert.equal(g.soutienArgent(),.9);assert.equal(g.S.argent,500);
+});
+test('Quotes are checked again before debit and restore an existing pause',()=>{
+  departed([1]);assert.equal(g.faireRevenir(1,499),false);assert.equal(g.S.argent,1000);
+  g.gamePaused=true;g.confirm=()=>true;assert.equal(g.demanderRappel(1),true);assert.equal(g.gamePaused,true);
+});
+test('The main menu has only New and Resume as game actions',()=>{
+  const actions=html.match(/<div id="actionsPartie">([\s\S]*?)<\/div>/)[1];
+  assert.equal((actions.match(/<button /g)||[]).length,2);
+  assert.ok(actions.includes('Nouvelle partie'));assert.ok(actions.includes('Reprendre'));
+  assert.ok(!html.includes('id="btnProgres"'));assert.ok(!html.includes('id="btnZero"'));
+});
+test('Resume is available from day one and restores the exact game and difficulty',()=>{
+  data.clear();g.majBoutonReprendre();assert.equal(nodes.get('btnReprendre').disabled,true);
+  g.iNiveau=2;g.demarrer();assert.ok(g.partieEnAttente());
+  assert.equal(nodes.get('btnReprendre').disabled,false);
+  assert.ok(nodes.get('btnReprendre').innerHTML.includes('jour 1'));
+  g.S.jour=24;g.S.temps=300;g.S.argent=321.5;g.S.force=63;g.S.modou.x=60;g.S.modou.y=51.9;
+  g.sauvegarder();g.iNiveau=0;g.reprendreLaPartie();
+  assert.equal(g.S.jour,24);assert.equal(g.S.temps,300);assert.equal(g.S.argent,321.5);
+  assert.equal(g.S.force,63);assert.equal(g.S.modou.x,60);assert.equal(g.NIV().cle,'tresdur');
+  assert.equal(g.gamePaused,true);
+});
+test('New game cannot replace an existing save without confirmation',()=>{
+  const saved=data.get(g.CLE_PARTIE);g.confirm=()=>false;
+  g.traiterAppui({cancelable:false}, {id:'btnStart'});
+  assert.equal(data.get(g.CLE_PARTIE),saved);
+  g.confirm=()=>true;g.traiterAppui({cancelable:false},{id:'btnStart'});
+  assert.equal(g.S.jour,1);assert.equal(g.S.etapesTerminees,0);assert.equal(g.partieEnAttente().jour,1);
+});
+console.log(`TOTAL: ${checks} regression tests passed.`);

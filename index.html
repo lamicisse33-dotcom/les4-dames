@@ -868,6 +868,19 @@ body.playing #etapeJeu{display:block}
 #chapitre > *{flex-shrink:0}
 #chapitre .chTitre{font-size:clamp(24px,6vw,46px)}
 @media(max-height:440px){#chapitre .chScene{height:68px}#chapitre .chModou{height:68px;width:50px}#chapitre{gap:7px}}
+.badge.ferme{flex-direction:column;gap:4px;white-space:normal;z-index:35;max-width:180px;opacity:1;padding:7px}
+.badge.ferme .txt{max-width:none;font-size:11px;font-weight:900;text-align:center}
+.badge.ferme small{max-width:160px;font-size:10px;text-align:center}
+.rappelDame{pointer-events:auto;touch-action:manipulation;cursor:pointer;font:800 12px var(--ui);min-height:44px;
+  color:var(--trait);background:var(--or);border:2px solid var(--trait);border-radius:10px;padding:6px 9px}
+.rappelDame:disabled{background:#d5d1c6;color:#58564e;cursor:default}
+.rappelDame:focus-visible,#actionsPartie button:focus-visible{outline:3px solid white;outline-offset:3px}
+#actionsPartie{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+#actionsPartie small{display:block;font-size:11px;margin-top:5px;font-weight:600;letter-spacing:0;text-transform:none}
+#actionsPartie button:disabled{opacity:.5;cursor:default;box-shadow:none}
+#avantagesJeu{margin-top:8px;border-top:1px solid #657459;padding-top:5px;line-height:1.5}
+#avantagesJeu .actif{color:#b8efb8}#avantagesJeu .inactif{color:#d6c9b5}
+#etapeJeu[open]{max-height:50vh;overflow-y:auto}
 </style>
 </head>
 <body>
@@ -893,6 +906,7 @@ body.playing #etapeJeu{display:block}
 <details id="etapeJeu"><summary id="etapeTitre">Niveau 1 / 18</summary>
   <progress id="etapeAvance" max="10" value="0" aria-label="Jours terminés dans ce niveau"></progress>
   <div id="etapeObjectif"></div><div id="etapeConseil"></div>
+  <div id="avantagesJeu" aria-label="Avantages des quatre Dames"></div>
 </details>
 <div id="force"><span class="pic">&#128170;</span><span class="bar"><i id="forceFill"></i></span></div>
 
@@ -910,10 +924,15 @@ body.playing #etapeJeu{display:block}
 <div class="screen" id="scrIntro">
   <div class="eyebrow">KHALAM <span id="versionIntro"></span></div>
   <h1>LES QUATRE DAMES<span>L'Équilibre de Modou</span></h1>
+  <div id="actionsPartie">
+    <button class="cta" id="btnStart">Nouvelle partie<small>Commencer au niveau 1</small></button>
+    <button class="cta ghost" id="btnReprendre" disabled>Reprendre<small>Aucune partie en cours</small></button>
+  </div>
   <p class="lede">Modou est maçon. Il monte sur le <b>chantier</b> pour gagner, puis il court payer ce que ses quatre Dames réclament : des fleurs, des soins, des prières, de l'argent.<br><br>
   <b>Tout coûte. Et chaque jour, tout coûte plus cher.</b><br><br>
-  Une Dame dont la jauge tombe à zéro <b>s'en va</b>. Rattrape-la avant la sortie, ou ramène-la plus tard pour <b>500 F</b>.<br><br>
+  Une Dame dont la jauge tombe à zéro <b>s'en va</b>. Rattrape-la avant la sortie, ou choisis de la rappeler sur sa case pour <b>50 % de ton argent, minimum 100 F</b>.<br><br>
   À la <b>troisième</b> qui est partie, tout s'arrête.<br><br>
+  Chaque Dame présente aide Modou : <b>repos, énergie, sérénité ou économies.</b><br><br>
   <b>Ton score, c'est le nombre de jours tenus.</b><br><br>
   <b>Touche un endroit</b> et Modou y va tout seul. Ou sers-toi du <b>joystick</b>.<br>
   Entre dans un cercle et l'affaire se fait toute seule.</p>
@@ -930,12 +949,8 @@ body.playing #etapeJeu{display:block}
     <ol id="parcoursListe"></ol><p>Après le niveau 18 : survie libre et record de jours.</p>
   </details>
   <div id="recordAccueil"></div>
-  <button class="cta ghost hide" id="btnReprendre">Reprendre</button>
-  <button class="cta hide" id="btnProgres">Continuer</button>
-  <button class="cta" id="btnStart">Réveiller Modou</button>
   <div id="installer"></div>
   <button class="cta ghost petit" id="btnAide">Comment jouer</button>
-  <button class="cta ghost petit" id="btnZero">Repartir de zéro</button>
   <button id="bordAcces" aria-label="•">&#8226;</button>
 </div>
 
@@ -1255,7 +1270,7 @@ function dameSVG(i){
    ========================================================= */
 'use strict';
 
-var BUILD_TAG = 'LQD-v12.0';
+var BUILD_TAG = 'LQD-v12.1';
 document.getElementById('build').textContent = BUILD_TAG;
 var vIntro = document.getElementById('versionIntro');
 if (vIntro) vIntro.textContent = BUILD_TAG;
@@ -1300,7 +1315,7 @@ var dernierAppui = 0, dernierId = '';
 var gamePaused = false;
 
 function majPauseBtn(){
-  if (S) afficherEtape();
+  if (S){ afficherEtape(); afficherAvantages(); }
   var btn = document.getElementById('pauseBtn');
   if (!btn) return;
   var actif = S && S.enCours;
@@ -1328,6 +1343,10 @@ function surAppui(e){
 function traiterAppui(e, n){
 
   while (n && n !== document.body){
+    if (n.id && /^rappelDame[0-3]$/.test(n.id)){
+      if (e.cancelable) e.preventDefault();
+      demanderRappel(Number(n.id.slice(-1))); return;
+    }
     if (n.id === 'chMenu'){ fermerLeChapitre(true); retourAuMenu(); return; }
     if (n.id === 'bordFermer'){ if (e.cancelable) e.preventDefault(); sonBouton(); fermerLeBord(); return; }
     if (n.id === 'bordVerrou'){
@@ -1345,7 +1364,7 @@ function traiterAppui(e, n){
       catch (err) {}
       return;
     }
-    if (n.id === 'btnProgres' || n.id === 'btnProgres2'){
+    if (n.id === 'btnProgres2'){
       if (e.cancelable) e.preventDefault();
       try {
         sonBouton();
@@ -1377,6 +1396,7 @@ function traiterAppui(e, n){
       try {
         if (typeof audioInit === 'function') audioInit();
         if (typeof sonBouton === 'function') sonBouton();
+        if (n.id === 'btnStart' && partieEnAttente() && !window.confirm('Commencer une nouvelle partie au niveau 1 ? La partie en cours sera remplacée.')) return;
         demarrer();
       } catch (err) {
         montrerErreur('démarrage : ' + (err && err.message ? err.message : err));
@@ -1519,12 +1539,11 @@ var CFG = {
   ENFANT_VITESSE: 0.52,   // il marche à la moitié du pas de Modou
   ENFANT_RENDEMENT: 0.75, // un enfant s'y prend moins bien que son père
 
-  PRIX_RETOUR: 500,      // avec cette somme, Modou fait revenir une Dame partie
+  RETOUR_MIN: 100,       // rappel choisi : moitié du solde, au minimum 100 F
   JAUGE_RETOUR: 55,       // dans quel état elle revient
   VIT_RETOUR: 2.4,        // elle revient plus vite qu'elle n'est partie
   VIT_DAME: 3.5,          // elle s'en va lentement : Modou peut encore la rattraper
   SORTIE_X: 108,          // au-delà du bord droit, elle est perdue
-  DEUIL: [1.0, 1.45, 2.0],  // chaque Dame partie durcit tout le reste
   USURE_EPUISE: 0.9,      // à bout de force, les Dames se vident jusqu'à 1,9 fois plus vite
   SERIE_BONUS: 0.06,      // le chantier paie mieux si Modou tient sans s'arrêter
   SERIE_MAX: 0.5,
@@ -1662,6 +1681,64 @@ var DAMES = [
     voix:{ hauteur:1.42, vitesse:1.12 },
     usure:0.84, muette:false, bed:{x:56.5,y:77.0}, col:'--argent' }
 ];
+
+var AVANTAGES = [
+  {nom:'Santé', texte:'Récupération au foyer +20 %', retour:'Tu es fatigué, Modou. Viens te reposer.'},
+  {nom:'Amour', texte:'Fatigue des déplacements −15 %', retour:'Je suis là. Courage, on va y arriver.'},
+  {nom:'Spiritualité', texte:'Baisse des autres jauges −10 %', retour:'On se calme. On va trouver l’équilibre.'},
+  {nom:'Argent', texte:'Prix des courses −10 %', retour:'On va mieux organiser les dépenses.'}
+];
+function dameAuFoyer(i){ return !!S && !S.parties[i] && !S.exode[i]; }
+function soutienSante(){ return dameAuFoyer(0) ? 1.20 : 1; }
+function soutienAmour(){ return dameAuFoyer(1) ? 0.85 : 1; }
+function soutienSpiritualite(i){ return i !== 2 && dameAuFoyer(2) ? 0.90 : 1; }
+function soutienArgent(){ return dameAuFoyer(3) ? 0.90 : 1; }
+function afficherAvantages(){
+  var z = document.getElementById('avantagesJeu');
+  if (!S || !z) return;
+  var signature = DAMES.map(function(d,i){return dameAuFoyer(i) ? 'actif' : (S.exode[i] && S.exode[i].retour ? 'retour' : 'absent');}).join(':');
+  if (z.dataset.etat === signature) return;
+  z.dataset.etat = signature;
+  z.innerHTML = AVANTAGES.map(function(a,i){
+    var actif = dameAuFoyer(i), revient = S.exode[i] && S.exode[i].retour;
+    return '<div class="' + (actif ? 'actif' : 'inactif') + '"><b>Dame ' + (i+1) + ' · ' + a.nom + '</b> : ' +
+      a.texte + ' — ' + (actif ? 'actif' : (revient ? 'au retour au foyer' : 'inactif')) + '</div>';
+  }).join('');
+}
+function prixRappel(){ return Math.max(CFG.RETOUR_MIN, Math.ceil(Math.max(0, S ? S.argent : 0) / 2)); }
+function peutRappeler(i){
+  return !!S && S.enCours && !!DAMES[i] && S.parties[i] && !S.chapitre && S.sorties < CFG.SORTIES_FATALES;
+}
+function majRappels(){
+  if (!S) return;
+  for (var i=0;i<DAMES.length;i++){
+    if (!S.parties[i]) continue;
+    var b = document.getElementById('rappelDame' + i);
+    if (!b) continue;
+    var prix = prixRappel();
+    b.textContent = 'Rappeler la ' + (i+1) + (i===0 ? 're' : 'e') + ' Dame · ' + prix + ' F';
+    b.disabled = !peutRappeler(i) || S.argent < prix;
+    b.setAttribute('aria-label', b.textContent + '. ' + AVANTAGES[i].texte + (b.disabled ? '. Indisponible.' : ''));
+  }
+}
+function demanderRappel(i){
+  if (!peutRappeler(i)) return false;
+  var prix = prixRappel();
+  if (S.argent < prix){ flash('Il faut au moins ' + CFG.RETOUR_MIN + ' F pour rappeler une Dame.', 3000); return false; }
+  var pauseAvant = gamePaused, partie = S;
+  gamePaused = true;
+  majPauseBtn();
+  couperLaParole();
+  try {
+    var oui = window.confirm('Rappeler la ' + DAMES[i].nom.toLowerCase() + ' pour ' + prix + ' F ?\n' +
+      'Il te restera ' + Math.floor(S.argent - prix) + ' F.\n\n' + AVANTAGES[i].texte + ' à son arrivée au foyer.');
+    return oui && S === partie ? faireRevenir(i, prix) : false;
+  } finally {
+    gamePaused = pauseAvant;
+    last = 0;
+    majPauseBtn();
+  }
+}
 
 /* ---------- LES CINQ LIEUX ---------- */
 /* x,y = centre de la zone · px,py = porte · cx,cy = comptoir (où le vendeur s'arrête) */
@@ -1836,7 +1913,6 @@ function nouvelEtat(){
     sortieVue:0,
     exode:[null,null,null,null],
     ordreDepart:[],
-    viseRetour:false,
     vu:{}, rappels:{},
     fete:null, chapitre:null, derniereFete:0, fetes:0, rachats:0,
     recordBattu:false, recordVu:false, moisSalue:false,
@@ -1891,7 +1967,7 @@ function palierActuel(jour){
 function prixDuJour(cle){
   var base = LIEUX[cle].prix;
   var k = Math.pow(1 + NIV().inflation, palierActuel());
-  return Math.round(base * k);
+  return Math.round(base * k * soutienArgent());
 }
 
 /* ---------- CONSTRUCTION ---------- */
@@ -3671,11 +3747,13 @@ function fermerLeFoyer(i){
   var cle = DAMES[i].lieu;
   var L = LIEUX[cle];
 
-  // le badge devient un cadenas
+  // le badge du besoin devient un rappel au choix
   if (badgesEl[cle]){
     badgesEl[cle].classList.add('ferme');
-    badgesEl[cle].innerHTML = '<span class="pic" style="background:#9A9184">\uD83D\uDD12</span>' +
-                              '<span class="txt">FERMÉ</span>';
+    badgesEl[cle].innerHTML = '<span class="txt">' + L.nom + ' · Dame ' + (i+1) + ' absente</span>' +
+      '<button type="button" class="rappelDame" id="rappelDame' + i + '">Rappeler cette Dame</button>' +
+      '<small>' + AVANTAGES[i].texte + '</small>';
+    majRappels();
   }
   // le cercle d'arrêt disparaît
   if (zonesEl[cle]) zonesEl[cle].classList.add('ferme');
@@ -3714,8 +3792,7 @@ function commencerExode(i){
     if (b) b.textContent = D.adieu;
     if (damesEl[i]) damesEl[i].classList.add('parle');
     // la consigne s'écrit, elle ne se dit pas : une voix de moins à attendre
-    flash('Ach\u00e8te-lui ' + D.besoin + ' avant la sortie, ou ' + CFG.PRIX_RETOUR +
-          ' F pour la ramener.', 4200);
+    flash('Achète-lui ' + D.besoin + ' avant la sortie. Après, son rappel coûtera la moitié de ton argent (minimum 100 F).', 4200);
     setTimeout(function(){
       if (b && S && S.exode[i]) b.textContent = 'Je m\u2019en vais\u2026';
     }, 4600);
@@ -3758,11 +3835,12 @@ function majExode(dt){
           for (var w2=0;w2<DAMES.length;w2++){ if (S.parties[w2]) complet = false; }
           sonFoyer();
           var b2 = damesEl[i] ? damesEl[i].querySelector('.cri') : null;
-          if (b2) b2.textContent = DAMES[i].retour;
+          if (b2) b2.textContent = AVANTAGES[i].retour;
           if (damesEl[i]) damesEl[i].classList.add('parle');
-          parleDame(i, DAMES[i].retour, function(){
-            flash(DAMES[i].nom + ' : \u00ab ' + DAMES[i].retour + ' \u00bb', 4200);
-          });
+          parleDame(i, AVANTAGES[i].retour);
+          flash(DAMES[i].nom + ' est au foyer : ' + AVANTAGES[i].texte + '.', 4200);
+          afficherAvantages();
+          sauvegarder();
           setTimeout(function(){
             if (damesEl[i]) damesEl[i].classList.remove('parle');
           }, 5200);
@@ -3812,9 +3890,11 @@ function rouvrirLeFoyer(i){
   }
 }
 
-function faireRevenir(i){
+function faireRevenir(i, prixConfirme){
+  var prix = prixRappel();
+  if (!peutRappeler(i) || prixConfirme !== prix || S.argent < prix) return false;
   var D = DAMES[i];
-  S.argent -= CFG.PRIX_RETOUR;
+  S.argent -= prix;
   S.rachats++;
   S.parties[i] = false;
   S.sorties = Math.max(0, S.sorties - 1);
@@ -3840,9 +3920,13 @@ function faireRevenir(i){
   S.sortieVue = 2.4;
   sonFoyer();
   parleDame(i, 'Je reviens.');
-  volant('-' + CFG.PRIX_RETOUR + ' F', '#FFC53D');
-  flash(D.nom + ' revient au foyer. Sa maison rouvre.', 3200);
-  noter(S.jour, D.nom + ' est revenue \u2014 ' + CFG.PRIX_RETOUR + ' F.');
+  volant('-' + prix + ' F', '#FFC53D');
+  flash(D.nom + ' revient. Son avantage sera actif à son arrivée.', 3200);
+  noter(S.jour, D.nom + ' rappelée au choix — ' + prix + ' F.');
+  majRappels();
+  afficherAvantages();
+  sauvegarder();
+  return true;
 }
 
 function faitPartir(i){
@@ -3863,10 +3947,8 @@ function faitPartir(i){
     setTimeout(function(){ if (S.enCours) finir('abandon'); }, 1400);
   } else {
     var reste = CFG.SORTIES_FATALES - S.sorties;
-    var dur = Math.round((CFG.DEUIL[Math.min(CFG.DEUIL.length - 1, S.sorties)] - 1) * 100);
-    flash(DAMES[i].nom + ' est partie. Les autres se vident ' + dur +
-          ' % plus vite. Encore ' + reste + '.', 3200);
-    noter(S.jour, 'Le foyer se vide d\u00e9sormais ' + dur + ' % plus vite.');
+    flash(DAMES[i].nom + ' est partie. Avantage perdu : ' + AVANTAGES[i].texte + '. Rappelle-la sur sa case si tu le souhaites.', 4200);
+    noter(S.jour, 'Avantage perdu : ' + AVANTAGES[i].texte + '.');
   }
 }
 
@@ -3909,14 +3991,10 @@ function rendre(){
 
   elSous.textContent = Math.floor(S.argent);
   majBandeauDette();
+  majRappels();
+  afficherAvantages();
   boxSous.classList.toggle('serie', S.serie > 2);
   boxSous.classList.toggle('rachat', S.sorties > 0);
-  if (S.sorties > 0 && !S.viseRetour){
-    S.viseRetour = true;
-    flash('Atteins ' + CFG.PRIX_RETOUR + ' F et elle revient.', 3000);
-    modouDit('Avec mille francs, je peux la ramener.', 3200);
-  }
-  if (S.sorties === 0) S.viseRetour = false;
   var nuitPleine = S.nuit > 0.5;
   badgesEl.CHANTIER.classList.toggle('nuit', nuitPleine);
   var bc2 = badgesEl.CHANTIER.querySelector('.prix');
@@ -4080,7 +4158,7 @@ function deplacerModou(dt){
 
   // hors du cercle familial, le temps use Modou quoi qu'il fasse
   if (S.zone !== 'CENTRE'){
-    S.force = Math.max(0, S.force - (bouge ? CFG.COUT_MARCHE : CFG.COUT_REPOS) * dt);
+    S.force = Math.max(0, S.force - (bouge ? CFG.COUT_MARCHE * soutienAmour() : CFG.COUT_REPOS) * dt);
   }
 }
 
@@ -4113,7 +4191,7 @@ function vivreDansLaZone(dt){
     }
     var bonusNuit = 1 + (CFG.NUIT_SOUFFLE - 1) * S.nuit;
     var fuite = (S.pluie > 0 && !S.toitRepare) ? CFG.FOYER_FUITE : 1;
-    S.force = Math.min(100, S.force + CFG.SOUFFLE_PAR_SEC * bonusNuit * fuite * dt);
+    S.force = Math.min(100, S.force + CFG.SOUFFLE_PAR_SEC * soutienSante() * bonusNuit * fuite * dt);
     if (!S.foyer){
       S.foyer = true;
       sonFoyer();
@@ -4284,7 +4362,7 @@ function tourDeBoucle(ts){
       if (S.zone === 'CENTRE'){
         var bonusN = 1 + (CFG.NUIT_SOUFFLE - 1) * S.nuit;
         var fuiteN = (S.pluie > 0 && !S.toitRepare) ? CFG.FOYER_FUITE : 1;
-        S.force = Math.min(100, S.force + CFG.SOUFFLE_PAR_SEC * bonusN * fuiteN * dt);
+        S.force = Math.min(100, S.force + CFG.SOUFFLE_PAR_SEC * soutienSante() * bonusN * fuiteN * dt);
       }
       vivreDansLaZone(dt);
       majExode(dt);
@@ -4398,13 +4476,13 @@ function tourDeBoucle(ts){
   // quand Modou flanche, le foyer se vide plus vite
   var manque = Math.max(0, (CFG.SEUIL_FATIGUE - S.force) / CFG.SEUIL_FATIGUE);
   var abandon = 1 + manque * CFG.USURE_EPUISE;
-  var deuil = CFG.DEUIL[Math.min(CFG.DEUIL.length - 1, S.sorties)];
   S.abandon = abandon;
   for (var i=0;i<DAMES.length;i++){
+    if (S.exode[i] && S.exode[i].rachat && S.exode[i].retour) continue;
     var nuitFacteur = 1 - (1 - CFG.NUIT_USURE) * S.nuit;
     var pluieFacteur = (S.pluie > 0 && !S.toitRepare) ? CFG.PLUIE_USURE : 1;
     S.jauges[i] = Math.max(0, S.jauges[i] -
-      DAMES[i].usure * NIV().usure * douceurDepart(S.jour) * pression * abandon * deuil * nuitFacteur * pluieFacteur * dt);
+      DAMES[i].usure * NIV().usure * douceurDepart(S.jour) * pression * abandon * soutienSpiritualite(i) * nuitFacteur * pluieFacteur * dt);
   }
 
   // déplacement
@@ -4414,13 +4492,6 @@ function tourDeBoucle(ts){
 
   MUS.tension = Math.max(0, Math.min(1, (45 - plusBasse) / 45));
   musique();
-
-  // assez d'argent pour aller rechercher une Dame partie
-  if (S.sorties > 0 && S.argent >= CFG.PRIX_RETOUR){
-    var enChemin = false;
-    for (var q=0;q<DAMES.length;q++){ if (S.exode[q] && S.exode[q].retour) enChemin = true; }
-    if (!enChemin && S.ordreDepart.length) faireRevenir(S.ordreDepart[0]);
-  }
 
   majExode(dt);
   majEnfant(dt);
@@ -4534,10 +4605,10 @@ var COULEURS_FEU = ['#FFC53D','#FF7FB0','#8B9BFF','#4CC97A','#FFFFFF','#FF8A3D',
 /* 18 étapes de dix jours. Le calendrier ne dépend jamais des fêtes. */
 var JOURS_ETAPE = 10;
 var ETAPES = [
-  {t:'Les premiers pas', s:'Va au chantier, puis reviens au foyer pour récupérer.'},
-  {t:'Les quatre besoins', s:'Repère la Dame la plus pressée et fais sa course.'},
-  {t:'Le bon rythme', s:'Alterne travail, courses et repos. Prépare ta première promotion.'},
-  {t:'Un coup de main', s:'Ton fils arrive. Appuie sur son visage pour lui confier une course.'},
+  {t:'Les premiers pas', s:'Va au chantier, puis repose-toi au foyer. La première Dame accélère ta récupération.'},
+  {t:'Les quatre besoins', s:'Sers la Dame la plus pressée. La deuxième Dame réduit la fatigue de tes déplacements.'},
+  {t:'Le bon rythme', s:'Alterne travail, courses et repos. La troisième Dame apaise les besoins des autres.'},
+  {t:'Un coup de main', s:'Ton fils arrive : appuie sur son visage pour une course. La quatrième Dame réduit le prix des courses.'},
   {t:'Faire équipe', s:'Travaille pendant que ton fils fait les courses.'},
   {t:'Préparer la suite', s:'Garde une réserve : l’âne sera proposé au jour 61 pour 200 F.'},
   {t:'Voyager avec l’âne', s:'Passe au temple pour acheter l’âne. Ton fils reste encore dix jours.'},
@@ -5320,13 +5391,14 @@ function restaurerLeDecor(){
       if (!E.retour) damesEl[i].classList.add('sen-va');
     }
   }
-  if (S.sorties > 0) S.viseRetour = true;      // pas de rappel intempestif
+  majRappels();
+  afficherAvantages();
 }
 
 function reprendreLaPartie(){
   noterAction('reprise de la partie sauvegardée');
   var d = partieEnAttente();
-  if (!d) { demarrer(); return; }
+  if (!d) { majBoutonReprendre(); return; }
   audioInit();
   if (AC && AC.state === 'suspended') AC.resume();
 
@@ -5383,7 +5455,7 @@ function armerLaSauvegarde(){
 armerLaSauvegarde();
 ouvrirSession();
 
-/* et le bouton Reprendre n'apparaît que s'il y a quelque chose à reprendre */
+/* Reprendre reste visible et indique la partie sauvegardée. */
 function afficherRecordAccueil(){
   var z = document.getElementById('recordAccueil');
   if (!z) return;
@@ -5399,7 +5471,7 @@ function afficherRecordAccueil(){
 
 function majBoutonProgres(){
   afficherParcours();
-  [document.getElementById('btnProgres'), document.getElementById('btnProgres2')]
+  [document.getElementById('btnProgres2')]
     .forEach(function(b){ if (b) remplirBoutonProgres(b); });
 }
 function remplirBoutonProgres(b){
@@ -5422,13 +5494,12 @@ function majBoutonReprendre(){
   var b = document.getElementById('btnReprendre');
   if (!b) return;
   var d = partieEnAttente();
-  if (d && d.jour > 1){          // au premier jour, il n'y a rien à reprendre
-    b.classList.remove('hide');
-    b.textContent = 'Reprendre — ' + nomEtape(numeroEtape(d.jour)) + ' · jour ' + d.jour;
-  } else {
-    b.classList.add('hide');
-  }
+  b.classList.remove('hide');
+  b.disabled = !d;
+  b.innerHTML = d ? 'Reprendre<small>Partie en cours · ' + nomEtape(numeroEtape(d.jour)) + ' · jour ' + d.jour + '</small>'
+    : 'Reprendre<small>Aucune partie en cours</small>';
 }
+
 majBoutonsNiveau();
 majBlocInstall();
 chargerRecord();
@@ -5518,6 +5589,13 @@ function fermerModeEmploi(){
    L'AIDE — tout ce que le jeu attend du joueur, en clair
    ========================================================= */
 var AIDE = [
+  { t:'Ce que les Dames apportent', l:[
+    'Première Dame — Santé : récupération au foyer augmentée de 20 %.',
+    'Deuxième Dame — Amour : fatigue des déplacements réduite de 15 %.',
+    'Troisième Dame — Spiritualité : les jauges des autres Dames baissent 10 % moins vite.',
+    'Quatrième Dame — Argent : les courses habituelles coûtent 10 % moins cher. Le rappel et les équipements ne sont pas réduits.',
+    'Un avantage reste inactif pendant une absence ou un trajet de retour.'
+  ]},
   { t:'Se d\u00e9placer', l:[
     'Touche un endroit de la carte : Modou y va tout seul, en suivant les all\u00e9es.',
     'Ou pose le doigt n\u2019importe o\u00f9 et tire : un joystick appara\u00eet sous ton doigt.',
@@ -5548,11 +5626,11 @@ var AIDE = [
     'Ensuite Modou monte dessus : tous ses trajets sont deux fois plus rapides.',
     'Cet achat ne demande pas de passer par le foyer.'
   ]},
-  { t:'Ton fils \u00e9tudie \u2014 \u00e0 partir du jour 61', l:[
+  { t:'Ton fils \u00e9tudie \u2014 \u00e0 partir du jour 71', l:[
     'Il part en ville. Chaque semaine, ' + 100 + ' F partent tout seuls pour lui.',
     'Tu n\u2019as rien \u00e0 faire : l\u2019argent est pr\u00e9lev\u00e9 et Modou l\u2019appelle ensuite.',
     'Si la caisse est vide ce jour-l\u00e0, la somme est report\u00e9e \u00e0 la semaine suivante.',
-    'Au jour 106 il rentre une semaine en vacances : il refait les courses,',
+    'Au jour 111 il rentre une semaine en vacances : il refait les courses,',
     'et tant qu\u2019il est \u00e0 la maison, rien n\u2019est pr\u00e9lev\u00e9.'
   ]},
   { t:'La saison des pluies \u2014 jour 91', l:[
@@ -5580,7 +5658,10 @@ var AIDE = [
   { t:'Quand une Dame s\u2019en va', l:[
     'Sous 30 %, elle r\u00e9clame. \u00c0 z\u00e9ro, elle se l\u00e8ve et marche vers la sortie.',
     'Tant qu\u2019elle marche, ach\u00e8te ce qu\u2019elle demande : elle fait demi-tour.',
-    'Sortie du domaine, il faut 500 F pour la ramener.',
+    'Sortie du domaine, son bouton de rappel apparaît sur la case de son besoin.',
+    'Tu choisis qui rappeler : 50 % de ton solde, arrondi au franc supérieur, avec un minimum de 100 F.',
+    'Le jeu se met en pause pour confirmer le prix. Annuler ne coûte rien.',
+    'Son avantage redevient actif quand elle rejoint le foyer.',
     'Trois Dames parties, la partie s\u2019arr\u00eate.'
   ]}
 ];
@@ -5677,6 +5758,7 @@ function demarrerA(pr){
   document.getElementById('scrFin').classList.add('hide');
   if (AC){ MUS.depart = AC.currentTime + 0.2; MUS.pas = 0; MUS.tension = 0; MUS.fete = 0;
            monter(BUS_MUS, SON_ON ? 0.15 : 0, 2.0); }
+  sauvegarder();
   majRecord(); majBoutonEnfant(); majBoutonReprendre(); afficherRecordAccueil();
   flash(nomEtape(numeroEtape(S.jour)) + ' — jour ' + S.jour + '. On reprend.', 3200);
   majPauseBtn();
@@ -5709,6 +5791,8 @@ function demarrer(){
   document.getElementById('scrIntro').classList.add('hide');
   document.getElementById('scrFin').classList.add('hide');
   majRecord();
+  sauvegarder();
+  majBoutonReprendre();
   couperLaParole();
   majBoutonEnfant();
   majPauseBtn();
