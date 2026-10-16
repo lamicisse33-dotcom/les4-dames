@@ -844,6 +844,30 @@ button.cta{touch-action:manipulation;position:relative;z-index:2}
   padding:10px 34px 10px 12px;font-family:var(--ui);word-break:break-word;
   -webkit-user-select:text;user-select:text}
 #erreur::after{content:"\2715";position:absolute;right:10px;top:9px;font-size:14px;opacity:.7}
+/* Progression lisible au menu et en jeu, sans couvrir les commandes. */
+#scrIntro{justify-content:flex-start;padding-top:28px;padding-bottom:32px}
+#scrIntro > *{flex-shrink:0}
+#parcours{width:min(440px,100%);text-align:left;border:2px solid #657459;border-radius:14px;padding:12px;color:var(--creme)}
+#parcours summary{font-weight:900;color:var(--or);cursor:pointer;min-height:24px}
+#parcours p{font-size:12px;line-height:1.5;margin-top:9px}
+#parcoursListe{list-style:none;display:grid;gap:8px;margin-top:12px}
+#parcoursListe li{padding:10px;border:1px solid #53654a;border-radius:10px;background:#213321}
+#parcoursListe li.actuel{border:2px solid var(--or)}
+#parcoursListe li.termine{border-color:#4CC97A}
+#parcoursListe b,#parcoursListe small,#parcoursListe span{display:block}
+#parcoursListe b{font-size:13px}#parcoursListe small{color:var(--or);margin:4px 0}
+#parcoursListe span{font-size:12px;line-height:1.4;color:#d8dfcf}
+#etapeJeu{display:none;position:fixed;left:10px;bottom:calc(58px + env(safe-area-inset-bottom));z-index:43;
+  width:min(300px,calc(100vw - 142px));padding:8px 10px;border:2px solid #657459;border-radius:12px;
+  background:rgba(20,38,22,.95);color:var(--creme);font-size:11px;line-height:1.4}
+body.playing #etapeJeu{display:block}
+#etapeJeu summary{cursor:pointer;color:var(--or);font-weight:900;min-height:24px}
+#etapeJeu progress{width:100%;height:7px;accent-color:var(--or)}
+#etapeConseil{margin-top:5px;color:#d8dfcf}
+#chapitre{overflow-y:auto;justify-content:flex-start;padding-block:20px}
+#chapitre > *{flex-shrink:0}
+#chapitre .chTitre{font-size:clamp(24px,6vw,46px)}
+@media(max-height:440px){#chapitre .chScene{height:68px}#chapitre .chModou{height:68px;width:50px}#chapitre{gap:7px}}
 </style>
 </head>
 <body>
@@ -866,6 +890,10 @@ button.cta{touch-action:manipulation;position:relative;z-index:2}
 <div id="mandat"></div>
 <div id="dette"></div>
 
+<details id="etapeJeu"><summary id="etapeTitre">Niveau 1 / 18</summary>
+  <progress id="etapeAvance" max="10" value="0" aria-label="Jours terminés dans ce niveau"></progress>
+  <div id="etapeObjectif"></div><div id="etapeConseil"></div>
+</details>
 <div id="force"><span class="pic">&#128170;</span><span class="bar"><i id="forceFill"></i></span></div>
 
 <button id="camBtn">⊕</button>
@@ -889,12 +917,18 @@ button.cta{touch-action:manipulation;position:relative;z-index:2}
   <b>Ton score, c'est le nombre de jours tenus.</b><br><br>
   <b>Touche un endroit</b> et Modou y va tout seul. Ou sers-toi du <b>joystick</b>.<br>
   Entre dans un cercle et l'affaire se fait toute seule.</p>
+  <div class="eyebrow">Difficulté</div>
   <div id="niveaux">
-    <button class="niveauBtn" id="niv0">Facile</button>
-    <button class="niveauBtn actif" id="niv1">Difficile</button>
+    <button class="niveauBtn actif" id="niv0">Facile</button>
+    <button class="niveauBtn" id="niv1">Difficile</button>
     <button class="niveauBtn" id="niv2">Très difficile</button>
   </div>
   <div id="niveauDit"></div>
+  <details id="parcours"><summary>Le parcours · 18 niveaux courts</summary>
+    <p>Chaque niveau dure 10 jours de jeu (environ 2 min 10 hors pauses et attentes).
+    Objectif : tenir sans perdre trois Dames. Ta progression est conservée à chaque niveau.</p>
+    <ol id="parcoursListe"></ol><p>Après le niveau 18 : survie libre et record de jours.</p>
+  </details>
   <div id="recordAccueil"></div>
   <button class="cta ghost hide" id="btnReprendre">Reprendre</button>
   <button class="cta hide" id="btnProgres">Continuer</button>
@@ -907,7 +941,7 @@ button.cta{touch-action:manipulation;position:relative;z-index:2}
 
 <div class="screen hide" id="scrFin">
   <div id="portrait" class="hide"></div>
-  <div class="eyebrow" id="eyebrowFin">Fin du trentième jour</div>
+  <div class="eyebrow" id="eyebrowFin">Fin de partie</div>
   <div id="titre"></div>
   <div id="score">0</div>
   <div id="journal"></div>
@@ -1221,7 +1255,7 @@ function dameSVG(i){
    ========================================================= */
 'use strict';
 
-var BUILD_TAG = 'LQD-v11.3';
+var BUILD_TAG = 'LQD-v12.0';
 document.getElementById('build').textContent = BUILD_TAG;
 var vIntro = document.getElementById('versionIntro');
 if (vIntro) vIntro.textContent = BUILD_TAG;
@@ -1266,6 +1300,7 @@ var dernierAppui = 0, dernierId = '';
 var gamePaused = false;
 
 function majPauseBtn(){
+  if (S) afficherEtape();
   var btn = document.getElementById('pauseBtn');
   if (!btn) return;
   var actif = S && S.enCours;
@@ -1293,6 +1328,7 @@ function surAppui(e){
 function traiterAppui(e, n){
 
   while (n && n !== document.body){
+    if (n.id === 'chMenu'){ fermerLeChapitre(true); retourAuMenu(); return; }
     if (n.id === 'bordFermer'){ if (e.cancelable) e.preventDefault(); sonBouton(); fermerLeBord(); return; }
     if (n.id === 'bordVerrou'){
       try { localStorage.removeItem(CLE_ACCES); } catch (e) {}
@@ -1423,7 +1459,7 @@ var CFG = {
   ARGENT_DEPART: 510,
   GAIN_CHANTIER: 51,      // francs par seconde de travail
   COUT_CHANTIER: 9,       // le chantier paie bien, mais il casse le dos
-  MOIS: 30,               // une partie dure un mois de jeu
+  MOIS: 30,               // promotions et calendrier économique
 
   PALIER_JOURS: 15,       // tous les 15 jours...
 
@@ -1463,7 +1499,7 @@ var CFG = {
   FOYER_FUITE: 0.5,       // sous la pluie, un toit percé ne repose qu'à moitié
   PLUIE_USURE: 1.25,      // et les Dames supportent mal l'humidité
 
-  VACANCES_JOUR: 106,     // le fils revient une semaine
+  VACANCES_JOUR: 111,     // le fils revient une semaine
   VACANCES_DUREE: 7,
 
   MOTO_JOUR: 121,        // cinquième partie
@@ -1474,6 +1510,7 @@ var CFG = {
   PRIME_REPOS: 2.0,      // samedi, dimanche et jours fériés : la paye double
   ATTENTE_MAX: 15,       // le jour chômé attend Modou au chantier, au plus quinze secondes      // samedi, dimanche et jours fériés : la paye double     // quatre fois plus rapide qu'à pied
 
+  FILS_DEPART_JOUR: 71,   // apprendre à utiliser l’âne avant le départ du fils
   ANE_JOUR: 61,           // troisième mois : le gardien du temple le propose
   PRIX_ANE: 200,
   ANE_VITESSE: 2.0,       // Modou monte dessus, les trajets sont deux fois plus courts
@@ -1518,11 +1555,11 @@ var STATUTS = [
 ];
 function statutActuel(){
   if (!S) return STATUTS[0];
-  return STATUTS[Math.min(STATUTS.length - 1, S.fetes)];
+  return STATUTS[Math.min(STATUTS.length - 1, Math.floor((S.jour - 1) / CFG.MOIS))];
 }
 function annoncerLePromotion(){
   var st = statutActuel();
-  if (!S || S.fetes <= 0) return;
+  if (!S || S.jour <= CFG.MOIS) return;
   flash('Le patron te nomme ' + st.nom + '. Ta paye monte de ' +
         Math.round((st.paye - 1) * 100) + ' %.', 4600);
   parler('Je suis ' + st.nom + ' maintenant.', VOIX_MODOU);
@@ -1550,7 +1587,7 @@ function payeDoublee(j){ return estWeekend(j) || !!ferieDuJour(j); }
 function estConge(j){ return Math.floor((j - 1) / CFG.MOIS) % 6 === 5; }
 
 /* =========================================================
-   LES TROIS NIVEAUX
+   LES TROIS DIFFICULTÉS — indépendantes des 18 niveaux du parcours
    Ce qui change : le coût de la vie, l'usure des Dames,
    la paye du chantier et le mandat du fils.
    ========================================================= */
@@ -1565,7 +1602,7 @@ var NIVEAUX = [
     inflation:0.40, pressionMax:2.20, usure:1.20, paye:0.85, mandat:1.30,
     dit:'Tout co\u00fbte plus cher, la paye baisse. La vie ne fait aucun cadeau.' }
 ];
-var iNiveau = 1;
+var iNiveau = 0;
 try {
   var sauve = localStorage.getItem('lqd_niveau');
   for (var q=0;q<NIVEAUX.length;q++) if (NIVEAUX[q].cle === sauve) iNiveau = q;
@@ -1576,6 +1613,7 @@ function choisirNiveau(i){
   iNiveau = Math.max(0, Math.min(NIVEAUX.length - 1, i));
   try { localStorage.setItem('lqd_niveau', NIV().cle); } catch (e) {}
   majBoutonsNiveau();
+  afficherParcours();
   chargerRecord();
   afficherRecordAccueil();
   sonBouton();
@@ -1782,7 +1820,7 @@ function trajetVers(cibleXpct, cibleYpct){
 var S = null;
 function nouvelEtat(){
   return {
-    enCours:false, jour:1, temps:0,
+    enCours:false, jour:1, temps:0, difficulte:NIV().cle, etapesTerminees:0,
     jauges:[56,52,59,49],
     force:100,
     argent:CFG.ARGENT_DEPART,
@@ -1800,7 +1838,7 @@ function nouvelEtat(){
     ordreDepart:[],
     viseRetour:false,
     vu:{}, rappels:{},
-    fete:null, chapitre:null, derniereFete:0, fetes:0, prochainJalon:1, rachats:0,
+    fete:null, chapitre:null, derniereFete:0, fetes:0, rachats:0,
     recordBattu:false, recordVu:false, moisSalue:false,
     tuto:null, achats:0,
     attente:0,
@@ -3911,6 +3949,7 @@ function rendre(){
   var bp = badgesEl.CENTRE.querySelector('.txt');
   if (bp) bp.textContent = S.foyer ? 'FOYER' : 'REVIENS ICI D\u2019ABORD';
   elJour.textContent = S.jour;
+  afficherEtape();
 
   // prix du jour sur les badges + zone trop chère
   var pasAssez = false;
@@ -4278,7 +4317,7 @@ function tourDeBoucle(ts){
 
     if (jour === CFG.ENFANT_JOUR && !S.enfant) faireVenirLEnfant();
     if (jour >= CFG.ANE_JOUR && !S.aneOffert && !S.ane) proposerLAne();
-    if (jour >= CFG.ANE_JOUR && !S.filsParti) leFilsPart();
+    if (jour >= CFG.FILS_DEPART_JOUR && !S.filsParti) leFilsPart();
     if (estConge(jour) && !estConge(jour - 1)){
       flash('Mois de cong\u00e9 pay\u00e9 ! Le patron verse quatre fois ta paye.', 4600);
       parler('Le patron me met en cong\u00e9 pay\u00e9. Quatre fois la paye !', VOIX_MODOU);
@@ -4311,7 +4350,7 @@ function tourDeBoucle(ts){
     if (S.vacances && jour >= S.vacancesFin) leFilsRepart();
     if (jour >= CFG.MOTO_JOUR && !S.motoOfferte && !S.moto) proposerLaMoto();
     if (S.filsParti && !S.vacances &&
-        (jour - CFG.ANE_JOUR) % CFG.MANDAT_JOURS === 0 && jour > CFG.ANE_JOUR){
+        (jour - CFG.FILS_DEPART_JOUR) % CFG.MANDAT_JOURS === 0 && jour > CFG.FILS_DEPART_JOUR){
       envoyerLeMandatSeul();
     }
 
@@ -4365,7 +4404,7 @@ function tourDeBoucle(ts){
     var nuitFacteur = 1 - (1 - CFG.NUIT_USURE) * S.nuit;
     var pluieFacteur = (S.pluie > 0 && !S.toitRepare) ? CFG.PLUIE_USURE : 1;
     S.jauges[i] = Math.max(0, S.jauges[i] -
-      DAMES[i].usure * NIV().usure * pression * abandon * deuil * nuitFacteur * pluieFacteur * dt);
+      DAMES[i].usure * NIV().usure * douceurDepart(S.jour) * pression * abandon * deuil * nuitFacteur * pluieFacteur * dt);
   }
 
   // déplacement
@@ -4492,77 +4531,90 @@ function finir(cause){
    ========================================================= */
 var COULEURS_FEU = ['#FFC53D','#FF7FB0','#8B9BFF','#4CC97A','#FFFFFF','#FF8A3D','#7BD3F7'];
 
-/* fin de chaque mois : 30, 60, 90, 120... */
-function jalonFete(n){ return CFG.MOIS * n; }
-
-function peutFeter(){
-  if (!S || S.fete || S.chapitre) return false;
-  if (S.jour < jalonFete(S.prochainJalon)) return false;
-
-  var toutes = true;
-  for (var i=0;i<DAMES.length;i++){ if (S.parties[i]) toutes = false; }
-
-  if (!toutes){
-    var perdu = jalonFete(S.prochainJalon);
-    S.prochainJalon++;
-    flash('Jour ' + perdu + ' \u2014 f\u00eate manqu\u00e9e. Le cercle n\u2019est pas complet.', 3000);
-    noter(S.jour, 'Fin du mois manqu\u00e9e : une Dame n\u2019\u00e9tait plus l\u00e0.');
-    return false;
-  }
-  S.prochainJalon++;
-  return true;
-}
-
-/* =========================================================
-   L'ÉCRAN DE FIN DE CHAPITRE
-   Modou seul sur fond sombre, feux d'artifice, musique.
-   Plus riche à chaque mois passé.
-   ========================================================= */
-var CHAPITRES = [
-  { t:'BRAVO',            s:'Tu as tenu la maison de Modou pendant un mois.' },
-  { t:'BRAVO, DEUX MOIS', s:'Ton fils t\u2019aide maintenant. La maison tient toujours.' },
-  { t:'BRAVO, TROIS MOIS',s:'L\u2019\u00e2ne, le fils, les quatre Dames. Tu tiens tout.' },
-  { t:'QUATRE MOIS',      s:'Les pluies arrivent. Le toit du foyer ne tiendra pas.' },
-  { t:'CINQ MOIS',        s:'La moto t\u2019attend au chantier.' },
-  { t:'LE DOMAINE EST \u00c0 TOI', s:'Le temps ne compte plus.' }
+/* 18 étapes de dix jours. Le calendrier ne dépend jamais des fêtes. */
+var JOURS_ETAPE = 10;
+var ETAPES = [
+  {t:'Les premiers pas', s:'Va au chantier, puis reviens au foyer pour récupérer.'},
+  {t:'Les quatre besoins', s:'Repère la Dame la plus pressée et fais sa course.'},
+  {t:'Le bon rythme', s:'Alterne travail, courses et repos. Prépare ta première promotion.'},
+  {t:'Un coup de main', s:'Ton fils arrive. Appuie sur son visage pour lui confier une course.'},
+  {t:'Faire équipe', s:'Travaille pendant que ton fils fait les courses.'},
+  {t:'Préparer la suite', s:'Garde une réserve : l’âne sera proposé au jour 61 pour 200 F.'},
+  {t:'Voyager avec l’âne', s:'Passe au temple pour acheter l’âne. Ton fils reste encore dix jours.'},
+  {t:'Le départ du fils', s:'Ton fils part étudier. Prévois son mandat automatique chaque semaine.'},
+  {t:'Tenir le budget', s:'Répartis tes gains entre les besoins du foyer et les mandats.'},
+  {t:'La saison des pluies', s:'La pluie arrive. Dès le jour 92, le toit peut être réparé pour 500 F.'},
+  {t:'Un foyer protégé', s:'Répare le toit si nécessaire et profite du repos au foyer.'},
+  {t:'Le retour du fils', s:'Ton fils revient sept jours. Profite de son aide avant son départ.'},
+  {t:'La moto à crédit', s:'La moto est proposée au chantier. Son prix sera retenu sur ta paye.'},
+  {t:'Rembourser sans faiblir', s:'Surveille la dette de la moto et garde de quoi faire les courses.'},
+  {t:'Garder l’équilibre', s:'Utilise tes trajets plus rapides sans oublier le repos.'},
+  {t:'La paye majorée', s:'Pendant ce mois, ta paye est multipliée par quatre. Refais tes réserves.'},
+  {t:'Préparer l’avenir', s:'Profite encore de la paye majorée pour protéger le foyer.'},
+  {t:'Maître du domaine', s:'Tiens encore dix jours. Ensuite, poursuis ton record en survie libre.'}
 ];
-
+function numeroEtape(jour){
+  return Math.min(ETAPES.length + 1, Math.floor((Math.max(1, jour) - 1) / JOURS_ETAPE) + 1);
+}
+function nomEtape(n){ return n > ETAPES.length ? 'Survie libre' : 'Niveau ' + n + ' / ' + ETAPES.length; }
+function douceurDepart(jour){ return Math.min(1, 0.65 + Math.max(0, jour - 1) * 0.35 / 30); }
+function etapesAcquises(jour){ return Math.min(ETAPES.length, Math.floor((Math.max(1, jour) - 1) / JOURS_ETAPE)); }
+function afficherEtape(){
+  var z = document.getElementById('etapeJeu');
+  if (!z || !S) return;
+  var n = numeroEtape(S.jour), e = ETAPES[n - 1];
+  var cle = n + ':' + S.jour;
+  if (z.dataset.etape === cle) return;
+  z.dataset.etape = cle;
+  document.getElementById('etapeTitre').textContent = nomEtape(n) + (e ? ' · ' + e.t : ' · Bats ton record');
+  document.getElementById('etapeObjectif').textContent = e
+    ? 'Objectif : tenir jusqu’à la fin du jour ' + n * JOURS_ETAPE + ' sans perdre trois Dames.'
+    : 'Tiens le plus longtemps possible.';
+  document.getElementById('etapeConseil').textContent = e ? e.s : 'Les prix et les besoins continuent d’augmenter.';
+  document.getElementById('etapeAvance').value = e ? (S.jour - 1) % JOURS_ETAPE : JOURS_ETAPE;
+}
+function afficherParcours(){
+  var z = document.getElementById('parcoursListe');
+  if (!z) return;
+  var pr = lireProgres(), atteint = pr ? pr.niveau : 1;
+  z.innerHTML = ETAPES.map(function(e, i){
+    var n = i + 1, statut = n < atteint ? 'Terminé' : (n === atteint ? 'À jouer' : 'À venir');
+    return '<li class="' + (n < atteint ? 'termine' : (n === atteint ? 'actuel' : '')) + '">' +
+      '<b>' + n + '. ' + e.t + '</b><small>Jours ' + (i * JOURS_ETAPE + 1) + '–' + n * JOURS_ETAPE +
+      ' · ' + statut + '</small><span>' + e.s + '</span></li>';
+  }).join('');
+}
+function peutFeter(){
+  return !!S && !S.fete && !S.chapitre && etapesAcquises(S.jour) > (S.etapesTerminees || 0);
+}
 function ouvrirLeChapitre(){
-  noterAction('ouverture d un chapitre');
-  var n = S.fetes;                       // 1 = fin du premier mois
-  var niveau = Math.min(CHAPITRES.length, Math.max(1, n));
-  var C = CHAPITRES[niveau - 1];
+  noterAction('fin de niveau');
+  var niveau = S.etapesTerminees;
+  var C = ETAPES[niveau - 1], suivant = ETAPES[niveau];
   S.chapitre = { niveau:niveau, t:0, prochain:0 };
-
   document.body.classList.remove('playing');
   couperLaParole();
-
   var z = document.getElementById('chapitre');
-  z.className = 'on niv' + niveau;
+  z.className = 'on niv' + Math.min(6, Math.ceil(niveau / 3));
   z.innerHTML =
     '<div class="chFond"></div>' +
-    '<div class="chScene">' +
-      '<div class="chModou">' + bonhommeSVG() + '</div>' +
-      (niveau >= 2 ? '<div class="chEnfant">' + enfantSVG() + '</div>' : '') +
-      (niveau >= 5 ? '<div class="chAne">' + motoSVG() + '</div>' :
-       (niveau >= 3 ? '<div class="chAne">' + aneSVG() + '</div>' : '')) +
-    '</div>' +
+    '<div class="chScene"><div class="chModou">' + bonhommeSVG() + '</div>' +
+      (S.enfant ? '<div class="chEnfant">' + enfantSVG() + '</div>' : '') +
+      (S.moto ? '<div class="chAne">' + motoSVG() + '</div>' :
+       (S.ane ? '<div class="chAne">' + aneSVG() + '</div>' : '')) + '</div>' +
     '<div class="chTexte">' +
-      '<div class="chPartie">PARTIE ' + niveau + ' TERMIN\u00c9E \u2014 JOUR ' + S.jour + '</div>' +
-      '<div class="chGrade">' + statutActuel().nom + ' \u00b7 paye \u00d7' +
-        statutActuel().paye.toFixed(2).replace('.', ',') + '</div>' +
-      '<div class="chTitre">' + C.t + '</div>' +
-      '<div class="chSous">' + C.s + '</div>' +
-    '</div>' +
-    '<div class="chBoutons">' +
-      '<button class="cta" id="chContinuer">Continuer \u2014 partie ' + (niveau + 1) + '</button>' +
-      '<button class="cta ghost" id="chRejouer">Rejouer</button>' +
-    '</div>';
-
+      '<div class="chPartie">NIVEAU ' + niveau + ' / ' + ETAPES.length + ' TERMINÉ</div>' +
+      '<div class="chGrade">' + statutActuel().nom + ' · paye ×' + statutActuel().paye.toFixed(2).replace('.', ',') + '</div>' +
+      '<div class="chTitre">' + (suivant ? 'BRAVO !' : 'DOMAINE MAÎTRISÉ !') + '</div>' +
+      '<div class="chSous">' + C.t + ' : dix jours tenus.<br><br>' +
+      (suivant ? '<b>À suivre : ' + suivant.t + '</b><br>' + suivant.s : 'Les 18 niveaux sont terminés. Continue en survie libre pour battre ton record.') +
+      '</div></div><div class="chBoutons">' +
+      '<button class="cta" id="chContinuer">' + (suivant ? 'Niveau ' + (niveau + 1) : 'Continuer en survie libre') + '</button>' +
+      '<button class="cta ghost" id="chMenu">Sauvegarder et quitter</button></div>';
   ouvrirLaMusiqueDeFete();
-  fanfare(Math.min(4, niveau));
-  parler('On a tenu ! Al\u2019hamdoulillah !', VOIX_MODOU);
-  noter(S.jour, 'Fin de la partie ' + niveau + '.');
+  fanfare(Math.min(4, Math.ceil(niveau / 3)));
+  parler('Niveau ' + niveau + ' terminé. ' + (suivant ? suivant.s : 'Place à la survie libre !'), VOIX_MODOU);
+  noter(S.jour, 'Niveau ' + niveau + ' terminé : ' + C.t + '.');
   ecrireProgres();
   sauvegarder();
 }
@@ -4573,7 +4625,7 @@ function majChapitre(dt){
   C.t += dt;
   C.prochain -= dt;
   if (C.prochain <= 0){
-    var n = C.niveau;
+    var n = Math.min(5, Math.ceil(C.niveau / 3));
     for (var k=0;k<n+1;k++) uneSalve(Math.min(5, n));
     C.prochain = Math.max(0.16, 0.5 - n * 0.07);
     if (Math.random() < 0.5) bipFeu(n);
@@ -4591,17 +4643,19 @@ function fermerLeChapitre(continuer){
   if (continuer){
     document.body.classList.add('playing');
     last = 0;
-    flash('Partie ' + (S.fetes + 1) + '. \u00c7a continue.', 2600);
-    setTimeout(function(){ if (S && S.enCours) annoncerLePromotion(); }, 2800);
+    afficherEtape();
+    flash(nomEtape(numeroEtape(S.jour)) + '. À toi de jouer.', 2600);
+    if (S.etapesTerminees % 3 === 0) setTimeout(function(){ if (S && S.enCours) annoncerLePromotion(); }, 2800);
   } else {
     finir('abandon');
   }
 }
 
-/* la fin de mois ouvre l'écran de chapitre */
+/* Une pause à chaque étape ; les fêtes mensuelles restent une statistique distincte. */
 function lancerLaFete(){
+  S.etapesTerminees = etapesAcquises(S.jour);
   S.derniereFete = S.jour;
-  S.fetes++;
+  if (S.etapesTerminees % 3 === 0 && S.parties.every(function(p){ return !p; })) S.fetes++;
   ouvrirLeChapitre();
 }
 
@@ -5159,58 +5213,63 @@ poserLaPorte(document.getElementById('bordAcces'));
    ========================================================= */
 function CLE_PROGRES(){ return 'lqd_progres_v1_' + NIV().cle; }
 
+function normaliserProgres(d){
+  if (!d || (!d.partie && !d.niveau)) return null;
+  var jour = Math.max(1, Number(d.jours) || 1);
+  var niveau = d.schema === 2 ? (Number(d.niveau) || 1)
+    : Math.max(numeroEtape(jour), (Math.max(1, Number(d.partie) || 1) - 1) * 3 + 1);
+  niveau = Math.min(ETAPES.length + 1, Math.max(1, Math.floor(niveau)));
+  return { schema:2, niveau:niveau, jours:jour, fetes:Number(d.fetes) || 0,
+    ane:!!d.ane, moto:!!d.moto, toit:!!d.toit };
+}
 function lireProgres(){
-  try {
-    var d = JSON.parse(localStorage.getItem(CLE_PROGRES()) || 'null');
-    if (!d || !d.partie) return null;
-    return d;
-  } catch (e) { return null; }
+  try { return normaliserProgres(JSON.parse(localStorage.getItem(CLE_PROGRES()) || 'null')); }
+  catch (e) { return null; }
 }
 function ecrireProgres(){
   if (!S) return;
-  var ancien = lireProgres() || { partie:1 };
-  var atteinte = Math.max(ancien.partie, S.fetes + 1);
-  var d = {
-    partie: atteinte,
-    ane: !!(S.ane || ancien.ane),
-    moto: !!(S.moto || ancien.moto),
-    toit: !!(S.toitRepare || ancien.toit),
-    jours: Math.max(ancien.jours || 0, S.jour)
+  var ancien = lireProgres() || { niveau:1 };
+  var d = { schema:2,
+    niveau:Math.max(ancien.niveau, numeroEtape(S.jour)),
+    ane:!!(S.ane || ancien.ane), moto:!!(S.moto || ancien.moto), toit:!!(S.toitRepare || ancien.toit),
+    jours:Math.max(ancien.jours || 0, S.jour), fetes:Math.max(ancien.fetes || 0, S.fetes || 0)
   };
   try { localStorage.setItem(CLE_PROGRES(), JSON.stringify(d)); } catch (e) {}
 }
 function effacerProgres(){
   try { localStorage.removeItem(CLE_PROGRES()); } catch (e) {}
 }
-
-/* on remet Modou dans l'état où il était au début de cette partie-là */
 function appliquerLaProgression(pr){
-  var n = pr.partie;
-  S.fetes = n - 1;
-  S.prochainJalon = n;
-  S.temps = CFG.MOIS * (n - 1) * CFG.SEC_PAR_JOUR;
-  S.jour = CFG.MOIS * (n - 1) + 1;
-  S.moisSalue = S.jour > 30;
-
-  // l'argent de départ suit le coût de la vie
+  pr = normaliserProgres(pr);
+  var n = pr.niveau;
+  var jour = n > ETAPES.length ? Math.max(181, Math.floor((pr.jours - 1) / JOURS_ETAPE) * JOURS_ETAPE + 1)
+    : (n - 1) * JOURS_ETAPE + 1;
+  S.fetes = pr.fetes;
+  S.etapesTerminees = etapesAcquises(jour);
+  S.temps = (jour - 1) * CFG.SEC_PAR_JOUR;
+  S.jour = jour;
+  S.moisSalue = jour > 30;
   S.argent = Math.round(CFG.ARGENT_DEPART * Math.pow(1 + NIV().inflation, palierActuel()));
-
-  if (n >= 3){
-    S.filsParti = true;
-    S.aneOffert = true;
-  }
-  if (n >= 4){
-    S.saisonPluies = true;
-    S.toitPropose = true;
-    S.prochaineAverse = 8;
-  }
-  if (n >= 5) S.motoOfferte = true;
-
-  // ce qu'il a déjà payé lui reste acquis
-  S.ane  = !!pr.ane;
-  S.moto = !!pr.moto;
-  S.toitRepare = !!pr.toit;
+  S.filsParti = jour >= CFG.FILS_DEPART_JOUR;
+  S.aneOffert = jour >= CFG.ANE_JOUR;
+  S.saisonPluies = jour >= CFG.PLUIE_JOUR;
+  S.toitPropose = jour >= CFG.PLUIE_JOUR + 1;
+  S.prochaineAverse = S.saisonPluies ? 8 : 0;
+  S.motoOfferte = jour >= CFG.MOTO_JOUR;
+  S.vacances = jour >= CFG.VACANCES_JOUR && jour < CFG.VACANCES_JOUR + CFG.VACANCES_DUREE;
+  S.vacancesFin = S.vacances ? CFG.VACANCES_JOUR + CFG.VACANCES_DUREE : 0;
+  S.ane = pr.ane; S.moto = pr.moto; S.toitRepare = pr.toit;
   if (S.moto) S.dette = 0;
+}
+function migrerSauvegarde(d){
+  if (typeof d.etapesTerminees !== 'number') d.etapesTerminees = etapesAcquises(d.jour);
+  d.chapitre = null; // l'ancien écran de fête ne doit jamais bloquer la reprise
+  if (!d.difficulte){
+    var ancienneDifficulte = null;
+    try { ancienneDifficulte = localStorage.getItem('lqd_niveau'); } catch (e) {}
+    d.difficulte = ancienneDifficulte || 'dur';
+  }
+  return d;
 }
 
 /* =========================================================
@@ -5223,6 +5282,7 @@ function sauvegarder(){
   if (!S || !S.enCours) return;
   try {
     var copie = JSON.parse(JSON.stringify(S));
+    copie.chapitre = null;
     copie.fete = null;          // on ne reprend jamais au milieu d'une fête
     copie.auto = null;          // ni au milieu d'un trajet automatique
     copie.sortieVue = 0;
@@ -5270,7 +5330,10 @@ function reprendreLaPartie(){
   audioInit();
   if (AC && AC.state === 'suspended') AC.resume();
 
-  S = d;
+  S = migrerSauvegarde(d);
+  for (var q=0;q<NIVEAUX.length;q++) if (NIVEAUX[q].cle === S.difficulte) iNiveau = q;
+  try { localStorage.setItem('lqd_niveau', NIV().cle); } catch (e) {}
+  chargerRecord();
   S.fete = null; S.auto = null; S.cool = 0; S.sortieVue = 0;
   S.vu = S.vu || {}; S.rappels = S.rappels || {};
 
@@ -5335,19 +5398,20 @@ function afficherRecordAccueil(){
 }
 
 function majBoutonProgres(){
+  afficherParcours();
   [document.getElementById('btnProgres'), document.getElementById('btnProgres2')]
     .forEach(function(b){ if (b) remplirBoutonProgres(b); });
 }
 function remplirBoutonProgres(b){
   if (!b) return;
   var pr = lireProgres();
-  if (pr && pr.partie > 1){
+  if (pr && pr.niveau > 1){
     b.classList.remove('hide');
     var avoir = [];
     if (pr.ane)  avoir.push('l\u2019\u00e2ne');
     if (pr.moto) avoir.push('la moto');
     if (pr.toit) avoir.push('le toit');
-    b.innerHTML = 'Continuer \u2014 partie ' + pr.partie +
+    b.innerHTML = 'Rejouer — ' + nomEtape(pr.niveau) +
       (avoir.length ? '<small>avec ' + avoir.join(', ') + '</small>' : '');
   } else {
     b.classList.add('hide');
@@ -5360,7 +5424,7 @@ function majBoutonReprendre(){
   var d = partieEnAttente();
   if (d && d.jour > 1){          // au premier jour, il n'y a rien à reprendre
     b.classList.remove('hide');
-    b.textContent = 'Reprendre \u2014 jour ' + d.jour;
+    b.textContent = 'Reprendre — ' + nomEtape(numeroEtape(d.jour)) + ' · jour ' + d.jour;
   } else {
     b.classList.add('hide');
   }
@@ -5599,7 +5663,7 @@ function demarrerA(pr){
   CAM.tx = 50; CAM.ty = 55; CAM.tz = CFG.Z_LIBRE;
   construire();
   finirLaFete();
-  if (S.filsParti === false && S.jour >= CFG.ENFANT_JOUR) faireVenirLEnfant();
+  if ((!S.filsParti && S.jour >= CFG.ENFANT_JOUR) || S.vacances) faireVenirLEnfant();
   if (modouEl){
     if (S.moto) modouEl.classList.add('surLaMoto');
     else if (S.ane) modouEl.classList.add('surLane');
@@ -5614,7 +5678,7 @@ function demarrerA(pr){
   if (AC){ MUS.depart = AC.currentTime + 0.2; MUS.pas = 0; MUS.tension = 0; MUS.fete = 0;
            monter(BUS_MUS, SON_ON ? 0.15 : 0, 2.0); }
   majRecord(); majBoutonEnfant(); majBoutonReprendre(); afficherRecordAccueil();
-  flash('Partie ' + pr.partie + ' \u2014 jour ' + S.jour + '. On reprend.', 3200);
+  flash(nomEtape(numeroEtape(S.jour)) + ' — jour ' + S.jour + '. On reprend.', 3200);
   majPauseBtn();
   setTimeout(function(){ if (S && S.enCours) annoncerLePromotion(); }, 3400);
 
@@ -5663,3 +5727,4 @@ requestAnimationFrame(boucle);
 </script>
 </body>
 </html>
+
