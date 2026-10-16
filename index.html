@@ -860,7 +860,7 @@ button.cta{touch-action:manipulation;position:relative;z-index:2}
 #etapeJeu{display:none;position:fixed;left:10px;bottom:calc(58px + env(safe-area-inset-bottom));z-index:43;
   width:min(300px,calc(100vw - 142px));padding:8px 10px;border:2px solid #657459;border-radius:12px;
   background:rgba(20,38,22,.95);color:var(--creme);font-size:11px;line-height:1.4}
-body.playing #etapeJeu{display:block}
+body.playing #etapeJeu.visible{display:block}
 #etapeJeu summary{cursor:pointer;color:var(--or);font-weight:900;min-height:24px}
 #etapeJeu progress{width:100%;height:7px;accent-color:var(--or)}
 #etapeConseil{margin-top:5px;color:#d8dfcf}
@@ -1321,7 +1321,7 @@ function dameSVG(i){
    ========================================================= */
 'use strict';
 
-var BUILD_TAG = 'LQD-v12.2';
+var BUILD_TAG = 'LQD-v12.3';
 document.getElementById('build').textContent = BUILD_TAG;
 var vIntro = document.getElementById('versionIntro');
 if (vIntro) vIntro.textContent = BUILD_TAG;
@@ -4706,10 +4706,23 @@ function numeroEtape(jour){
 function nomEtape(n){ return n > ETAPES.length ? 'Survie libre' : 'Niveau ' + n + ' / ' + ETAPES.length; }
 function douceurDepart(jour){ return Math.min(1, 0.65 + Math.max(0, jour - 1) * 0.35 / 30); }
 function etapesAcquises(jour){ return Math.min(ETAPES.length, Math.floor((Math.max(1, jour) - 1) / JOURS_ETAPE)); }
+var etapeBanniereEtat = null, etapeBanniereNumero = null, etapeBanniereTimer = null;
 function afficherEtape(){
   var z = document.getElementById('etapeJeu');
   if (!z || !S) return;
   var n = numeroEtape(S.jour), e = ETAPES[n - 1];
+  // Une annonce brève au démarrage/reprise et au changement de niveau seulement.
+  if (etapeBanniereEtat !== S || etapeBanniereNumero !== n){
+    etapeBanniereEtat = S;
+    etapeBanniereNumero = n;
+    clearTimeout(etapeBanniereTimer);
+    z.open = false;
+    z.classList.add('visible');
+    etapeBanniereTimer = setTimeout(function(){
+      z.classList.remove('visible');
+      z.open = false;
+    }, 4000);
+  }
   var cle = n + ':' + S.jour;
   if (z.dataset.etape === cle) return;
   z.dataset.etape = cle;
