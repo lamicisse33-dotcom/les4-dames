@@ -371,7 +371,7 @@ html,body{height:100%;overflow:hidden;background:#1B2A1B;font-family:var(--ui);c
   border:3px solid var(--trait);box-shadow:var(--ombre);font-family:var(--ui);
   font-size:16px;font-weight:900;line-height:1;color:var(--trait);cursor:pointer;display:none}
 #pauseBtn.en-jeu{display:block}
-#pauseBtn.en-pause{background:var(--or)}
+#pauseBtn.en-pause{background:var(--or);animation:signalPlay 1.2s ease-in-out infinite}
 #pauseBtn:active{transform:translateY(2px);box-shadow:0 1px 0 var(--trait)}
 /* ---- INTÉRIEUR DES BÂTIMENTS ---- */
 .vignette{width:186px;height:120px;z-index:26;pointer-events:none;
@@ -502,7 +502,7 @@ html,body{height:100%;overflow:hidden;background:#1B2A1B;font-family:var(--ui);c
   border:3px solid var(--trait);box-shadow:var(--ombre);font-family:var(--ui);
   font-size:16px;font-weight:900;line-height:1;color:var(--trait);cursor:pointer;display:none}
 #pauseBtn.en-jeu{display:block}
-#pauseBtn.en-pause{background:var(--or)}
+#pauseBtn.en-pause{background:var(--or);animation:signalPlay 1.2s ease-in-out infinite}
 #pauseBtn:active{transform:translateY(2px);box-shadow:0 1px 0 var(--trait)}
 
 
@@ -836,6 +836,10 @@ button.cta{touch-action:manipulation;position:relative;z-index:2}
 #rot{position:fixed;inset:0;z-index:95;background:#1B2A1B;display:none;
   flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px;text-align:center}
 @media (orientation:portrait) and (max-width:820px){body.playing #rot{display:flex}}
+@keyframes signalPlay{
+  0%,100%{background:var(--or);opacity:1}
+  50%{background:#fff5c2;opacity:.65}
+}
 @media (prefers-reduced-motion:reduce){*{animation:none!important}}
 #build{position:fixed;left:6px;bottom:2px;z-index:99;font-size:8px;font-weight:900;
   color:rgba(255,255,255,.28);pointer-events:none}
@@ -1321,7 +1325,7 @@ function dameSVG(i){
    ========================================================= */
 'use strict';
 
-var BUILD_TAG = 'LQD-v12.4';
+var BUILD_TAG = 'LQD-v12.5';
 document.getElementById('build').textContent = BUILD_TAG;
 var vIntro = document.getElementById('versionIntro');
 if (vIntro) vIntro.textContent = BUILD_TAG;
@@ -1373,6 +1377,7 @@ function majPauseBtn(){
   if (!actif){ btn.classList.remove('en-jeu'); btn.classList.remove('en-pause'); return; }
   btn.classList.add('en-jeu');
   btn.textContent = gamePaused ? '▶' : '⏸';
+  btn.setAttribute('aria-label', gamePaused ? 'Démarrer ou reprendre le jeu' : 'Mettre le jeu en pause');
   if (gamePaused){ btn.classList.add('en-pause'); }
   else { btn.classList.remove('en-pause'); }
 }
