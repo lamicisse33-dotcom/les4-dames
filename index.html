@@ -762,7 +762,7 @@ button.cta{touch-action:manipulation;position:relative;z-index:2}
 #installer button:active{transform:translateY(3px);box-shadow:0 1px 0 var(--trait)}
 #installer .isous{font-size:10px;font-weight:600;color:rgba(255,246,228,.5)}
 
-#modeEmploi{position:fixed;inset:0;z-index:160;display:none;align-items:center;
+#modeEmploi{position:fixed;inset:0;z-index:180;display:none;align-items:center;
   justify-content:center;padding:22px;background:rgba(12,20,12,.82)}
 #modeEmploi.on{display:flex}
 .meBoite{background:#1B2A1B;border:4px solid var(--trait);border-radius:24px;
@@ -881,6 +881,35 @@ body.playing #etapeJeu{display:block}
 #avantagesJeu{margin-top:8px;border-top:1px solid #657459;padding-top:5px;line-height:1.5}
 #avantagesJeu .actif{color:#b8efb8}#avantagesJeu .inactif{color:#d6c9b5}
 #etapeJeu[open]{max-height:50vh;overflow-y:auto}
+/* Accueil : trois actions. La difficulté se choisit seulement pour une nouvelle partie. */
+#scrIntro{justify-content:center;gap:18px;padding:24px 20px}
+#scrIntro h1{margin-bottom:12px}
+#actionsPartie{width:min(350px,100%);display:flex;flex-direction:column;gap:12px}
+#actionsPartie .cta,#btnAide{width:min(350px,100%);min-height:52px;letter-spacing:.03em}
+#actionsPartie small{font-size:11px}
+#build{display:none}body.playing #build{display:block}
+#aide{background:#142214;color:var(--creme);padding:16px 12px}
+#aide .aBoite{width:min(540px,100%);max-width:100%;margin:0;gap:12px}
+.aEntete{display:flex;align-items:center;justify-content:space-between;gap:12px;position:sticky;top:-16px;
+  z-index:2;background:#1B2A1B;padding:10px 0;border-bottom:1px solid #657459}
+.aEntete .aTitre{text-align:left;font-size:16px}.aEntete .cta{font-size:11px;min-height:44px;white-space:normal}
+#aideRegles{display:flex;flex-direction:column;gap:10px}
+.aRubrique{border:1px solid #657459;border-radius:12px;padding:12px;font-size:12px;line-height:1.55}
+.aRubrique summary{cursor:pointer;color:var(--or);font-size:13px;font-weight:800;min-height:24px}
+.aRubrique p,.aRubrique .lede{margin-top:10px}.aRubrique ul{padding-left:20px;margin-top:10px;color:#d8dfcf}
+.aRubrique li+li{margin-top:6px}.aRubrique #niveaux{margin:12px 0}
+.aRubrique .eyebrow{margin-top:12px}.aRubrique #recordAccueil{margin-top:10px}
+.aVersion{display:flex;align-items:center;justify-content:center;font-size:10px;color:#abb8a5}
+.aVersion #bordAcces{margin:0}#parcours{width:100%}
+@media(max-height:420px){#scrIntro{justify-content:flex-start;gap:10px;padding:16px}#scrIntro h1{margin-bottom:4px}}
+#choixDifficulte{width:min(440px,100%);display:flex;flex-direction:column;align-items:center;gap:10px;margin-top:4px}
+#choixDifficulte #niveauDit{font-size:11px;line-height:1.4;max-width:320px}
+@media(max-height:560px){#scrIntro{justify-content:flex-start;gap:10px;padding:16px}#scrIntro h1{margin-bottom:4px}}
+#scrDifficulte{gap:18px}
+#scrDifficulte h2{color:var(--creme);font-size:clamp(22px,5vw,32px)}
+#choixDifficulte #niveaux{flex-direction:column;width:min(320px,100%);gap:12px}
+#choixDifficulte .niveauBtn{min-height:52px;font-size:14px}
+#choixDifficulte #niveauDit{color:#d8dfcf}
 </style>
 </head>
 <body>
@@ -922,20 +951,21 @@ body.playing #etapeJeu{display:block}
 <div id="fete"></div>
 
 <div class="screen" id="scrIntro">
-  <div class="eyebrow">KHALAM <span id="versionIntro"></span></div>
+  <div class="eyebrow">KHALAM</div>
   <h1>LES QUATRE DAMES<span>L'Équilibre de Modou</span></h1>
   <div id="actionsPartie">
-    <button class="cta" id="btnStart">Nouvelle partie<small>Commencer au niveau 1</small></button>
-    <button class="cta ghost" id="btnReprendre" disabled>Reprendre<small>Aucune partie en cours</small></button>
+    <button class="cta" id="btnStart">Nouvelle partie</button>
+    <button class="cta ghost" id="btnReprendre" disabled>Reprendre la partie en cours<small>Aucune partie en cours</small></button>
   </div>
-  <p class="lede">Modou est maçon. Il monte sur le <b>chantier</b> pour gagner, puis il court payer ce que ses quatre Dames réclament : des fleurs, des soins, des prières, de l'argent.<br><br>
-  <b>Tout coûte. Et chaque jour, tout coûte plus cher.</b><br><br>
-  Une Dame dont la jauge tombe à zéro <b>s'en va</b>. Rattrape-la avant la sortie, ou choisis de la rappeler sur sa case pour <b>50 % de ton argent, minimum 100 F</b>.<br><br>
-  À la <b>troisième</b> qui est partie, tout s'arrête.<br><br>
-  Chaque Dame présente aide Modou : <b>repos, énergie, sérénité ou économies.</b><br><br>
-  <b>Ton score, c'est le nombre de jours tenus.</b><br><br>
-  <b>Touche un endroit</b> et Modou y va tout seul. Ou sers-toi du <b>joystick</b>.<br>
-  Entre dans un cercle et l'affaire se fait toute seule.</p>
+  <button class="cta ghost" id="btnAide">Comment jouer</button>
+
+</div>
+
+<div class="screen hide" id="scrDifficulte">
+  <div class="eyebrow">Nouvelle partie</div>
+  <h2>Choisis ta difficulté</h2>
+  <p class="lede">Touche une difficulté pour commencer au niveau 1.</p>
+  <div id="choixDifficulte">
   <div class="eyebrow">Difficulté</div>
   <div id="niveaux">
     <button class="niveauBtn actif" id="niv0">Facile</button>
@@ -943,15 +973,8 @@ body.playing #etapeJeu{display:block}
     <button class="niveauBtn" id="niv2">Très difficile</button>
   </div>
   <div id="niveauDit"></div>
-  <details id="parcours"><summary>Le parcours · 18 niveaux courts</summary>
-    <p>Chaque niveau dure 10 jours de jeu (environ 2 min 10 hors pauses et attentes).
-    Objectif : tenir sans perdre trois Dames. Ta progression est conservée à chaque niveau.</p>
-    <ol id="parcoursListe"></ol><p>Après le niveau 18 : survie libre et record de jours.</p>
-  </details>
-  <div id="recordAccueil"></div>
-  <div id="installer"></div>
-  <button class="cta ghost petit" id="btnAide">Comment jouer</button>
-  <button id="bordAcces" aria-label="•">&#8226;</button>
+  </div>
+  <button class="cta ghost" id="difficulteRetour">Retour au menu</button>
 </div>
 
 <div class="screen hide" id="scrFin">
@@ -981,7 +1004,35 @@ body.playing #etapeJeu{display:block}
 
 <div id="chapitre"></div>
 <div id="modeEmploi"></div>
-<div id="aide"></div>
+<div id="aide" role="dialog" aria-modal="true" aria-labelledby="titreAide">
+  <div class="aBoite">
+    <div class="aEntete"><h2 class="aTitre" id="titreAide">Comment jouer</h2>
+      <button class="cta ghost petit" id="aideFermer">Retour au menu</button></div>
+    <details class="aRubrique"><summary>Le principe du jeu</summary>
+  <p class="lede">Modou est maçon. Il monte sur le <b>chantier</b> pour gagner, puis il court payer ce que ses quatre Dames réclament : des fleurs, des soins, des prières, de l'argent.<br><br>
+  <b>Tout coûte. Et chaque jour, tout coûte plus cher.</b><br><br>
+  Une Dame dont la jauge tombe à zéro <b>s'en va</b>. Rattrape-la avant la sortie, ou choisis de la rappeler sur sa case pour <b>50 % de ton argent, minimum 100 F</b>.<br><br>
+  À la <b>troisième</b> qui est partie, tout s'arrête.<br><br>
+  Chaque Dame présente aide Modou : <b>repos, énergie, sérénité ou économies.</b><br><br>
+  <b>Ton score, c'est le nombre de jours tenus.</b><br><br>
+  <b>Touche un endroit</b> et Modou y va tout seul. Ou sers-toi du <b>joystick</b>.<br>
+  Entre dans un cercle et l'affaire se fait toute seule.</p>
+    </details>
+    <div id="aideRegles"></div>
+  <details id="parcours"><summary>Le parcours · 18 niveaux courts</summary>
+    <p>Chaque niveau dure 10 jours de jeu (environ 2 min 10 hors pauses et attentes).
+    Objectif : tenir sans perdre trois Dames. Ta progression est conservée à chaque niveau.</p>
+    <ol id="parcoursListe"></ol><p>Après le niveau 18 : survie libre et record de jours.</p>
+  </details>
+    <details class="aRubrique"><summary>Mon record</summary><div id="recordAccueil"></div></details>
+    <details class="aRubrique"><summary>Installer le jeu</summary>
+      <p>Installe le jeu depuis un navigateur compatible pour le retrouver sur ton écran d’accueil.</p>
+      <div id="installer"></div>
+    </details>
+    <div class="aBoutons"><button class="cta" id="btnTuto">Revoir le tutoriel</button></div>
+    <div class="aVersion"><span id="versionIntro"></span><button id="bordAcces" aria-label="•">&#8226;</button></div>
+  </div>
+</div>
 
 <div id="rot"><p class="lede">Tourne ton téléphone.<br>Le domaine se regarde du ciel.</p></div>
 <div id="build"></div>
@@ -1270,7 +1321,7 @@ function dameSVG(i){
    ========================================================= */
 'use strict';
 
-var BUILD_TAG = 'LQD-v12.1';
+var BUILD_TAG = 'LQD-v12.2';
 document.getElementById('build').textContent = BUILD_TAG;
 var vIntro = document.getElementById('versionIntro');
 if (vIntro) vIntro.textContent = BUILD_TAG;
@@ -1343,6 +1394,8 @@ function surAppui(e){
 function traiterAppui(e, n){
 
   while (n && n !== document.body){
+    if (n.id === 'btnStart'){ if (e.cancelable) e.preventDefault(); ouvrirChoixPartie(); return; }
+    if (n.id === 'difficulteRetour'){ if (e.cancelable) e.preventDefault(); fermerChoixPartie(); return; }
     if (n.id && /^rappelDame[0-3]$/.test(n.id)){
       if (e.cancelable) e.preventDefault();
       demanderRappel(Number(n.id.slice(-1))); return;
@@ -1360,8 +1413,8 @@ function traiterAppui(e, n){
     }
     if (n.id && n.id.indexOf('niv') === 0 && n.id.length === 4){
       if (e.cancelable) e.preventDefault();
-      try { choisirNiveau(parseInt(n.id.slice(3), 10)); majBoutonProgres(); majBoutonReprendre(); }
-      catch (err) {}
+      try { demarrerDifficulte(parseInt(n.id.slice(3), 10)); }
+      catch (err) { montrerErreur('choix de difficulté : ' + err.message); }
       return;
     }
     if (n.id === 'btnProgres2'){
@@ -1391,12 +1444,11 @@ function traiterAppui(e, n){
       } catch (err){ montrerErreur('reprise : ' + (err && err.message ? err.message : err)); }
       return;
     }
-    if (n.id === 'btnStart' || n.id === 'btnRejouer'){
+    if (n.id === 'btnRejouer'){
       if (e.cancelable) e.preventDefault();
       try {
         if (typeof audioInit === 'function') audioInit();
         if (typeof sonBouton === 'function') sonBouton();
-        if (n.id === 'btnStart' && partieEnAttente() && !window.confirm('Commencer une nouvelle partie au niveau 1 ? La partie en cours sera remplacée.')) return;
         demarrer();
       } catch (err) {
         montrerErreur('démarrage : ' + (err && err.message ? err.message : err));
@@ -1437,7 +1489,9 @@ function traiterAppui(e, n){
     }
     if (n.id === 'btnTuto'){
       if (e.cancelable) e.preventDefault();
-      try { sonBouton(); fermerLAide();
+      try {
+        if (partieEnAttente() && !window.confirm('Revoir le tutoriel commence une nouvelle partie. Remplacer la partie en cours ?')) return;
+        sonBouton(); fermerLAide();
             try { localStorage.removeItem('lqd_tuto_vu'); } catch (x) {} demarrer(); }
       catch (err){ montrerErreur('tuto : ' + (err && err.message ? err.message : err)); }
       return;
@@ -1627,6 +1681,28 @@ try {
   for (var q=0;q<NIVEAUX.length;q++) if (NIVEAUX[q].cle === sauve) iNiveau = q;
 } catch (e) {}
 function NIV(){ return NIVEAUX[iNiveau]; }
+function ouvrirChoixPartie(){
+  sonBouton();
+  majBoutonsNiveau();
+  document.getElementById('scrIntro').classList.add('hide');
+  document.getElementById('scrDifficulte').classList.remove('hide');
+  var choix = document.getElementById('niv' + iNiveau);
+  if (choix && choix.focus) choix.focus();
+}
+function fermerChoixPartie(){
+  document.getElementById('scrDifficulte').classList.add('hide');
+  document.getElementById('scrIntro').classList.remove('hide');
+  var bouton = document.getElementById('btnStart');
+  if (bouton && bouton.focus) bouton.focus();
+}
+function demarrerDifficulte(i){
+  if (i < 0 || i >= NIVEAUX.length || i !== Math.floor(i)) return;
+  if (document.getElementById('scrDifficulte').classList.contains('hide')) return;
+  if (partieEnAttente() && !window.confirm('Commencer une nouvelle partie en mode ' + NIVEAUX[i].nom + ' ? La partie en cours sera remplacée.')) return;
+  choisirNiveau(i);
+  fermerChoixPartie();
+  demarrer();
+}
 function choisirNiveau(i){
   noterAction('changement de niveau');
   iNiveau = Math.max(0, Math.min(NIVEAUX.length - 1, i));
@@ -5202,6 +5278,7 @@ function demanderLeMot(){
 }
 function ouvrirLeBord(){
   if (!accesOuvert() && !demanderLeMot()) return;
+  if (document.getElementById('aide').className === 'on') fermerLAide();
   construireTableau();
   document.getElementById('scrBord').classList.remove('hide');
 }
@@ -5496,8 +5573,8 @@ function majBoutonReprendre(){
   var d = partieEnAttente();
   b.classList.remove('hide');
   b.disabled = !d;
-  b.innerHTML = d ? 'Reprendre<small>Partie en cours · ' + nomEtape(numeroEtape(d.jour)) + ' · jour ' + d.jour + '</small>'
-    : 'Reprendre<small>Aucune partie en cours</small>';
+  b.innerHTML = d ? 'Reprendre la partie en cours<small>' + nomEtape(numeroEtape(d.jour)) + ' · jour ' + d.jour + '</small>'
+    : 'Reprendre la partie en cours<small>Aucune partie en cours</small>';
 }
 
 majBoutonsNiveau();
@@ -5670,22 +5747,27 @@ function ouvrirLAide(){
   noterAction('ouverture de l aide');
   var z = document.getElementById('aide');
   if (!z) return;
-  var h = '<div class="aBoite"><div class="aTitre">Comment jouer</div>';
+  var h = '';
   for (var i=0;i<AIDE.length;i++){
-    h += '<div class="aSection"><div class="aSujet">' + AIDE[i].t + '</div><ul>';
+    h += '<details class="aRubrique"><summary>' + AIDE[i].t + '</summary><ul>';
     for (var j=0;j<AIDE[i].l.length;j++) h += '<li>' + AIDE[i].l[j] + '</li>';
-    h += '</ul></div>';
+    h += '</ul></details>';
   }
-  h += '<div class="aBoutons">' +
-         '<button class="cta" id="btnTuto">Revoir le tutoriel</button>' +
-         '<button class="cta ghost" id="aideFermer">Fermer</button>' +
-       '</div></div>';
-  z.innerHTML = h;
+  document.getElementById('aideRegles').innerHTML = h;
+  majBoutonsNiveau(); afficherParcours(); afficherRecordAccueil(); majBlocInstall();
+  document.getElementById('scrIntro').classList.add('hide');
   z.className = 'on';
+  z.scrollTop = 0;
+  var retour = document.getElementById('aideFermer');
+  if (retour && retour.focus) retour.focus();
 }
 function fermerLAide(){
   var z = document.getElementById('aide');
-  if (z){ z.className = ''; z.innerHTML = ''; }
+  if (z) z.className = '';
+  document.getElementById('scrIntro').classList.remove('hide');
+  majBoutonReprendre();
+  var bouton = document.getElementById('btnAide');
+  if (bouton && bouton.focus) bouton.focus();
 }
 
 /* ---------- MISE À L'ÉCHELLE ---------- */

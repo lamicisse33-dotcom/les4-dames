@@ -229,11 +229,20 @@ test('Resume is available from day one and restores the exact game and difficult
   assert.equal(g.S.force,63);assert.equal(g.S.modou.x,60);assert.equal(g.NIV().cle,'tresdur');
   assert.equal(g.gamePaused,true);
 });
-test('New game cannot replace an existing save without confirmation',()=>{
-  const saved=data.get(g.CLE_PARTIE);g.confirm=()=>false;
+test('New game shows difficulty first; backing out and canceling preserve the save',()=>{
+  const saved=data.get(g.CLE_PARTIE), previousDifficulty=g.iNiveau;
+  g.confirm=()=>{throw Error('Opening the chooser must not prompt');};
   g.traiterAppui({cancelable:false}, {id:'btnStart'});
+  assert.equal(nodes.get('scrDifficulte').classList.contains('hide'),false);
   assert.equal(data.get(g.CLE_PARTIE),saved);
-  g.confirm=()=>true;g.traiterAppui({cancelable:false},{id:'btnStart'});
+  g.traiterAppui({cancelable:false},{id:'difficulteRetour'});
+  assert.equal(nodes.get('scrDifficulte').classList.contains('hide'),true);
+  assert.equal(data.get(g.CLE_PARTIE),saved);
+  g.traiterAppui({cancelable:false},{id:'btnStart'});
+  g.confirm=()=>false;g.traiterAppui({cancelable:false},{id:'niv1'});
+  assert.equal(data.get(g.CLE_PARTIE),saved);assert.equal(g.iNiveau,previousDifficulty);
+  g.confirm=()=>true;g.traiterAppui({cancelable:false},{id:'niv1'});
   assert.equal(g.S.jour,1);assert.equal(g.S.etapesTerminees,0);assert.equal(g.partieEnAttente().jour,1);
+  assert.equal(g.S.difficulte,'dur');assert.equal(nodes.get('scrDifficulte').classList.contains('hide'),true);
 });
 console.log(`TOTAL: ${checks} regression tests passed.`);
