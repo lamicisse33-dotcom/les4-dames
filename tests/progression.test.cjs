@@ -244,3 +244,33 @@ test('New game preserves the save until a difficulty starts it without a prompt'
   assert.equal(g.S.difficulte,'dur');assert.equal(nodes.get('scrDifficulte').classList.contains('hide'),true);
 });
 console.log(`TOTAL: ${checks} regression tests passed.`);
+
+test('Foyer charges once per recovering visit and enforces a full-day cooldown',()=>{
+  g.iNiveau=1;g.demarrer();g.S.force=70;g.S.argent=1000;
+  g.S.zone='CHANTIER';g.S.modou.x=g.CENTRE.x;g.S.modou.y=g.CENTRE.y;
+  g.vivreDansLaZone(.1);assert.equal(g.S.argent,898);assert.ok(g.S.force>70);
+  g.S.temps+=g.CFG.SEC_PAR_JOUR;g.vivreDansLaZone(.1);assert.equal(g.S.argent,898);
+  g.S.zone='CHANTIER';g.vivreDansLaZone(.1);assert.equal(g.S.argent,796);
+  g.S.zone='CHANTIER';g.vivreDansLaZone(.1);assert.equal(g.S.argent,796);
+  g.sauvegarder();const saved=JSON.parse(data.get(g.CLE_PARTIE));
+  g.S=g.migrerSauvegarde(saved);g.S.zone='CHANTIER';g.vivreDansLaZone(.1);
+  assert.equal(g.S.argent,796);
+});
+test('Foyer costs scale with ordinary wages; poverty never blocks recovery',()=>{
+  for(let i=0;i<3;i++){
+    g.iNiveau=i;state();const first=g.prixCoursesFoyer();
+    assert.equal(first,Math.round(102*g.NIV().paye));
+    g.S.jour=121;assert.ok(g.prixCoursesFoyer()>first);
+    assert.equal(g.prixCoursesFoyer(),Math.round(102*g.NIV().paye*g.statutActuel().paye));
+  }
+  g.demarrer();g.S.force=100;g.S.argent=20;g.S.zone='CHANTIER';
+  g.S.modou.x=g.CENTRE.x;g.S.modou.y=g.CENTRE.y;
+  g.vivreDansLaZone(.1);assert.equal(g.S.argent,20);
+  g.S.force=20;g.S.zone='CHANTIER';g.vivreDansLaZone(.1);
+  assert.equal(g.S.argent,0);assert.ok(g.S.force>20);
+  g.S.temps+=g.CFG.SEC_PAR_JOUR;g.S.zone='CHANTIER';g.S.force=20;
+  g.vivreDansLaZone(.1);assert.equal(g.S.argent,0);assert.ok(g.S.force>20);
+  delete g.S.dernierVersementFoyer;g.S.zone='CHANTIER';g.S.argent=1000;
+  g.vivreDansLaZone(.1);assert.ok(g.S.argent<1000);
+});
+console.log(`TOTAL: ${checks} regression tests passed.`);

@@ -1325,7 +1325,7 @@ function dameSVG(i){
    ========================================================= */
 'use strict';
 
-var BUILD_TAG = 'LQD-v12.7';
+var BUILD_TAG = 'LQD-v12.8';
 document.getElementById('build').textContent = BUILD_TAG;
 var vIntro = document.getElementById('versionIntro');
 if (vIntro) vIntro.textContent = BUILD_TAG;
@@ -1981,6 +1981,7 @@ function nouvelEtat(){
     jauges:[56,52,59,49],
     force:100,
     argent:CFG.ARGENT_DEPART,
+    dernierVersementFoyer:null,
     crise:[0,0,0,0],
     parties:[false,false,false,false],
     derniersAppels:[0,0,0,0],
@@ -2929,7 +2930,7 @@ function flash(txt, ms){
   elFlash.textContent = txt;
   elFlash.classList.add('on');
   clearTimeout(flashT);
-  flashT = setTimeout(function(){ elFlash.classList.remove('on'); }, ms || 1800);
+  flashT = setTimeout(function(){ elFlash.classList.remove('on'); }, Math.min(ms || 1800, 2600));
 }
 function volant(txt, coul){
   var d = document.createElement('div');
@@ -3274,7 +3275,7 @@ function majScene(dt){
     S.jauges[sc.iD] = Math.min(CFG.MAX_JAUGE, S.jauges[sc.iD] + CFG.GAIN_ACHAT * rend);
     S.force = Math.max(0, S.force - CFG.COUT_ACHAT);
     sonCaisse();
-    guider('achat', 'Voil\u00e0. Elle est servie. Je repasse au foyer.', 3000);
+    guider('achat', 'Au foyer !', 3000);
     S.foyer = false;
     volant('-' + sc.prix + ' F', '#FF7B92');
   }
@@ -3872,7 +3873,7 @@ function commencerExode(i){
     if (b) b.textContent = D.adieu;
     if (damesEl[i]) damesEl[i].classList.add('parle');
     // la consigne s'écrit, elle ne se dit pas : une voix de moins à attendre
-    flash('Achète-lui ' + D.besoin + ' avant la sortie. Après, son rappel coûtera la moitié de ton argent (minimum 100 F).', 4200);
+    flash('Vite : ' + D.besoin + ' avant son départ !', 4200);
     setTimeout(function(){
       if (b && S && S.exode[i]) b.textContent = 'Je m\u2019en vais\u2026';
     }, 4600);
@@ -4027,7 +4028,7 @@ function faitPartir(i){
     setTimeout(function(){ if (S.enCours) finir('abandon'); }, 1400);
   } else {
     var reste = CFG.SORTIES_FATALES - S.sorties;
-    flash(DAMES[i].nom + ' est partie. Avantage perdu : ' + AVANTAGES[i].texte + '. Rappelle-la sur sa case si tu le souhaites.', 4200);
+    flash(DAMES[i].nom + ' est partie. Rappel sur sa case.', 4200);
     noter(S.jour, 'Avantage perdu : ' + AVANTAGES[i].texte + '.');
   }
 }
@@ -4244,6 +4245,19 @@ function deplacerModou(dt){
 
 /* tout ce qui se passe dans un lieu : entrer, acheter, payer, réparer.
    Isolé pour que ça marche aussi pendant l'attente d'un jour chômé. */
+function prixCoursesFoyer(){
+  return Math.round(2 * CFG.GAIN_CHANTIER * statutActuel().paye * NIV().paye);
+}
+function contribuerAuFoyer(){
+  if (S.force >= 100) return;
+  if (S.dernierVersementFoyer != null &&
+      S.temps - S.dernierVersementFoyer < CFG.SEC_PAR_JOUR) return;
+  var somme = Math.min(Math.max(0, S.argent), prixCoursesFoyer());
+  S.argent -= somme;
+  S.dernierVersementFoyer = S.temps;
+  if (somme > 0) flash('Courses du foyer : −' + Math.round(somme) + ' F', 2000);
+  sauvegarder();
+}
 function vivreDansLaZone(dt){
   var estNuit = S.nuit > 0.5;
   // zone
@@ -4251,6 +4265,7 @@ function vivreDansLaZone(dt){
   if (z !== S.zone){
     if (z) sonEntree(); else sonSortie();
     S.zone = z;
+    if (z === 'CENTRE') contribuerAuFoyer();
   }
   if (S.cool > 0) S.cool -= dt;
   if (S.sortieVue > 0) S.sortieVue -= dt;
@@ -4264,7 +4279,7 @@ function vivreDansLaZone(dt){
   }
 
   if (S.zone === 'CENTRE'){
-    guider('foyer', 'Ici c\u2019est le foyer. Je reprends des forces.', 3000);
+    guider('foyer', 'Je reprends des forces.', 3000);
     if (S.force < 99){
       tickSouffle += dt;
       if (tickSouffle > 0.9){ tickSouffle = 0; sonSouffle(); }
@@ -4288,7 +4303,7 @@ function vivreDansLaZone(dt){
         S.cool = n3 ? 3 : 6;
       }
     } else {
-      guider('chantier', 'Ici je gagne ma journ\u00e9e. Je reste et l\u2019argent monte.', 3200);
+      guider('chantier', 'Je travaille.', 3200);
     var rendT = 1;
     if (S.force < CFG.SEUIL_EPUISE) rendT = CFG.RENDEMENT_EPUISE;
     else if (S.force < CFG.SEUIL_FATIGUE) rendT = CFG.RENDEMENT_FATIGUE;
@@ -4345,7 +4360,7 @@ function vivreDansLaZone(dt){
           'Je dois d\u2019abord passer au foyer, au centre des quatre lits.',
           'Au foyer d\u2019abord.', 3200);
         if (n2 === 1){
-          flash('Retourne au foyer, au centre des quatre lits, avant d\u2019entrer ici.', 3000);
+          flash('Passe d’abord au foyer.', 3000);
           montrerLaRoute();
         } else {
           // même la centième fois, on dit pourquoi : sinon la maison
@@ -4540,8 +4555,8 @@ function tourDeBoucle(ts){
   var estNuit = S.nuit > 0.5;
   if (estNuit !== S.etaitNuit){
     S.etaitNuit = estNuit;
-    if (estNuit){ note(220,0.8,'sine',0.2,0,BUS_EFF,165); flash('La nuit tombe. Le chantier ferme.', 2000); }
-    else { note(392,0.7,'sine',0.2,0,BUS_EFF,523); flash('Le jour se l\u00e8ve. Le chantier rouvre.', 2000); }
+    if (estNuit){ note(220,0.8,'sine',0.2,0,BUS_EFF,165); flash('Chantier fermé.', 2000); }
+    else { note(392,0.7,'sine',0.2,0,BUS_EFF,523); flash('Chantier ouvert.', 2000); }
   }
   if (voileNuit) voileNuit.style.opacity = (0.62 * S.nuit).toFixed(3);
   if (voileCrep) voileCrep.style.opacity = (0.5 * Math.sin(Math.PI * S.nuit)).toFixed(3);
@@ -5683,6 +5698,12 @@ function fermerModeEmploi(){
    L'AIDE — tout ce que le jeu attend du joueur, en clair
    ========================================================= */
 var AIDE = [
+  { t:'Les courses du foyer', l:[
+    'Revenir au foyer pour récupérer coûte deux secondes de salaire normal, arrondies au franc.',
+    'La contribution suit le grade et la difficulté, sans les primes ni les bonus de travail.',
+    'Un seul versement par visite, avec une journée de jeu minimum entre deux versements.',
+    'Modou donne au maximum ce qu’il possède et peut toujours récupérer, même sans argent.'
+  ]},
   { t:'Ce que les Dames apportent', l:[
     'Première Dame — Santé : récupération au foyer augmentée de 20 %.',
     'Deuxième Dame — Amour : fatigue des déplacements réduite de 15 %.',
