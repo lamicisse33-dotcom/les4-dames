@@ -163,7 +163,7 @@ test('Benefits affect actual recovery, walking fatigue and shopping prices',()=>
   g.deplacerModou(.05);const withoutLove=100-g.S.force;
   assert.ok(withLove>0);assert.ok(Math.abs(withLove/withoutLove-.85)<1e-9);g.joyFin();
   const discounted=g.prixDuJour('AMOUR');g.S.parties[3]=true;
-  assert.equal(discounted,36);assert.equal(g.prixDuJour('AMOUR'),40);
+  assert.equal(discounted,63);assert.equal(g.prixDuJour('AMOUR'),70);
 });
 test('Recall costs at least half the exact balance, rounded up, with a 100 F minimum',()=>{
   state();
@@ -274,3 +274,35 @@ test('Foyer costs scale with ordinary wages; poverty never blocks recovery',()=>
   g.vivreDansLaZone(.1);assert.ok(g.S.argent<1000);
 });
 console.log(`TOTAL: ${checks} regression tests passed.`);
+
+/* ── 30 octobre 2026 : jalousie, congé ×2, prix liés au grade, dialogue bref, partage ── */
+test('Jealousy: a neglected Dame drains faster only while another is pampered',()=>{
+  state(40);g.S.jauges=[85,30,60,60];
+  assert.equal(JSON.stringify(g.jalouses()),JSON.stringify([false,true,false,false]));
+  g.S.jauges=[70,30,60,60];assert.equal(JSON.stringify(g.jalouses()),JSON.stringify([false,false,false,false]));
+  g.S.jauges=[85,30,60,60];g.S.parties[0]=true;assert.equal(JSON.stringify(g.jalouses()),JSON.stringify([false,false,false,false]));
+  g.S.parties[0]=false;g.S.exode[0]={retour:true};assert.equal(JSON.stringify(g.jalouses()),JSON.stringify([false,false,false,false]));
+});
+test('Jealousy is applied in the loop at the configured rate and announced once',()=>{
+  g.demarrer();g.gamePaused=false;g.S.force=100;g.S.modou.x=g.CENTRE.x;g.S.modou.y=g.CENTRE.y;g.S.zone='CENTRE';
+  g.S.jauges=[85,30,60,60];g.last=1000;g.tourDeBoucle(1050);const avecJalousie=30-g.S.jauges[1];
+  g.S.jauges=[70,30,60,60];g.last=1000;g.tourDeBoucle(1050);const sans=30-g.S.jauges[1];
+  assert.ok(avecJalousie>0&&sans>0);assert.ok(Math.abs(avecJalousie/sans-g.CFG.JALOUSIE_USURE)<0.02,avecJalousie/sans);
+  assert.equal(g.S.vu.jalousie,true);assert.ok(g.S.journal.some(j=>/jalousie/.test(j.texte)));
+});
+test('Paid leave doubles instead of quadrupling; prices follow the grade',()=>{
+  assert.equal(g.CFG.PRIME_CONGE,2);
+  state(1);const j1=g.prixDuJour('TEMPLE');state(121);
+  assert.equal(g.prixDuJour('TEMPLE'),Math.round(45*Math.pow(1+g.NIV().inflation,g.palierActuel())*Math.pow(g.statutActuel().paye,g.CFG.PRIX_GRADE)*g.soutienArgent()));
+  assert.ok(g.prixDuJour('TEMPLE')>j1);
+});
+test('The four-line crisis sketch plays once; later crises only state the need',()=>{
+  const lignes=[];g.parler=(t)=>lignes.push(t);state();
+  g.lancerLeDialogue(1);assert.equal(lignes.length,4);assert.equal(g.S.vu.dialogueComplet,true);
+  lignes.length=0;g.lancerLeDialogue(0);assert.equal(lignes.length,1);assert.equal(lignes[0],g.DAMES[0].suite);g.parler=()=>{};
+});
+test('Share text names the days held and the difficulty',()=>{
+  g.iNiveau=0;state(37);assert.match(g.texteDePartage(),/Modou a tenu 37 jours \(Facile\)/);
+  const actions=html.match(/<div class="screen hide" id="scrFin">([\s\S]*?)<\/div>\s*<\/div>/)[1];assert.ok(actions.includes('id="btnPartager"'));
+});
+console.log(`TOTAL: ${checks} tests passed, 30 octobre inclus.`);
