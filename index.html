@@ -45,6 +45,8 @@ html,body{height:100%;overflow:hidden;background:#1B2A1B;font-family:var(--ui);c
   -webkit-user-select:none;user-select:none;-webkit-text-size-adjust:100%;overscroll-behavior:none}
 
 #scene{position:fixed;inset:0;overflow:hidden;background:#1B2A1B;touch-action:none}
+/* 30 oct. 2026 : le domaine entier tient sur l'écran ; autour, de l'herbe plutôt qu'un bandeau noir. */
+#scene{background:#6FB862}
 #board{position:absolute;left:0;top:0;transform-origin:0 0;will-change:transform}
 #board svg.carte{position:absolute;inset:0;width:100%;height:100%;display:block}
 #nuit{position:absolute;inset:0;z-index:1;pointer-events:none;opacity:0;
@@ -1116,32 +1118,62 @@ document.addEventListener('click', function(e){
    LA CARTE DU DOMAINE — repère 1400 x 800
    Le tracé des allées ici DOIT correspondre à VOIES dans game.js
    ========================================================= */
+/* =========================================================
+   LE PLAN DU DOMAINE — 30 octobre 2026, demandé par Lamine :
+   le foyer au centre exact, les quatre maisons dans les coins à ÉGALE
+   DISTANCE du foyer, le chantier en haut au centre, et tout visible d'un
+   coup sur l'écran. Un seul jeu de nombres, repère 1400 x 800 : le dessin,
+   les allées, les portes, les cercles et les trajets en découlent tous.
+   Pour déplacer les maisons, on change DX et DY ici, nulle part ailleurs.
+   ========================================================= */
+var PLAN = (function(){
+  var C = { x:700, y:400 };             // le foyer, centre du domaine
+  var DX = 370, DY = 155;               // écart des maisons au foyer : les quatre sont à la même distance
+  var ANNEAU = { x0:130, y0:110, x1:1270, y1:690, rx:54 };
+  var PORTE_Y = 66;                      // la porte est sous la maison (dessin), à 66 du centre
+  var maison = function(sx, sy){
+    var x = C.x + sx*DX, y = C.y + sy*DY;
+    return { x:x, y:y, porte:{ x:x, y:y + PORTE_Y } };
+  };
+  return {
+    C:C, DX:DX, DY:DY, ANNEAU:ANNEAU, PORTE_Y:PORTE_Y,
+    CHANTIER:{ x:700, y:60, arret:{ x:700, y:95 } },
+    AMOUR:maison(-1,-1), TEMPLE:maison(1,-1), BANQUE:maison(-1,1), SANTE:maison(1,1),
+    PLACE:{ w:296, h:246 },
+    LITS:[[C.x-91, C.y-76],[C.x+91, C.y-76],[C.x-91, C.y+76],[C.x+91, C.y+76]],
+    pct:function(v, axe){ return +(axe === 'y' ? v/8 : v/14).toFixed(2); }
+  };
+})();
+
 function carteSVG(){
   var s = '<svg class="carte" viewBox="0 0 1400 800" xmlns="http://www.w3.org/2000/svg">';
 
   s += '<rect width="1400" height="800" fill="#79C46B"/>';
-  var taches = [[70,330],[1330,330],[700,760],[240,760],[1160,760],[70,600],[1330,600]];
+  var taches = [[60,400],[1340,400],[700,760],[200,40],[1200,40],[560,220],[840,220],[560,590],[840,590]];
   for (var t=0;t<taches.length;t++){
     s += '<ellipse cx="'+taches[t][0]+'" cy="'+taches[t][1]+'" rx="66" ry="30" fill="#8AD177" opacity=".65"/>';
   }
 
   // ---------- ALLÉES ----------
+  var A = PLAN.ANNEAU, Cc = PLAN.C;
+  var seg = function(a, b){ return '<path d="M' + a.x + ' ' + a.y + ' L' + b.x + ' ' + b.y + '"/>'; };
   var trace =
-    '<rect x="130" y="150" width="1140" height="530" rx="54"/>' +   // anneau
-    '<path d="M700 150 L700 680"/>' +                               // allée verticale
-    '<path d="M130 415 L1270 415"/>' +                              // allée horizontale
-    '<path d="M700 150 L700 95"/>' +                                 // montée vers le chantier
-    '<path d="M400 415 L400 330"/>' +                                // allée du jardin AMOUR
-    '<path d="M1000 415 L1000 330"/>' +                              // allée du TEMPLE
-    '<path d="M400 680 L400 600"/>' +                                // allée de la BANQUE
-    '<path d="M1000 680 L1000 600"/>';                               // allée de la SANTÉ
+    '<rect x="' + A.x0 + '" y="' + A.y0 + '" width="' + (A.x1-A.x0) + '" height="' + (A.y1-A.y0) + '" rx="' + A.rx + '"/>' +   // anneau
+    seg({x:Cc.x, y:A.y0}, {x:Cc.x, y:A.y1}) +                        // allée verticale, par le foyer
+    seg({x:A.x0, y:Cc.y}, {x:A.x1, y:Cc.y}) +                        // allée horizontale, par le foyer
+    seg({x:Cc.x, y:A.y0}, PLAN.CHANTIER.arret) +                      // montée vers le chantier
+    seg({x:PLAN.AMOUR.x,  y:Cc.y}, PLAN.AMOUR.porte) +                // allée du jardin AMOUR (porte vers le centre)
+    seg({x:PLAN.TEMPLE.x, y:Cc.y}, PLAN.TEMPLE.porte) +               // allée du TEMPLE
+    seg({x:PLAN.BANQUE.x, y:A.y1}, PLAN.BANQUE.porte) +               // allée de la BANQUE (porte vers l'anneau du bas)
+    seg({x:PLAN.SANTE.x,  y:A.y1}, PLAN.SANTE.porte);                 // allée de la SANTÉ
   s += '<g stroke="#CBB88C" stroke-width="66" fill="none" stroke-linecap="round">' + trace + '</g>';
   s += '<g stroke="#EADCB8" stroke-width="52" fill="none" stroke-linecap="round">' + trace + '</g>';
 
   // ---------- PLACE CENTRALE ----------
-  s += '<rect x="552" y="417" width="296" height="246" rx="26" fill="#CBB88C"/>';
-  s += '<rect x="562" y="427" width="276" height="226" rx="20" fill="#DCD3C4"/>';
-  var lits = [[609,464],[791,464],[609,616],[791,616]];
+  var Pw = PLAN.PLACE.w, Ph = PLAN.PLACE.h;
+  s += '<rect x="' + (Cc.x-Pw/2) + '" y="' + (Cc.y-Ph/2) + '" width="' + Pw + '" height="' + Ph + '" rx="26" fill="#CBB88C"/>';
+  s += '<rect x="' + (Cc.x-Pw/2+10) + '" y="' + (Cc.y-Ph/2+10) + '" width="' + (Pw-20) + '" height="' + (Ph-20) + '" rx="20" fill="#DCD3C4"/>';
+  var lits = PLAN.LITS;
   for (var L=0;L<lits.length;L++){
     s += '<g transform="translate('+lits[L][0]+','+lits[L][1]+')">';
     s += '<rect x="-38" y="-30" width="76" height="60" rx="10" fill="#8C6A4A" stroke="#5B4430" stroke-width="4"/>';
@@ -1150,7 +1182,7 @@ function carteSVG(){
   }
 
   // ---------- AMOUR : maison rose et jardin fleuri (400,270) ----------
-  s += '<g transform="translate(400,270)">';
+  s += '<g transform="translate(' + PLAN.AMOUR.x + ',' + PLAN.AMOUR.y + ')">';
   s += '<rect x="-140" y="-95" width="280" height="190" rx="24" fill="#A9E27C" stroke="#4E8F45" stroke-width="6"/>';
   var fl = [[-112,-64],[-78,-76],[-46,-62],[104,-66],[112,-32],[-116,50],[-84,68],[104,52],[72,72],[-50,76],[6,80],[46,-80]];
   var cf = ['#FF7FB0','#FFD166','#FF5C7A','#FFFFFF','#FF9EC4'];
@@ -1166,7 +1198,7 @@ function carteSVG(){
   s += '</g>';
 
   // ---------- TEMPLE : blanc à coupoles (1000,270) ----------
-  s += '<g transform="translate(1000,270)">';
+  s += '<g transform="translate(' + PLAN.TEMPLE.x + ',' + PLAN.TEMPLE.y + ')">';
   s += '<rect x="-140" y="-95" width="280" height="190" rx="24" fill="#DCE9CE" stroke="#4E8F45" stroke-width="6"/>';
   s += '<rect x="-90" y="-38" width="180" height="94" rx="12" fill="#FFFFFF" stroke="#2B2118" stroke-width="5"/>';
   s += '<rect x="-90" y="-38" width="180" height="20" rx="10" fill="#EFEFE6" stroke="#2B2118" stroke-width="5"/>';
@@ -1183,7 +1215,7 @@ function carteSVG(){
   s += '</g>';
 
   // ---------- BANQUE : colonnes dorées (400,540) ----------
-  s += '<g transform="translate(400,540)">';
+  s += '<g transform="translate(' + PLAN.BANQUE.x + ',' + PLAN.BANQUE.y + ')">';
   s += '<rect x="-140" y="-95" width="280" height="190" rx="24" fill="#D9E7C4" stroke="#4E8F45" stroke-width="6"/>';
   s += '<rect x="-96" y="-34" width="192" height="98" rx="10" fill="#FFF0C2" stroke="#2B2118" stroke-width="5"/>';
   s += '<path d="M-106 -34 L0 -82 L106 -34 Z" fill="#F2B705" stroke="#2B2118" stroke-width="5" stroke-linejoin="round"/>';
@@ -1197,7 +1229,7 @@ function carteSVG(){
   s += '</g>';
 
   // ---------- SANTÉ : clinique à toit végétal (1000,540) ----------
-  s += '<g transform="translate(1000,540)">';
+  s += '<g transform="translate(' + PLAN.SANTE.x + ',' + PLAN.SANTE.y + ')">';
   s += '<rect x="-140" y="-95" width="280" height="190" rx="24" fill="#CFE8C0" stroke="#4E8F45" stroke-width="6"/>';
   s += '<rect x="-98" y="-44" width="196" height="108" rx="14" fill="#FFFFFF" stroke="#2B2118" stroke-width="5"/>';
   s += '<rect x="-98" y="-44" width="196" height="42" rx="14" fill="#5FD98A" stroke="#2B2118" stroke-width="5"/>';
@@ -1211,7 +1243,7 @@ function carteSVG(){
   s += '</g>';
 
   // ---------- CHANTIER (700,70) ----------
-  s += '<g transform="translate(700,70)">';
+  s += '<g transform="translate(' + PLAN.CHANTIER.x + ',' + PLAN.CHANTIER.y + ')">';
   s += '<rect x="-180" y="-62" width="360" height="130" rx="20" fill="#E8C98A" stroke="#B08A4A" stroke-width="6"/>';
   s += '<rect x="-150" y="-40" width="104" height="96" rx="6" fill="#C9C2B4" stroke="#2B2118" stroke-width="5"/>';
   for (var b=0;b<3;b++){
@@ -1231,20 +1263,20 @@ function carteSVG(){
   s += '</g>';
 
   // ---------- seuils devant chaque porte ----------
-  var portes = [[400,336],[1000,336],[400,606],[1000,606]];
+  var portes = ['AMOUR','TEMPLE','BANQUE','SANTE'].map(function(k){ return [PLAN[k].porte.x, PLAN[k].porte.y]; });
   for (var pp=0;pp<portes.length;pp++){
     s += '<rect x="'+(portes[pp][0]-30)+'" y="'+(portes[pp][1]-9)+'" width="60" height="18" rx="7" ' +
          'fill="#B08A4A" stroke="#2B2118" stroke-width="3"/>';
   }
 
   // ---------- marques au sol des points d'arrêt ----------
-  var arrets = [[400,336],[1000,336],[400,606],[1000,606],[700,100]];
+  var arrets = portes.concat([[PLAN.CHANTIER.arret.x, PLAN.CHANTIER.arret.y]]);
   for (var a=0;a<arrets.length;a++){
     s += '<circle cx="'+arrets[a][0]+'" cy="'+arrets[a][1]+'" r="46" fill="none" stroke="#FFFFFF" stroke-width="4" opacity=".5" stroke-dasharray="10 9"/>';
   }
 
   // ---------- arbres, loin des allées ----------
-  var arbres = [[210,240],[600,240],[800,240],[1190,240],[210,600],[1190,600],[560,760],[840,760]];
+  var arbres = [[560,230],[840,230],[560,585],[840,585],[60,250],[1340,250],[60,560],[1340,560],[330,760],[1070,760]];
   for (var r=0;r<arbres.length;r++){
     s += '<circle cx="'+arbres[r][0]+'" cy="'+(arbres[r][1]+7)+'" r="24" fill="rgba(0,0,0,.15)"/>';
     s += '<circle cx="'+arbres[r][0]+'" cy="'+arbres[r][1]+'" r="24" fill="#5FA84E" stroke="#3E7635" stroke-width="5"/>';
@@ -1776,7 +1808,7 @@ var DAMES = [
     retour:'La polygamie, ce n\u2019est pas pour tout le monde. Maintenant tu le sais.',
     adieu:'La polygamie n\u2019est pas pour tout le monde.',
     voix:{ hauteur:0.92, vitesse:0.84 },
-    usure:0.58, muette:false, bed:{x:43.5,y:58.0}, col:'--sante'  },
+    usure:0.58, muette:false, bed:{x:PLAN.pct(PLAN.LITS[0][0]),y:PLAN.pct(PLAN.LITS[0][1],'y')}, col:'--sante'  },
   { id:2, nom:'Deuxième Dame',  lieu:'AMOUR',  cri:'Tu ne me vois plus.',
     suite:'Am\u00e8ne-moi des fleurs.',
     dernier:'Modou ! Mes fleurs, ou je m\u2019en vais.',
@@ -1784,7 +1816,7 @@ var DAMES = [
     retour:'Je n\u2019ai rien fait, moi. C\u2019est toi qui avais promis des fleurs chaque jour. Tiens parole.',
     adieu:'Tu avais promis des fleurs.',
     voix:{ hauteur:1.22, vitesse:0.98 },
-    usure:0.68, muette:false, bed:{x:56.5,y:58.0}, col:'--amour'  },
+    usure:0.68, muette:false, bed:{x:PLAN.pct(PLAN.LITS[1][0]),y:PLAN.pct(PLAN.LITS[1][1],'y')}, col:'--amour'  },
   { id:3, nom:'Troisième Dame', lieu:'TEMPLE', cri:'…',
     suite:'J\u2019ai besoin de pri\u00e8res.',
     dernier:'Modou\u2026 mes pri\u00e8res. Je ne demanderai plus.',
@@ -1792,7 +1824,7 @@ var DAMES = [
     retour:'C\u2019est mieux pour toi que je sois \u00e0 tes c\u00f4t\u00e9s. Tu le verras.',
     adieu:'Tu verras ce que c\u2019est, sans moi.',
     voix:{ hauteur:1.08, vitesse:0.76 },
-    usure:0.48, muette:true,  bed:{x:43.5,y:77.0}, col:'--spirit' },
+    usure:0.48, muette:true,  bed:{x:PLAN.pct(PLAN.LITS[2][0]),y:PLAN.pct(PLAN.LITS[2][1],'y')}, col:'--spirit' },
   { id:4, nom:'Quatrième Dame', lieu:'BANQUE', cri:'Il me faut ça demain.',
     suite:'J\u2019ai besoin d\u2019argent.',
     dernier:'Modou ! Mon argent, ou je m\u2019en vais !',
@@ -1800,7 +1832,7 @@ var DAMES = [
     retour:'Tu as dit \u00e0 mes parents que tu ferais de moi une princesse. Respecte ta parole.',
     adieu:'Tu avais donn\u00e9 ta parole \u00e0 mes parents.',
     voix:{ hauteur:1.42, vitesse:1.12 },
-    usure:0.84, muette:false, bed:{x:56.5,y:77.0}, col:'--argent' }
+    usure:0.84, muette:false, bed:{x:PLAN.pct(PLAN.LITS[3][0]),y:PLAN.pct(PLAN.LITS[3][1],'y')}, col:'--argent' }
 ];
 
 var AVANTAGES = [
@@ -1865,44 +1897,50 @@ function demanderRappel(i){
 /* x,y = centre de la zone · px,py = porte · cx,cy = comptoir (où le vendeur s'arrête) */
 var LIEUX = {
   AMOUR:  { nom:'AMOUR',  icone:'\uD83D\uDC90', objet:'\uD83D\uDC90', prix:70, col:'--amour',
-            x:28.6, y:42.0, bx:28.6, by:33.8, mur:'#FFDCEB', sol:'#E9B9CE', ly:19.5,
+            x:PLAN.pct(PLAN.AMOUR.porte.x), y:PLAN.pct(PLAN.AMOUR.porte.y,'y'), bx:PLAN.pct(PLAN.AMOUR.x), by:PLAN.pct(PLAN.AMOUR.y,'y'), mur:'#FFDCEB', sol:'#E9B9CE', ly:PLAN.pct(PLAN.AMOUR.y-114,'y'),
             qui:'Tata Rose', mot:'Des fleurs pour la deuxi\u00e8me !',
             vend:{peau:'#8A5A3B', hab:'#FF7FB0', hab2:'#E4568C', tete:'#FF5C7A', barbe:0, lun:0} },
   TEMPLE: { nom:'TEMPLE', icone:'\uD83D\uDCFF', objet:'\uD83D\uDCFF', prix:45, col:'--spirit',
-            x:71.4, y:42.0, bx:71.4, by:33.8, mur:'#EDEFFF', sol:'#C4CBEA', ly:19.5,
+            x:PLAN.pct(PLAN.TEMPLE.porte.x), y:PLAN.pct(PLAN.TEMPLE.porte.y,'y'), bx:PLAN.pct(PLAN.TEMPLE.x), by:PLAN.pct(PLAN.TEMPLE.y,'y'), mur:'#EDEFFF', sol:'#C4CBEA', ly:PLAN.pct(PLAN.TEMPLE.y-114,'y'),
             qui:'Le Vieux Serigne', mot:'Qu\u2019elle trouve la paix.',
             vend:{peau:'#8A5A3B', hab:'#F2F0E6', hab2:'#DAD6C4', tete:'#FFFFFF', barbe:1, lun:0} },
   BANQUE: { nom:'BANQUE', icone:'\uD83D\uDCB5', objet:'\uD83D\uDCB5', prix:160, col:'--argent',
-            x:28.6, y:75.8, bx:28.6, by:67.5, mur:'#FFF3D2', sol:'#E5CF95', ly:88.0,
+            x:PLAN.pct(PLAN.BANQUE.porte.x), y:PLAN.pct(PLAN.BANQUE.porte.y,'y'), bx:PLAN.pct(PLAN.BANQUE.x), by:PLAN.pct(PLAN.BANQUE.y,'y'), mur:'#FFF3D2', sol:'#E5CF95', ly:PLAN.pct(PLAN.BANQUE.y+150,'y'),
             qui:'Monsieur Gomis', mot:'Elle a d\u00e9j\u00e0 tout d\u00e9pens\u00e9.',
             vend:{peau:'#6B4326', hab:'#2F3B52', hab2:'#1F293B', tete:'#2F3B52', barbe:0, lun:1} },
   SANTE:  { nom:'SANTÉ',  icone:'\uD83D\uDC89', objet:'\uD83D\uDC89', prix:100, col:'--sante',
-            x:71.4, y:75.8, bx:71.4, by:67.5, mur:'#E8FBEF', sol:'#B8E3C8', ly:88.0,
+            x:PLAN.pct(PLAN.SANTE.porte.x), y:PLAN.pct(PLAN.SANTE.porte.y,'y'), bx:PLAN.pct(PLAN.SANTE.x), by:PLAN.pct(PLAN.SANTE.y,'y'), mur:'#E8FBEF', sol:'#B8E3C8', ly:PLAN.pct(PLAN.SANTE.y+150,'y'),
             qui:'Docteur Séka', mot:'Elle doit prendre \u00e7a chaque jour.',
             vend:{peau:'#8A5A3B', hab:'#FFFFFF', hab2:'#E6EFEA', tete:'#FFFFFF', barbe:0, lun:1} }
 };
-var CHANTIER = { x:50.0, y:12.5, px:44.3, py:7.5, cx:46.6, cy:11.5, ly:20.5,
+var CHANTIER = { x:50.0, y:PLAN.pct(PLAN.CHANTIER.arret.y,'y'), px:44.3, py:PLAN.pct(PLAN.CHANTIER.y,'y'), cx:46.6, cy:PLAN.pct(PLAN.CHANTIER.y+32,'y'), ly:PLAN.pct(PLAN.CHANTIER.y+100,'y'),
                  qui:'Le Patron', mot:'Tu es en retard, Modou.',
                  vend:{peau:'#6B4326', hab:'#FF8A3D', hab2:'#D96A22', tete:'#FFC53D', barbe:0, lun:0} };
-var CENTRE = { x:50.0, y:67.5, ly:88.0 };
+var CENTRE = { x:50.0, y:PLAN.pct(PLAN.C.y,'y'), ly:PLAN.pct(PLAN.C.y+PLAN.PLACE.h/2+40,'y') };
+var ALLEE_Y = CENTRE.y;   // l'allée horizontale passe par le foyer : c'est le chemin de sortie des Dames
 
 /* ---------- LE RÉSEAU D'ALLÉES (repère 1400 x 800) ----------
    Les mêmes segments servent à trois choses : dessiner la carte,
    empêcher Modou de couper à travers les jardins, et calculer ses trajets. */
-var NOEUDS = {
-  TL:[130,150],  TR:[1270,150],  BL:[130,680],  BR:[1270,680],
-  HE:[700,150],  BF:[700,680],   GO:[130,415],  DR:[1270,415],
-  CX:[700,415],  FO:[700,540],   CH:[700,95],
-  AK:[400,415],  AP:[400,330],   TK:[1000,415], TP:[1000,330],
-  BK:[400,680],  BP:[400,600],   SK:[1000,680], SP:[1000,600]
-};
+var NOEUDS = (function(){
+  var A = PLAN.ANNEAU, C = PLAN.C;
+  return {
+    TL:[A.x0,A.y0],  TR:[A.x1,A.y0],  BL:[A.x0,A.y1],  BR:[A.x1,A.y1],
+    HE:[C.x,A.y0],   BF:[C.x,A.y1],   GO:[A.x0,C.y],   DR:[A.x1,C.y],
+    CX:[C.x,C.y],    CH:[PLAN.CHANTIER.arret.x, PLAN.CHANTIER.arret.y],
+    AK:[PLAN.AMOUR.x,C.y],   AP:[PLAN.AMOUR.porte.x,PLAN.AMOUR.porte.y],
+    TK:[PLAN.TEMPLE.x,C.y],  TP:[PLAN.TEMPLE.porte.x,PLAN.TEMPLE.porte.y],
+    BK:[PLAN.BANQUE.x,A.y1], BP:[PLAN.BANQUE.porte.x,PLAN.BANQUE.porte.y],
+    SK:[PLAN.SANTE.x,A.y1],  SP:[PLAN.SANTE.porte.x,PLAN.SANTE.porte.y]
+  };
+})();
 var ARETES = [
   ['TL','HE'],['HE','TR'],
   ['TL','GO'],['GO','BL'],
   ['TR','DR'],['DR','BR'],
   ['BL','BK'],['BK','BF'],['BF','SK'],['SK','BR'],
   ['GO','AK'],['AK','CX'],['CX','TK'],['TK','DR'],
-  ['HE','CX'],['CX','FO'],['FO','BF'],
+  ['HE','CX'],['CX','BF'],
   ['HE','CH'],['AK','AP'],['TK','TP'],['BK','BP'],['SK','SP']
 ];
 var VOIES = ARETES.map(function(a){
@@ -1916,7 +1954,7 @@ var VOISINS = {};
     VOISINS[ARETES[i][1]].push(ARETES[i][0]);
   }
 })();
-var PLACE = { x0:540, y0:404, x1:860, y1:676 };
+var PLACE = { x0:PLAN.C.x-PLAN.PLACE.w/2-12, y0:PLAN.C.y-PLAN.PLACE.h/2-12, x1:PLAN.C.x+PLAN.PLACE.w/2+12, y1:PLAN.C.y+PLAN.PLACE.h/2+12 };
 var DEMI = 30;
 
 function distSeg(px, py, x1, y1, x2, y2){
@@ -2027,7 +2065,7 @@ function nouvelEtat(){
     parties:[false,false,false,false],
     derniersAppels:[0,0,0,0],
     sorties:0,
-    modou:{ x:50, y:51.9, dir:1, marche:false },
+    modou:{ x:50, y:CENTRE.y, dir:1, marche:false },
     zone:null,
     scene:null,       // { lieu, t, ok }
     cool:0,
@@ -2123,7 +2161,8 @@ function construire(){
   voileNuit = document.getElementById('nuit');
   voileCrep = document.getElementById('crepuscule');
   var lp = document.getElementById('lampes');
-  var pts = [[15.5,24],[84.5,24],[15.5,72],[84.5,72],[50,10],[50,67.5]];
+  var A2 = PLAN.ANNEAU;
+  var pts = [[PLAN.pct(A2.x0),PLAN.pct(A2.y0,'y')],[PLAN.pct(A2.x1),PLAN.pct(A2.y0,'y')],[PLAN.pct(A2.x0),PLAN.pct(A2.y1,'y')],[PLAN.pct(A2.x1),PLAN.pct(A2.y1,'y')],[50,PLAN.pct(PLAN.CHANTIER.y,'y')],[50,CENTRE.y]];
   for (var i=0;i<pts.length;i++){
     var l = document.createElement('div');
     l.className = 'lampe pos';
@@ -3196,7 +3235,8 @@ function clavier(){
 
 /* ---------- CAMÉRA ---------- */
 var BW = 0, BH = 0, VW = 0, VH = 0, RATIO = 1400/800, TOP_PAD = 0;
-var CAM = { x:50, y:50, z:1.45, tx:50, ty:50, tz:1.45, libre:false };
+/* 30 oct. 2026 : le domaine entier tient sur l'écran, c'est la vue par défaut. ⊕ zoome sur Modou. */
+var CAM = { x:50, y:50, z:1.45, tx:50, ty:50, tz:1.45, libre:true };
 function majCamera(dt){
   var cx = S.modou.x, cy = S.modou.y, cz = CFG.Z_LIBRE;
   if (S.fete){                       // plan très rapproché sur le foyer
@@ -3205,7 +3245,8 @@ function majCamera(dt){
   }
   else if (CAM.libre){
     cx = 50; cy = 50;
-    cz = BW ? Math.min(VW / BW, VH / (BH * CFG.APLAT)) : 1;
+    // on garde 48 px en haut (jauges) et 48 px en bas (force) : le chantier et la banque restent entièrement visibles
+    cz = BW ? Math.min(VW / BW, (VH - 96) / (BH * CFG.APLAT)) : 1;
   }
   else if (S.sortieVue > 0){
     var qui = -1;
@@ -3235,11 +3276,12 @@ function appliquerCamera(){
                           'scale(' + z.toFixed(4) + ',' + zy.toFixed(4) + ')';
 }
 var camBtn = document.getElementById('camBtn');
+camBtn.classList.add('wide'); camBtn.innerHTML = '\u2295';
 camBtn.addEventListener('click', function(){
   sonBouton();
   CAM.libre = !CAM.libre;
   camBtn.classList.toggle('wide', CAM.libre);
-  camBtn.innerHTML = CAM.libre ? '\u2296' : '\u2295';
+  camBtn.innerHTML = CAM.libre ? '\u2295' : '\u2296';
 });
 
 /* ---------- VITESSE LIÉE À L'ÉNERGIE ---------- */
@@ -3951,7 +3993,7 @@ function commencerExode(i){
   var D = DAMES[i];
   S.exode[i] = {
     x: D.bed.x, y: D.bed.y, etape: 0, retour: false,
-    route: [ {x:50, y:D.bed.y}, {x:50, y:51.9}, {x:90.7, y:51.9}, {x:CFG.SORTIE_X, y:51.9} ]
+    route: [ {x:50, y:D.bed.y}, {x:50, y:ALLEE_Y}, {x:90.7, y:ALLEE_Y}, {x:CFG.SORTIE_X, y:ALLEE_Y} ]
   };
   damesEl[i].classList.add('sen-va');
   var bulle = damesEl[i].querySelector('.cri');
@@ -3986,7 +4028,7 @@ function majExode(dt){
     // Modou l'a servie : elle fait demi-tour
     if (!E.retour && S.jauges[i] > 0){
       E.retour = true;
-      E.route = [ {x:50, y:51.9}, {x:50, y:DAMES[i].bed.y}, {x:DAMES[i].bed.x, y:DAMES[i].bed.y} ];
+      E.route = [ {x:50, y:ALLEE_Y}, {x:50, y:DAMES[i].bed.y}, {x:DAMES[i].bed.x, y:DAMES[i].bed.y} ];
       E.etape = 0;
       damesEl[i].classList.remove('sen-va');
       var b2 = damesEl[i].querySelector('.cri');
@@ -4086,13 +4128,13 @@ function faireRevenir(i, prixConfirme){
   var el = damesEl[i];
   el.className = 'dame pos d' + (i+1) + ' ' + (D.bed.x > 50 ? 'droite' : 'gauche');
   el.style.left = CFG.SORTIE_X + '%';
-  el.style.top  = '51.9%';
+  el.style.top  = ALLEE_Y + '%';
   var bulle = el.querySelector('.cri');
   if (bulle) bulle.textContent = 'Je reviens.';
 
   S.exode[i] = {
-    x: CFG.SORTIE_X, y: 51.9, etape: 0, retour: true, rachat: true, vit: CFG.VIT_RETOUR,
-    route: [ {x:90.7, y:51.9}, {x:50, y:51.9}, {x:50, y:D.bed.y}, {x:D.bed.x, y:D.bed.y} ]
+    x: CFG.SORTIE_X, y: ALLEE_Y, etape: 0, retour: true, rachat: true, vit: CFG.VIT_RETOUR,
+    route: [ {x:90.7, y:ALLEE_Y}, {x:50, y:ALLEE_Y}, {x:50, y:D.bed.y}, {x:D.bed.x, y:D.bed.y} ]
   };
   S.sortieVue = 2.4;
   sonFoyer();
@@ -5609,7 +5651,7 @@ function restaurerLeDecor(){
       fermerLeFoyer(i);                       // maison grisée, barre retirée
       damesEl[i].className = 'dame pos partie';
       damesEl[i].style.left = CFG.SORTIE_X + '%';
-      damesEl[i].style.top  = '51.9%';
+      damesEl[i].style.top  = ALLEE_Y + '%';
     } else if (S.exode[i]){
       var E = S.exode[i];
       damesEl[i].style.left = E.x + '%';
