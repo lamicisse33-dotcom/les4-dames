@@ -73,36 +73,59 @@ if(require.main===module){
     robots identiques, sauf que le second n'achète jamais rien à la
     Deuxième Dame et la laisse partir.
 
-    ATTENTION AU PIÈGE DE LA MESURE, il a failli nous tromper : comparer
-    les deux caisses À LA FIN ne prouve rien, parce que les deux parties
-    ne finissent pas le même jour. Le négligent meurt tôt avec sa caisse
-    pleine ; le servant meurt tard après avoir tout dépensé. On compare
-    donc AU MÊME JOUR. Les premières semaines, le négligent est en avance
-    — une bouche de moins à nourrir, c'est normal et c'est voulu. Depuis
-    le 31 octobre (v13.3), la pénalité d'absence MONTE SUR DEUX JOURS au
-    lieu de tomber d'un coup : le rattrapage se fait donc au jour 30, et
-    la règle ne doit plus lâcher ensuite (jours 30 et 40).
+    ─────────────────────────────────────────────────────────────────────
+    LA RÈGLE, EN TOUTES LETTRES (Lamine, 31 octobre 2026)
 
-    Si cette cible tombe, c'est que la règle ne mord pas : on baisse la
-    règle ou on la repense, JAMAIS la cible. */
+    1. LA CIBLE SE JUGE D'ABORD SUR LA DURÉE DE VIE. Le robot négligent
+       doit tenir AU PLUS 60 % des jours du robot qui sert ses quatre
+       Dames — en Facile comme en Difficile. C'est la seule moitié de la
+       preuve qui vaille dans les deux difficultés, et c'est elle qui
+       décide : si elle tombe, la règle ne mord pas.
+
+    2. LA COMPARAISON DES CAISSES reste affichée, parce que c'est un
+       indice utile — mais elle n'est EXIGÉE QU'EN FACILE, où les deux
+       robots vivent assez longtemps pour qu'elle ait un sens. En
+       Difficile elle est imprimée pour information, sans rien décider.
+
+    POURQUOI. En Difficile, le négligent MEURT RICHE au jour 28 : il
+    s'arrête avec sa caisse pleine pendant que le servant, lui, tient
+    jusqu'au jour 86 en ayant tout dépensé pour ses Dames. Comparer les
+    deux portefeuilles revenait à comparer le portefeuille d'un mort à
+    celui d'un vivant — et le mort gagnait. MOURIR RICHE N'EST PAS
+    GAGNER. Le jeu se perd quand trois Dames s'en vont, pas quand la
+    caisse est vide ; c'est donc le nombre de jours tenus qui dit la
+    vérité.
+
+    On compare donc les caisses AU DERNIER JOUR OÙ LES DEUX SONT ENCORE
+    EN VIE, jamais après : au-delà, la caisse du mort est gelée et le
+    chiffre ne veut plus rien dire.
+
+    Si une cible tombe, c'est que la règle ne mord pas : on baisse la
+    règle ou on la repense, JAMAIS la cible.
+    ───────────────────────────────────────────────────────────────────── */
  console.log('');
- const JOURS_PREUVE=[30,40];
- let coute=true;
+ const PART_MAX = 0.60;              // le négligent tient au plus 60 % des jours du servant
+ let coute = true;
  for (const [cle,nom] of [['facile','Facile   '],['dur','Difficile']]){
-   const tS=jouer(cle,{seuil:45,repos:35},220).perdu||220;
-   const tL=jouer(cle,{seuil:45,repos:35,abandonne:1},220).perdu||220;
-   const okT=tL<tS;
-   let okA=true;const detail=[];
-   for(const j of JOURS_PREUVE){
-     const a=jouer(cle,{seuil:45,repos:35},j).argent;
-     const b=jouer(cle,{seuil:45,repos:35,abandonne:1},j).argent;
-     if(b>=a)okA=false;
-     detail.push('j'+j+' '+a+'/'+b);
-   }
-   if(!okA||!okT)coute=false;
-   console.log('Laisser partir une Dame ('+nom+') : tient '+tL+' j contre '+tS+' j '+(okT?'✓':'✗')+
-     '   |   au même jour, sert/néglige : '+detail.join('  ')+' '+(okA?'✓':'✗'));
+   const tS = jouer(cle,{seuil:45,repos:35},220).perdu || 220;
+   const tL = jouer(cle,{seuil:45,repos:35,abandonne:1},220).perdu || 220;
+   const part = tL / tS;
+   const okT = part <= PART_MAX;
+
+   /* Le dernier jour où les deux sont encore debout : un de moins que la
+      plus courte des deux vies, pour qu'aucune caisse ne soit déjà gelée. */
+   const jourCommun = Math.max(1, Math.min(tS, tL) - 1);
+   const argentS = jouer(cle,{seuil:45,repos:35},jourCommun).argent;
+   const argentL = jouer(cle,{seuil:45,repos:35,abandonne:1},jourCommun).argent;
+   const okA = argentL < argentS;
+   const exigee = (cle === 'facile');          // n'est exigée qu'en Facile
+
+   if (!okT || (exigee && !okA)) coute = false;
+   console.log('Laisser partir une Dame ('+nom+') : tient '+tL+' j contre '+tS+' j'+
+     '  ('+Math.round(part*100)+' % — cible ≤ '+Math.round(PART_MAX*100)+' %) '+(okT?'✓':'✗')+
+     '   |   caisses au jour '+jourCommun+' (dernier jour commun) : '+argentS+' F contre '+argentL+' F '+
+     (okA?'✓':'✗')+(exigee?'':' — pour information, non exigé en Difficile'));
  }
- assert.ok(coute,'laisser partir une Dame ne coûte pas : la règle ne mord pas assez');
+ assert.ok(coute,'laisser partir une Dame ne coûte pas assez : la règle ne mord pas');
  console.log('\nÉconomie dans les cibles.');
 }
