@@ -370,4 +370,34 @@ test('Recalling a Dame takes her barrier down again',()=>{
   g.S.parties[0] = false; g.majFermetures();
   assert.equal(g.alleeFermee('AK','CX'), false, 'la barriere reste apres le rappel');
 });
+test('An absent Dame costs: the others wear faster and the pay drops',()=>{
+  state(40);
+  assert.equal(g.damesAbsentes(), 0);
+  assert.equal(g.usureDesequilibre(), 1);
+  assert.equal(g.payeDesequilibre(), 1);
+  g.S.parties = [true,false,false,false];
+  assert.equal(g.damesAbsentes(), 1);
+  assert.ok(Math.abs(g.usureDesequilibre() - 1.10) < 1e-9, g.usureDesequilibre());
+  assert.ok(Math.abs(g.payeDesequilibre()  - 0.90) < 1e-9, g.payeDesequilibre());
+  g.S.parties = [true,false,true,false];                 // deux : le double, jamais trois
+  assert.equal(g.damesAbsentes(), 2);
+  assert.ok(Math.abs(g.usureDesequilibre() - 1.20) < 1e-9, g.usureDesequilibre());
+  assert.ok(Math.abs(g.payeDesequilibre()  - 0.80) < 1e-9, g.payeDesequilibre());
+  g.S.journal = []; g.direLeDesequilibre();
+  assert.ok(g.S.journal.some(j => /quilibr/.test(j.texte)), 'rien au journal');
+  g.S.parties = [false,false,false,false];               // le rappel efface tout
+  assert.equal(g.usureDesequilibre(), 1);
+  assert.equal(g.payeDesequilibre(), 1);
+});
+test('The unbalanced house really bites in the loop, at the configured rate',()=>{
+  g.demarrer(); g.gamePaused = false; g.S.force = 100;
+  g.S.modou.x = g.CENTRE.x; g.S.modou.y = g.CENTRE.y; g.S.zone = 'CENTRE';
+  g.S.jauges = [60,60,60,60]; g.last = 1000; g.tourDeBoucle(1050);
+  const entier = 60 - g.S.jauges[1];
+  g.S.jauges = [60,60,60,60]; g.S.parties = [true,false,false,false];
+  g.last = 1000; g.tourDeBoucle(1050);
+  const ampute = 60 - g.S.jauges[1];
+  assert.ok(entier > 0 && ampute > 0);
+  assert.ok(Math.abs(ampute/entier - (1 + g.CFG.DESEQUILIBRE_USURE)) < 0.02, ampute/entier);
+});
 console.log(`TOTAL: ${checks} tests passed, 31 octobre inclus.`);

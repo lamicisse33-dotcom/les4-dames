@@ -31,7 +31,7 @@ function jouer(niveau,politique,maxJours=200,over={},depart=null){
   if(S.chapitre)g.fermerLeChapitre(true);
   // décision
   const prix=i=>g.prixDuJour(g.DAMES[i].lieu);
-  let urgent=-1,bas=999;for(let i=0;i<4;i++){if(S.parties[i])continue;if(S.jauges[i]<bas){bas=S.jauges[i];urgent=i;}}
+  let urgent=-1,bas=999;for(let i=0;i<4;i++){if(S.parties[i]||politique.abandonne===i)continue;if(S.jauges[i]<bas){bas=S.jauges[i];urgent=i;}}
   const seuil=politique.seuil;
   if(S.enfant&&S.enfant.phase==='libre'&&urgent>=0&&bas<seuil&&S.argent>=prix(urgent)+50)g.envoyerLEnfantSeul();
   if(urgent>=0&&bas<seuil&&S.argent>=prix(urgent)){
@@ -43,7 +43,7 @@ function jouer(niveau,politique,maxJours=200,over={},depart=null){
   if(S.zone===C&&cible==='C')S.auto=null;
   t+=50;g.last=t-50;g.tourDeBoucle(t);if(S.jour!==dernierJour){dernierJour=S.jour;if(S.jour%25===0)trace.push(S.jour+':'+Math.round(S.argent)+'F/prix'+g.prixDuJour('BANQUE'));}
  }
- return {jours:S.jour,perdu,sorties:S.sorties,trace:trace.join(' ')};
+ return {jours:S.jour,perdu,sorties:S.sorties,argent:Math.round(S.argent),gagne:Math.round(S.gagne||0),trace:trace.join(' ')};
 }
 
 module.exports={jouer};
@@ -53,11 +53,54 @@ if(require.main===module){
  console.log('Difficile      :',dur.perdu?'perdu jour '+dur.perdu:'tient 220 jours','|',dur.trace);
  console.log('Très difficile :',tres.perdu?'perdu jour '+tres.perdu:'tient 220 jours','|',tres.trace);
  console.log('Facile         :',fac.perdu?'perdu jour '+fac.perdu:'tient 220 jours','|',fac.trace);
- let ok=0,det=[];for(let n=1;n<=18;n++){const r=jouer('dur',{seuil:45,repos:35},200,{},n);if(!r.perdu)ok++;det.push(n+(r.perdu?'✗':'✓'));}
+ let ok=0,det=[],manques=[];
+ for(let n=1;n<=18;n++){
+   const r=jouer('dur',{seuil:45,repos:35},200,{},n);
+   if(!r.perdu)ok++;else manques.push('niveau '+n+' : perdu jour '+r.perdu+' ('+r.sorties+' Dame'+(r.sorties>1?'s':'')+' partie'+(r.sorties>1?'s':'')+')');
+   det.push(n+(r.perdu?'✗':'✓'));
+ }
  console.log('Niveaux passés depuis leur reprise (Difficile) :',ok,'/ 18 —',det.join(' '));
+ if(manques.length)console.log('   manqués —',manques.join(' | '));
  assert.ok(dur.perdu&&dur.perdu>=80&&dur.perdu<=140,'Difficile hors cible');
  assert.ok(tres.perdu&&tres.perdu>=35&&tres.perdu<=80,'Très difficile hors cible');
  assert.ok(!fac.perdu||fac.perdu>=150,'Facile trop dur');
  assert.ok(ok>=14,'trop de niveaux infranchissables');
- console.log('Économie dans les cibles.');
+
+ /* LA PREUVE DE « LA MAISON DÉSÉQUILIBRÉE » — 31 octobre 2026.
+    Lamine : « une Dame partie doit coûter. » Avant la règle, le contraire
+    était vrai en Facile : une bouche de moins, et le robot finissait plus
+    riche (31 150 F contre 71 636 F au jour 175). On compare donc deux
+    robots identiques, sauf que le second n'achète jamais rien à la
+    Deuxième Dame et la laisse partir.
+
+    ATTENTION AU PIÈGE DE LA MESURE, il a failli nous tromper : comparer
+    les deux caisses À LA FIN ne prouve rien, parce que les deux parties
+    ne finissent pas le même jour. Le négligent meurt tôt avec sa caisse
+    pleine ; le servant meurt tard après avoir tout dépensé. On compare
+    donc AU MÊME JOUR. Les dix premiers jours, le négligent est en avance
+    — une bouche de moins à nourrir, c'est normal et c'est voulu. À partir
+    du jour 15, la règle doit l'avoir rattrapé, et ne plus le lâcher.
+
+    Si cette cible tombe, c'est que la règle ne mord pas : on baisse la
+    règle ou on la repense, JAMAIS la cible. */
+ console.log('');
+ const JOURS_PREUVE=[15,20,25,30];
+ let coute=true;
+ for (const [cle,nom] of [['facile','Facile   '],['dur','Difficile']]){
+   const tS=jouer(cle,{seuil:45,repos:35},220).perdu||220;
+   const tL=jouer(cle,{seuil:45,repos:35,abandonne:1},220).perdu||220;
+   const okT=tL<tS;
+   let okA=true;const detail=[];
+   for(const j of JOURS_PREUVE){
+     const a=jouer(cle,{seuil:45,repos:35},j).argent;
+     const b=jouer(cle,{seuil:45,repos:35,abandonne:1},j).argent;
+     if(b>=a)okA=false;
+     detail.push('j'+j+' '+a+'/'+b);
+   }
+   if(!okA||!okT)coute=false;
+   console.log('Laisser partir une Dame ('+nom+') : tient '+tL+' j contre '+tS+' j '+(okT?'✓':'✗')+
+     '   |   au même jour, sert/néglige : '+detail.join('  ')+' '+(okA?'✓':'✗'));
+ }
+ assert.ok(coute,'laisser partir une Dame ne coûte pas : la règle ne mord pas assez');
+ console.log('\nÉconomie dans les cibles.');
 }

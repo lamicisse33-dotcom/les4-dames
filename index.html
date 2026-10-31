@@ -1380,7 +1380,7 @@ function dameSVG(i){
    ========================================================= */
 'use strict';
 
-var BUILD_TAG = 'LQD-v13.1';
+var BUILD_TAG = 'LQD-v13.2';
 document.getElementById('build').textContent = BUILD_TAG;
 var vIntro = document.getElementById('versionIntro');
 if (vIntro) vIntro.textContent = BUILD_TAG;
@@ -1655,6 +1655,16 @@ var CFG = {
   JALOUSIE_HAUT: 78,     // au-dessus : elle est gâtée
   JALOUSIE_BAS: 40,      // en dessous : elle est négligée
   JALOUSIE_USURE: 1.6,   // la négligée s'use 60 % plus vite tant que l'écart dure
+
+  /* LA MAISON DÉSÉQUILIBRÉE — 31 octobre 2026. Lamine : « une Dame partie
+     doit coûter. » Avant cette règle, laisser une Dame s'en aller pouvait
+     rapporter : une bouche de moins à nourrir, et le robot finissait plus
+     riche en Facile (31 150 F contre 71 636 F au jour 175, mesuré). Un
+     foyer amputé ne tourne plus rond : les Dames qui restent s'usent plus
+     vite, et le quartier parle — le patron paie moins bien un homme dont
+     la maison se vide. Par Dame absente, et le rappel efface tout. */
+  DESEQUILIBRE_USURE: 0.10,   // +10 % d'usure par Dame absente (20 % à deux)
+  DESEQUILIBRE_PAYE: 0.10,    // -10 % de paye par Dame absente (20 % à deux)
   PRIME_REPOS: 2.0,      // samedi, dimanche et jours fériés : la paye double
   ATTENTE_MAX: 15,       // le jour chômé attend Modou au chantier, au plus quinze secondes      // samedi, dimanche et jours fériés : la paye double     // quatre fois plus rapide qu'à pied
 
@@ -2189,6 +2199,20 @@ function prixDuJour(cle){
   var grade = Math.pow(statutActuel().paye, CFG.PRIX_GRADE);
   return Math.round(base * k * grade * soutienArgent());
 }
+/* ---------- LA MAISON DÉSÉQUILIBRÉE ----------
+   Combien de Dames manquent à l'appel en ce moment. Trois arrêtent la
+   partie, donc ce compte ne dépasse jamais deux. */
+function damesAbsentes(){
+  if (!S || !S.parties) return 0;
+  var n = 0;
+  for (var i=0;i<DAMES.length;i++) if (S.parties[i]) n++;
+  return n;
+}
+/* Une absente : les restantes s'usent 10 % plus vite. Deux : 20 %. */
+function usureDesequilibre(){ return 1 + CFG.DESEQUILIBRE_USURE * damesAbsentes(); }
+/* Une absente : la paye baisse de 10 %. Deux : 20 %. Jamais sous zéro. */
+function payeDesequilibre(){ return Math.max(0, 1 - CFG.DESEQUILIBRE_PAYE * damesAbsentes()); }
+
 /* Les Dames jalouses en ce moment : négligées pendant qu'une autre est gâtée. */
 function jalouses(){
   var r = [false,false,false,false];
@@ -4254,6 +4278,7 @@ function faireRevenir(i, prixConfirme){
      on ne rachète pas une statistique, on rouvre une route. */
   appliquerFermetures();
   if (FERMETURES[i] && FERMETURES[i].length) noter(S.jour, 'Allée rouverte par son retour.');
+  direLEquilibreRevenu();
 
   // elle rentre par où elle est sortie, mais d'un pas décidé
   var el = damesEl[i];
@@ -4298,8 +4323,34 @@ function faitPartir(i){
   } else {
     flash(DAMES[i].nom + ' est partie. Rappel sur sa case.', 4200);
     noter(S.jour, 'Avantage perdu : ' + AVANTAGES[i].texte + '.');
+    direLeDesequilibre();
     fermerSonAllee(i);
   }
+}
+
+/* La maison amputée, dite au joueur et écrite au journal. Un malus qu'on
+   ne voit nulle part est un bug aux yeux de celui qui le subit. */
+function direLeDesequilibre(){
+  var n = damesAbsentes();
+  if (n <= 0) return;
+  var pc = Math.round(CFG.DESEQUILIBRE_USURE * n * 100);
+  var pp = Math.round(CFG.DESEQUILIBRE_PAYE * n * 100);
+  noter(S.jour, 'Maison d\u00e9s\u00e9quilibr\u00e9e (' + n + (n > 1 ? ' absentes' : ' absente') +
+        ') : usure +' + pc + ' %, paye \u2212' + pp + ' %.');
+  if (!S.vu.desequilibre){
+    S.vu.desequilibre = true;
+    setTimeout(function(){
+      if (!S || !S.enCours) return;
+      flash('La maison est d\u00e9s\u00e9quilibr\u00e9e : les autres s\u2019usent plus vite, ' +
+            'et le quartier parle \u2014 le patron paie moins bien.', 4800);
+    }, 9000);
+  }
+}
+/* Le rappel efface tout : la maison retrouve son équilibre. */
+function direLEquilibreRevenu(){
+  var n = damesAbsentes();
+  if (n > 0){ direLeDesequilibre(); return; }
+  noter(S.jour, '\u00c9quilibre retrouv\u00e9 : usure et paye redeviennent normales.');
 }
 
 /* En partant, elle barre l'allée qui nourrit sa voisine. On le dit en
@@ -4602,7 +4653,9 @@ function vivreDansLaZone(dt){
       var bonus = 1 + Math.min(CFG.SERIE_MAX, S.serie * CFG.SERIE_BONUS);
       var prime = Math.max(payeDoublee(S.jour) ? CFG.PRIME_REPOS : 1,
                            estConge(S.jour) ? CFG.PRIME_CONGE : 1);
-      var paye = CFG.GAIN_CHANTIER * statutActuel().paye * NIV().paye * rendT * bonus * prime * dt;
+      /* Le quartier parle : le patron paie moins bien un homme dont la
+         maison se vide. -10 % par Dame absente. */
+      var paye = CFG.GAIN_CHANTIER * statutActuel().paye * NIV().paye * rendT * bonus * prime * payeDesequilibre() * dt;
       if (S.moto && S.dette > 0){
         var retenue = Math.min(S.dette, paye * CFG.MOTO_RETENUE);
         S.dette -= retenue;
@@ -4863,13 +4916,14 @@ function tourDeBoucle(ts){
   var abandon = 1 + manque * CFG.USURE_EPUISE;
   S.abandon = abandon;
   var jal = jalouses();
+  var desequilibre = usureDesequilibre();   // une maison amputée ne tourne plus rond
   for (var i=0;i<DAMES.length;i++){
     if (S.exode[i] && S.exode[i].rachat && S.exode[i].retour) continue;
     var nuitFacteur = 1 - (1 - CFG.NUIT_USURE) * S.nuit;
     var pluieFacteur = (S.pluie > 0 && !S.toitRepare) ? CFG.PLUIE_USURE : 1;
     var jalousie = jal[i] ? CFG.JALOUSIE_USURE : 1;
     S.jauges[i] = Math.max(0, S.jauges[i] -
-      DAMES[i].usure * NIV().usure * douceurDepart(S.jour) * pression * abandon * soutienSpiritualite(i) * nuitFacteur * pluieFacteur * jalousie * dt);
+      DAMES[i].usure * NIV().usure * douceurDepart(S.jour) * pression * abandon * soutienSpiritualite(i) * nuitFacteur * pluieFacteur * jalousie * desequilibre * dt);
   }
   majJalousie(jal);
 
@@ -6014,6 +6068,13 @@ var AIDE = [
     'La contribution suit le grade et la difficulté, sans les primes ni les bonus de travail.',
     'Un seul versement par visite, avec une journée de jeu minimum entre deux versements.',
     'Modou donne au maximum ce qu’il possède et peut toujours récupérer, même sans argent.'
+  ]},
+  { t:'La maison d\u00e9s\u00e9quilibr\u00e9e', l:[
+    'Une Dame partie co\u00fbte, m\u00eame quand elle n\u2019est plus l\u00e0 \u00e0 nourrir.',
+    'Par Dame absente : les Dames qui restent s\u2019usent 10 % plus vite,',
+    'et la paye du chantier baisse de 10 % \u2014 le quartier parle.',
+    'Deux absentes : 20 % des deux c\u00f4t\u00e9s.',
+    'Le rappel efface tout d\u2019un coup : la maison retrouve son \u00e9quilibre.'
   ]},
   { t:'Les all\u00e9es barr\u00e9es', l:[
     'Une Dame qui s\u2019en va barre une all\u00e9e derri\u00e8re elle.',
