@@ -377,12 +377,14 @@ test('An absent Dame costs: the others wear faster and the pay drops',()=>{
   assert.equal(g.payeDesequilibre(), 1);
   g.S.parties = [true,false,false,false];
   assert.equal(g.damesAbsentes(), 1);
-  assert.ok(Math.abs(g.usureDesequilibre() - 1.10) < 1e-9, g.usureDesequilibre());
-  assert.ok(Math.abs(g.payeDesequilibre()  - 0.90) < 1e-9, g.payeDesequilibre());
+  // v13.3 : la pénalité monte sur deux jours ; ici les départs sont anciens, donc à plein (15 %).
+  const U=g.CFG.DESEQUILIBRE_USURE, P=g.CFG.DESEQUILIBRE_PAYE;
+  assert.ok(Math.abs(g.usureDesequilibre() - (1+U)) < 1e-9, g.usureDesequilibre());
+  assert.ok(Math.abs(g.payeDesequilibre()  - (1-P)) < 1e-9, g.payeDesequilibre());
   g.S.parties = [true,false,true,false];                 // deux : le double, jamais trois
   assert.equal(g.damesAbsentes(), 2);
-  assert.ok(Math.abs(g.usureDesequilibre() - 1.20) < 1e-9, g.usureDesequilibre());
-  assert.ok(Math.abs(g.payeDesequilibre()  - 0.80) < 1e-9, g.payeDesequilibre());
+  assert.ok(Math.abs(g.usureDesequilibre() - (1+2*U)) < 1e-9, g.usureDesequilibre());
+  assert.ok(Math.abs(g.payeDesequilibre()  - (1-2*P)) < 1e-9, g.payeDesequilibre());
   g.S.journal = []; g.direLeDesequilibre();
   assert.ok(g.S.journal.some(j => /quilibr/.test(j.texte)), 'rien au journal');
   g.S.parties = [false,false,false,false];               // le rappel efface tout
@@ -401,3 +403,40 @@ test('The unbalanced house really bites in the loop, at the configured rate',()=
   assert.ok(Math.abs(ampute/entier - (1 + g.CFG.DESEQUILIBRE_USURE)) < 0.02, ampute/entier);
 });
 console.log(`TOTAL: ${checks} tests passed, 31 octobre inclus.`);
+
+/* ── 31 octobre 2026, v13.3 : cascade adoucie, tempéraments, objectifs de niveau ── */
+test('An absence weighs nothing on the day it happens and fully after two days',()=>{
+  g.demarrer();g.gamePaused=false;g.S.argent=1000;
+  g.S.parties[1]=true;g.S.departs=[null,g.S.temps,null,null];
+  assert.ok(Math.abs(g.poidsDesAbsences())<1e-9);assert.equal(g.usureDesequilibre(),1);assert.equal(g.payeDesequilibre(),1);
+  g.S.temps+=g.CFG.SEC_PAR_JOUR;assert.ok(Math.abs(g.poidsDesAbsences()-0.5)<1e-9);
+  g.S.temps+=g.CFG.SEC_PAR_JOUR*3;assert.equal(g.poidsDesAbsences(),1);
+  assert.ok(Math.abs(g.usureDesequilibre()-(1+g.CFG.DESEQUILIBRE_USURE))<1e-9);
+  assert.ok(Math.abs(g.payeDesequilibre()-(1-g.CFG.DESEQUILIBRE_PAYE))<1e-9);
+  delete g.S.departs;assert.equal(g.poidsDesAbsences(),1); // une vieille sauvegarde : plein poids
+});
+test('Temperaments: each Dame has her own gain; the discreet one is fed by presence at the foyer',()=>{
+  assert.deepEqual(g.DAMES.map(d=>d.gain).join(),'45,45,30,55');assert.ok(g.DAMES[2].presence>0&&!g.DAMES[0].presence);
+  g.demarrer();g.gamePaused=false;g.S.force=100;g.S.modou.x=g.CENTRE.x;g.S.modou.y=g.CENTRE.y;g.S.zone='CENTRE';
+  g.S.jauges=[50,50,50,50];const avant=g.S.jauges.slice();g.vivreDansLaZone(1);
+  assert.ok(g.S.jauges[2]>avant[2]);assert.equal(g.S.jauges[0],avant[0]);
+  g.S.modou.x=g.CHANTIER.x;g.S.modou.y=g.CHANTIER.y;g.S.jauges=[50,50,50,50];g.vivreDansLaZone(1);assert.equal(g.S.jauges[2],50);
+  // un achat rend le gain de la Dame
+  g.S.modou.x=g.LIEUX.BANQUE.x;g.S.modou.y=g.LIEUX.BANQUE.y;g.S.zone='BANQUE';g.S.argent=10000;g.S.foyer=true;g.S.jauges=[20,20,20,20];g.S.force=100;
+  g.tenterEchange('BANQUE');g.majScene(g.CFG.SCENE_MS/2000+0.01);assert.equal(g.S.jauges[3],75);assert.equal(g.S.suivi.achats[3],1);
+});
+test('Level objectives: judged on the level, starred in progress, rewarded, then reset',()=>{
+  data.clear();g.iNiveau=1;g.demarrer();g.gamePaused=false;
+  assert.ok(g.ETAPES.every(e=>e.o&&typeof e.ok==='function'));
+  g.S.suivi.gagne=900;g.S.argent=100;g.S.jour=11;g.S.temps=10*13;
+  assert.equal(g.peutFeter(),true);g.lancerLaFete();
+  assert.equal(g.S.verdictNiveau.reussi,true);assert.equal(g.S.argent,100+Math.round(g.PRIME_ETOILE*g.statutActuel().paye));
+  assert.ok(nodes.get('chapitre').innerHTML.includes('Objectif réussi'));assert.equal(g.S.suivi.gagne,0);
+  assert.equal(g.lireProgres().etoiles[1],true);g.fermerLeChapitre(true);
+  g.S.suivi.achats=[1,0,1,1];g.S.jour=21;g.S.temps=20*13;g.lancerLaFete();
+  assert.equal(g.S.verdictNiveau.reussi,false);assert.ok(nodes.get('chapitre').innerHTML.includes('Objectif manqué'));
+  assert.equal(g.lireProgres().etoiles[2],undefined);g.fermerLeChapitre(true);
+  g.afficherParcours();assert.ok(nodes.get('parcoursListe').innerHTML.includes('★ 1.'));
+  const saved=g.migrerSauvegarde({jour:8});assert.ok(saved.suivi&&saved.etoiles&&saved.departs);
+});
+console.log(`TOTAL: ${checks} tests passed, v13.3 incluse.`);

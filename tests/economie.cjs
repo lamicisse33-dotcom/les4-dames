@@ -77,14 +77,16 @@ if(require.main===module){
     les deux caisses À LA FIN ne prouve rien, parce que les deux parties
     ne finissent pas le même jour. Le négligent meurt tôt avec sa caisse
     pleine ; le servant meurt tard après avoir tout dépensé. On compare
-    donc AU MÊME JOUR. Les dix premiers jours, le négligent est en avance
-    — une bouche de moins à nourrir, c'est normal et c'est voulu. À partir
-    du jour 15, la règle doit l'avoir rattrapé, et ne plus le lâcher.
+    donc AU MÊME JOUR. Les premières semaines, le négligent est en avance
+    — une bouche de moins à nourrir, c'est normal et c'est voulu. Depuis
+    le 31 octobre (v13.3), la pénalité d'absence MONTE SUR DEUX JOURS au
+    lieu de tomber d'un coup : le rattrapage se fait donc au jour 30, et
+    la règle ne doit plus lâcher ensuite (jours 30 et 40).
 
     Si cette cible tombe, c'est que la règle ne mord pas : on baisse la
     règle ou on la repense, JAMAIS la cible. */
  console.log('');
- const JOURS_PREUVE=[15,20,25,30];
+ const JOURS_PREUVE=[30,40];
  let coute=true;
  for (const [cle,nom] of [['facile','Facile   '],['dur','Difficile']]){
    const tS=jouer(cle,{seuil:45,repos:35},220).perdu||220;

@@ -884,6 +884,7 @@ body.playing #etapeJeu.visible{display:block}
 #chapitre{overflow-y:auto;justify-content:flex-start;padding-block:20px}
 #chapitre > *{flex-shrink:0}
 #chapitre .chTitre{font-size:clamp(24px,6vw,46px)}
+.chEtoile{color:#FFC53D}.chRate{color:#d6c9b5;font-style:italic}
 @media(max-height:440px){#chapitre .chScene{height:68px}#chapitre .chModou{height:68px;width:50px}#chapitre{gap:7px}}
 .badge.ferme{flex-direction:column;gap:4px;white-space:normal;z-index:35;max-width:180px;opacity:1;padding:7px}
 .badge.ferme .txt{max-width:none;font-size:11px;font-weight:900;text-align:center}
@@ -1380,7 +1381,7 @@ function dameSVG(i){
    ========================================================= */
 'use strict';
 
-var BUILD_TAG = 'LQD-v13.2';
+var BUILD_TAG = 'LQD-v13.3';
 document.getElementById('build').textContent = BUILD_TAG;
 var vIntro = document.getElementById('versionIntro');
 if (vIntro) vIntro.textContent = BUILD_TAG;
@@ -1663,8 +1664,9 @@ var CFG = {
      foyer amputé ne tourne plus rond : les Dames qui restent s'usent plus
      vite, et le quartier parle — le patron paie moins bien un homme dont
      la maison se vide. Par Dame absente, et le rappel efface tout. */
-  DESEQUILIBRE_USURE: 0.10,   // +10 % d'usure par Dame absente (20 % à deux)
-  DESEQUILIBRE_PAYE: 0.10,    // -10 % de paye par Dame absente (20 % à deux)
+  DESEQUILIBRE_USURE: 0.15,   // +15 % d'usure par Dame absente (30 % à deux) — la montée sur deux jours rend ce taux tenable
+  DESEQUILIBRE_PAYE: 0.15,    // -15 % de paye par Dame absente (30 % à deux)
+  DESEQUILIBRE_MONTEE: 2,     // la pénalité monte sur deux jours après le départ : le temps de se relever
   PRIME_REPOS: 2.0,      // samedi, dimanche et jours fériés : la paye double
   ATTENTE_MAX: 15,       // le jour chômé attend Modou au chantier, au plus quinze secondes      // samedi, dimanche et jours fériés : la paye double     // quatre fois plus rapide qu'à pied
 
@@ -1823,6 +1825,8 @@ var DAMES = [
     retour:'La polygamie, ce n\u2019est pas pour tout le monde. Maintenant tu le sais.',
     adieu:'La polygamie n\u2019est pas pour tout le monde.',
     voix:{ hauteur:0.92, vitesse:0.84 },
+    temperament:'La fid\u00e8le', trait:'Elle tient, et ses soins la remettent vraiment : +45.',
+    gain:45, presence:0,
     usure:0.58, muette:false, bed:{x:PLAN.pct(PLAN.LITS[0][0]),y:PLAN.pct(PLAN.LITS[0][1],'y')}, col:'--sante'  },
   { id:2, nom:'Deuxième Dame',  lieu:'AMOUR',  cri:'Tu ne me vois plus.',
     suite:'Am\u00e8ne-moi des fleurs.',
@@ -1831,7 +1835,9 @@ var DAMES = [
     retour:'Je n\u2019ai rien fait, moi. C\u2019est toi qui avais promis des fleurs chaque jour. Tiens parole.',
     adieu:'Tu avais promis des fleurs.',
     voix:{ hauteur:1.22, vitesse:0.98 },
-    usure:0.68, muette:false, bed:{x:PLAN.pct(PLAN.LITS[1][0]),y:PLAN.pct(PLAN.LITS[1][1],'y')}, col:'--amour'  },
+    temperament:'L\u2019impatiente', trait:'Elle r\u00e9clame souvent, mais ses fleurs ne co\u00fbtent pas cher : +45.',
+    gain:45, presence:0,
+    usure:0.84, muette:false, bed:{x:PLAN.pct(PLAN.LITS[1][0]),y:PLAN.pct(PLAN.LITS[1][1],'y')}, col:'--amour'  },
   { id:3, nom:'Troisième Dame', lieu:'TEMPLE', cri:'…',
     suite:'J\u2019ai besoin de pri\u00e8res.',
     dernier:'Modou\u2026 mes pri\u00e8res. Je ne demanderai plus.',
@@ -1839,6 +1845,8 @@ var DAMES = [
     retour:'C\u2019est mieux pour toi que je sois \u00e0 tes c\u00f4t\u00e9s. Tu le verras.',
     adieu:'Tu verras ce que c\u2019est, sans moi.',
     voix:{ hauteur:1.08, vitesse:0.76 },
+    temperament:'La discr\u00e8te', trait:'Elle veut ta pr\u00e9sence plus que ton argent : sa jauge monte quand Modou est au foyer. Ses pri\u00e8res : +30.',
+    gain:30, presence:1.4,
     usure:0.48, muette:true,  bed:{x:PLAN.pct(PLAN.LITS[2][0]),y:PLAN.pct(PLAN.LITS[2][1],'y')}, col:'--spirit' },
   { id:4, nom:'Quatrième Dame', lieu:'BANQUE', cri:'Il me faut ça demain.',
     suite:'J\u2019ai besoin d\u2019argent.',
@@ -1847,7 +1855,9 @@ var DAMES = [
     retour:'Tu as dit \u00e0 mes parents que tu ferais de moi une princesse. Respecte ta parole.',
     adieu:'Tu avais donn\u00e9 ta parole \u00e0 mes parents.',
     voix:{ hauteur:1.42, vitesse:1.12 },
-    usure:0.84, muette:false, bed:{x:PLAN.pct(PLAN.LITS[3][0]),y:PLAN.pct(PLAN.LITS[3][1],'y')}, col:'--argent' }
+    temperament:'L\u2019exigeante', trait:'Elle co\u00fbte cher, mais quand elle est servie, elle est servie : +55, et elle tient longtemps.',
+    gain:55, presence:0,
+    usure:0.76, muette:false, bed:{x:PLAN.pct(PLAN.LITS[3][0]),y:PLAN.pct(PLAN.LITS[3][1],'y')}, col:'--argent' }
 ];
 
 var AVANTAGES = [
@@ -1869,8 +1879,8 @@ function afficherAvantages(){
   z.dataset.etat = signature;
   z.innerHTML = AVANTAGES.map(function(a,i){
     var actif = dameAuFoyer(i), revient = S.exode[i] && S.exode[i].retour;
-    return '<div class="' + (actif ? 'actif' : 'inactif') + '"><b>Dame ' + (i+1) + ' · ' + a.nom + '</b> : ' +
-      a.texte + ' — ' + (actif ? 'actif' : (revient ? 'au retour au foyer' : 'inactif')) + '</div>';
+    return '<div class="' + (actif ? 'actif' : 'inactif') + '"><b>Dame ' + (i+1) + ' · ' + a.nom + ' · ' + DAMES[i].temperament + '</b> : ' +
+      a.texte + ' — ' + (actif ? 'actif' : (revient ? 'au retour au foyer' : 'inactif')) + '<br><i>' + DAMES[i].trait + '</i></div>';
   }).join('');
 }
 function prixRappel(){ return Math.max(CFG.RETOUR_MIN, Math.ceil(Math.max(0, S ? S.argent : 0) / 2)); }
@@ -2132,6 +2142,7 @@ function nouvelEtat(){
     dernierVersementFoyer:null,
     crise:[0,0,0,0],
     parties:[false,false,false,false],
+    departs:[null,null,null,null],   // l'instant de chaque départ, pour la montée de la pénalité
     derniersAppels:[0,0,0,0],
     sorties:0,
     modou:{ x:50, y:CENTRE.y, dir:1, marche:false },
@@ -2146,6 +2157,7 @@ function nouvelEtat(){
     fete:null, chapitre:null, derniereFete:0, fetes:0, rachats:0,
     recordBattu:false, recordVu:false, moisSalue:false,
     tuto:null, achats:0,
+    suivi:null, etoiles:{}, verdictNiveau:null,
     attente:0,
     enfant:null, coursesEnfant:0,
     ane:false, aneOffert:false, rappelAne:0,
@@ -2208,10 +2220,23 @@ function damesAbsentes(){
   for (var i=0;i<DAMES.length;i++) if (S.parties[i]) n++;
   return n;
 }
+/* Le poids réel des absences : chaque départ pèse 0 le jour même et 1 au bout
+   de DESEQUILIBRE_MONTEE jours. Mesuré le 31 octobre : à plein dès le départ,
+   cinq niveaux sur dix-huit tombaient en cascade le dernier jour. */
+function poidsDesAbsences(){
+  if (!S || !S.parties) return 0;
+  var total = 0, fenetre = CFG.DESEQUILIBRE_MONTEE * CFG.SEC_PAR_JOUR;
+  for (var i=0;i<DAMES.length;i++){
+    if (!S.parties[i]) continue;
+    var depuis = (S.departs && S.departs[i] != null) ? S.temps - S.departs[i] : fenetre;
+    total += Math.max(0, Math.min(1, fenetre > 0 ? depuis / fenetre : 1));
+  }
+  return total;
+}
 /* Une absente : les restantes s'usent 10 % plus vite. Deux : 20 %. */
-function usureDesequilibre(){ return 1 + CFG.DESEQUILIBRE_USURE * damesAbsentes(); }
+function usureDesequilibre(){ return 1 + CFG.DESEQUILIBRE_USURE * poidsDesAbsences(); }
 /* Une absente : la paye baisse de 10 %. Deux : 20 %. Jamais sous zéro. */
-function payeDesequilibre(){ return Math.max(0, 1 - CFG.DESEQUILIBRE_PAYE * damesAbsentes()); }
+function payeDesequilibre(){ return Math.max(0, 1 - CFG.DESEQUILIBRE_PAYE * poidsDesAbsences()); }
 
 /* Les Dames jalouses en ce moment : négligées pendant qu'une autre est gâtée. */
 function jalouses(){
@@ -3465,7 +3490,8 @@ function majScene(dt){
     if (S.force < CFG.SEUIL_EPUISE) rend = CFG.RENDEMENT_EPUISE;
     else if (S.force < CFG.SEUIL_FATIGUE) rend = CFG.RENDEMENT_FATIGUE;
     S.argent -= sc.prix;
-    S.jauges[sc.iD] = Math.min(CFG.MAX_JAUGE, S.jauges[sc.iD] + CFG.GAIN_ACHAT * rend);
+    S.jauges[sc.iD] = Math.min(CFG.MAX_JAUGE, S.jauges[sc.iD] + (DAMES[sc.iD].gain || CFG.GAIN_ACHAT) * rend);
+    if (S.suivi) S.suivi.achats[sc.iD] = (S.suivi.achats[sc.iD] || 0) + 1;
     S.force = Math.max(0, S.force - CFG.COUT_ACHAT);
     sonCaisse();
     guider('achat', 'Au foyer !', 3000);
@@ -3654,11 +3680,13 @@ function finirCourse(){
   var E = S.enfant;
   enfantEl.classList.remove('donne');
   if (E.iD >= 0 && !S.parties[E.iD]){
-    S.jauges[E.iD] = Math.min(CFG.MAX_JAUGE, S.jauges[E.iD] + CFG.GAIN_ACHAT * CFG.ENFANT_RENDEMENT);
+    S.jauges[E.iD] = Math.min(CFG.MAX_JAUGE, S.jauges[E.iD] + (DAMES[E.iD].gain || CFG.GAIN_ACHAT) * CFG.ENFANT_RENDEMENT);
+    if (S.suivi) S.suivi.achats[E.iD] = (S.suivi.achats[E.iD] || 0) + 1;
     sonCaisse();
     parleDame(E.iD, 'Merci mon enfant.');
   }
   S.coursesEnfant++;
+  if (S.suivi) S.suivi.courses++;
   E.phase = 'retour';
   E.route = trajetVers2(E.x, E.y, CENTRE.x, CENTRE.y);
   E.etape = 1;
@@ -3787,6 +3815,7 @@ function envoyerLeMandatSeul(){
     parler('Pardonne-moi mon fils\u2026 la semaine prochaine.', VOIX_MODOU);
     noter(S.jour, 'Mandat report\u00e9 : ' + m + ' F.');
     S.mandatsRates++;
+    if (S.suivi) S.suivi.mandatsRates++;
     return;
   }
   S.argent -= m;
@@ -4046,6 +4075,7 @@ function majJalousie(jal){
   for (var i=0;i<DAMES.length;i++){
     if (jal[i] && !jalousieVue[i]){
       jalousieVue[i] = true;
+      if (S.suivi && S.vu.jalousie) S.suivi.jalousies++;
       if (damesEl[i]){
         damesEl[i].classList.add('jalouse');
         var b = damesEl[i].querySelector('.cri');
@@ -4053,6 +4083,7 @@ function majJalousie(jal){
       }
       if (!S.vu.jalousie){
         S.vu.jalousie = true;
+        if (S.suivi) S.suivi.jalousies++;
         flash(DAMES[i].nom + ' est jalouse : une Dame g\u00e2t\u00e9e, une Dame oubli\u00e9e. Elle se vide plus vite.', 4200);
         modouDit('Si je g\u00e2te l\u2019une, l\u2019autre le voit\u2026', 3000);
         noter(S.jour, 'Premi\u00e8re jalousie au foyer.');
@@ -4266,6 +4297,7 @@ function faireRevenir(i, prixConfirme){
   var D = DAMES[i];
   S.argent -= prix;
   S.rachats++;
+  if (S.suivi) S.suivi.rachats++;
   S.parties[i] = false;
   S.sorties = Math.max(0, S.sorties - 1);
   S.jauges[i] = CFG.JAUGE_RETOUR;
@@ -4307,6 +4339,9 @@ function faireRevenir(i, prixConfirme){
 function faitPartir(i){
   S.parties[i] = true;
   S.sorties++;
+  if (S.suivi) S.suivi.sorties++;
+  if (!S.departs) S.departs = [null,null,null,null];
+  S.departs[i] = S.temps;
   S.jauges[i] = 0;
   sonDepart();
   var el = damesEl[i];
@@ -4621,6 +4656,12 @@ function vivreDansLaZone(dt){
 
   if (S.zone === 'CENTRE'){
     guider('foyer', 'Je reprends des forces.', 3000);
+    // La discrète : la présence de Modou au foyer la nourrit, sans un franc.
+    for (var iP=0;iP<DAMES.length;iP++){
+      if (DAMES[iP].presence && dameAuFoyer(iP) && S.jauges[iP] < CFG.MAX_JAUGE){
+        S.jauges[iP] = Math.min(CFG.MAX_JAUGE, S.jauges[iP] + DAMES[iP].presence * dt);
+      }
+    }
     if (S.force < 99){
       tickSouffle += dt;
       if (tickSouffle > 0.9){ tickSouffle = 0; sonSouffle(); }
@@ -4660,6 +4701,7 @@ function vivreDansLaZone(dt){
         var retenue = Math.min(S.dette, paye * CFG.MOTO_RETENUE);
         S.dette -= retenue;
         paye -= retenue;
+        if (S.suivi) S.suivi.rembourse += retenue;
         if (S.dette <= 0){
           S.dette = 0;
           flash('La moto est pay\u00e9e. Elle est \u00e0 toi pour de bon.', 3600);
@@ -4669,6 +4711,7 @@ function vivreDansLaZone(dt){
       }
       S.argent += paye;
       S.gagne += paye;
+      if (S.suivi) S.suivi.gagne += paye;
       S.force = Math.max(0, S.force - CFG.COUT_CHANTIER * dt);
       tickPiece += dt;
       if (tickPiece > 0.5){ tickPiece = 0; sonPiece(); }
@@ -4938,6 +4981,7 @@ function tourDeBoucle(ts){
   majExode(dt);
   majEnfant(dt);
   majPluie(dt);
+  majSuivi();
   majPensees(dt);
   majTuto(dt);
   animerJambes(S.temps, S.modou.marche);
@@ -5063,26 +5107,84 @@ var COULEURS_FEU = ['#FFC53D','#FF7FB0','#8B9BFF','#4CC97A','#FFFFFF','#FF8A3D',
 
 /* 18 étapes de dix jours. Le calendrier ne dépend jamais des fêtes. */
 var JOURS_ETAPE = 10;
+/* Chaque niveau a, en plus des dix jours à tenir, UN OBJECTIF À LUI (o),
+   jugé à la fin du niveau sur ce qui s'est passé pendant ces dix jours
+   (S.suivi, remis à zéro à chaque niveau). Réussi : une étoile, gardée dans
+   la progression, et une prime. Raté : rien de perdu, on continue.
+   `ok` reçoit le suivi du niveau et l'état du jeu. */
 var ETAPES = [
-  {t:'Les premiers pas', s:'Va au chantier, puis repose-toi au foyer. La première Dame accélère ta récupération.'},
-  {t:'Les quatre besoins', s:'Sers la Dame la plus pressée. La deuxième Dame réduit la fatigue de tes déplacements.'},
-  {t:'Le bon rythme', s:'Alterne travail, courses et repos. La troisième Dame apaise les besoins des autres.'},
-  {t:'Un coup de main', s:'Ton fils arrive : appuie sur son visage pour une course. La quatrième Dame réduit le prix des courses.'},
-  {t:'Faire équipe', s:'Travaille pendant que ton fils fait les courses.'},
-  {t:'Préparer la suite', s:'Garde une réserve : l’âne sera proposé au jour 61 pour 200 F.'},
-  {t:'Voyager avec l’âne', s:'Passe au temple pour acheter l’âne. Ton fils reste encore dix jours.'},
-  {t:'Le départ du fils', s:'Ton fils part étudier. Prévois son mandat automatique chaque semaine.'},
-  {t:'Tenir le budget', s:'Répartis tes gains entre les besoins du foyer et les mandats.'},
-  {t:'La saison des pluies', s:'La pluie arrive. Dès le jour 92, le toit peut être réparé pour 500 F.'},
-  {t:'Un foyer protégé', s:'Répare le toit si nécessaire et profite du repos au foyer.'},
-  {t:'Le retour du fils', s:'Ton fils revient sept jours. Profite de son aide avant son départ.'},
-  {t:'La moto à crédit', s:'La moto est proposée au chantier. Son prix sera retenu sur ta paye.'},
-  {t:'Rembourser sans faiblir', s:'Surveille la dette de la moto et garde de quoi faire les courses.'},
-  {t:'Garder l’équilibre', s:'Utilise tes trajets plus rapides sans oublier le repos.'},
-  {t:'La paye majorée', s:'Pendant ce mois, ta paye est doublée. Refais tes réserves.'},
-  {t:'Préparer l’avenir', s:'Profite encore de la paye majorée pour protéger le foyer.'},
-  {t:'Maître du domaine', s:'Tiens encore dix jours. Ensuite, poursuis ton record en survie libre.'}
+  {t:'Les premiers pas', s:'Va au chantier, puis repose-toi au foyer. La première Dame accélère ta récupération.',
+   o:'Gagne 800 F au chantier', ok:function(v){ return v.gagne >= 800; }},
+  {t:'Les quatre besoins', s:'Sers la Dame la plus pressée. La deuxième Dame réduit la fatigue de tes déplacements.',
+   o:'Sers chacune des quatre Dames au moins une fois', ok:function(v){ return [0,1,2,3].every(function(i){ return (v.achats[i] || 0) >= 1; }); }},
+  {t:'Le bon rythme', s:'Alterne travail, courses et repos. La troisième Dame apaise les besoins des autres.',
+   o:'Aucune Dame sous 20 pendant le niveau', ok:function(v){ return v.minJauge >= 20; }},
+  {t:'Un coup de main', s:'Ton fils arrive : appuie sur son visage pour une course. La quatrième Dame réduit le prix des courses.',
+   o:'Envoie ton fils en course 3 fois', ok:function(v){ return v.courses >= 3; }},
+  {t:'Faire équipe', s:'Travaille pendant que ton fils fait les courses.',
+   o:'Une série de 40 secondes au chantier sans t\u2019arr\u00eater', ok:function(v){ return v.serieMax >= 40; }},
+  {t:'Préparer la suite', s:'Garde une réserve : l’âne sera proposé au jour 61 pour 200 F.',
+   o:'Finis le niveau avec 600 F en caisse', ok:function(v, S){ return S.argent >= 600; }},
+  {t:'Voyager avec l’âne', s:'Passe au temple pour acheter l’âne. Ton fils reste encore dix jours.',
+   o:'Ach\u00e8te l\u2019\u00e2ne', ok:function(v, S){ return !!S.ane; }},
+  {t:'Le départ du fils', s:'Ton fils part étudier. Prévois son mandat automatique chaque semaine.',
+   o:'Pas une seule jalousie pendant le niveau', ok:function(v){ return v.jalousies === 0; }},
+  {t:'Tenir le budget', s:'Répartis tes gains entre les besoins du foyer et les mandats.',
+   o:'Aucun mandat report\u00e9', ok:function(v){ return v.mandatsRates === 0; }},
+  {t:'La saison des pluies', s:'La pluie arrive. Dès le jour 92, le toit peut être réparé pour 500 F.',
+   o:'R\u00e9pare le toit', ok:function(v, S){ return !!S.toitRepare; }},
+  {t:'Un foyer protégé', s:'Répare le toit si nécessaire et profite du repos au foyer.',
+   o:'Aucune Dame ne part', ok:function(v){ return v.sorties === 0; }},
+  {t:'Le retour du fils', s:'Ton fils revient sept jours. Profite de son aide avant son départ.',
+   o:'4 courses faites par ton fils', ok:function(v){ return v.courses >= 4; }},
+  {t:'La moto à crédit', s:'La moto est proposée au chantier. Son prix sera retenu sur ta paye.',
+   o:'Prends la moto', ok:function(v, S){ return !!S.moto; }},
+  {t:'Rembourser sans faiblir', s:'Surveille la dette de la moto et garde de quoi faire les courses.',
+   o:'Rembourse 200 F de la moto', ok:function(v){ return v.rembourse >= 200; }},
+  {t:'Garder l’équilibre', s:'Utilise tes trajets plus rapides sans oublier le repos.',
+   o:'Aucune Dame sous 30 pendant le niveau', ok:function(v){ return v.minJauge >= 30; }},
+  {t:'La paye majorée', s:'Pendant ce mois, ta paye est doublée. Refais tes réserves.',
+   o:'Gagne 3 000 F au chantier', ok:function(v){ return v.gagne >= 3000; }},
+  {t:'Préparer l’avenir', s:'Profite encore de la paye majorée pour protéger le foyer.',
+   o:'Ni d\u00e9part, ni rappel', ok:function(v){ return v.sorties === 0 && v.rachats === 0; }},
+  {t:'Maître du domaine', s:'Tiens encore dix jours. Ensuite, poursuis ton record en survie libre.',
+   o:'Finis avec les quatre Dames au-dessus de 60', ok:function(v, S){ return S.jauges.every(function(j, i){ return !S.parties[i] && j >= 60; }); }}
 ];
+var PRIME_ETOILE = 100;    // francs, multipliés par le grade
+
+/* Le suivi d'un niveau : ce qui compte pour son objectif, depuis son premier jour. */
+function nouveauSuivi(){
+  return { gagne:0, achats:[0,0,0,0], minJauge:100, courses:0, serieMax:0, jalousies:0,
+           mandatsRates:0, sorties:0, rachats:0, rembourse:0 };
+}
+function majSuivi(){
+  if (!S || !S.suivi) return;
+  var v = S.suivi;
+  for (var i=0;i<DAMES.length;i++) if (!S.parties[i] && S.jauges[i] < v.minJauge) v.minJauge = S.jauges[i];
+  if (S.serie > v.serieMax) v.serieMax = S.serie;
+}
+function etoilesLues(){
+  var pr = lireProgres();
+  return (pr && pr.etoiles) ? pr.etoiles : {};
+}
+/* Jugé à la fin du niveau n (1..18), avant la remise à zéro du suivi. */
+function jugerObjectif(n){
+  var e = ETAPES[n - 1];
+  if (!e || !e.ok || !S.suivi) return null;
+  var reussi = false;
+  try { reussi = !!e.ok(S.suivi, S); } catch (err) { reussi = false; }
+  var prime = 0;
+  if (reussi){
+    prime = Math.round(PRIME_ETOILE * statutActuel().paye);
+    S.argent += prime;
+    S.etoiles = S.etoiles || {};
+    S.etoiles[n] = true;
+    noter(S.jour, '\u2605 Objectif du niveau ' + n + ' r\u00e9ussi : ' + e.o + ' (+' + prime + ' F).');
+  } else {
+    noter(S.jour, 'Objectif du niveau ' + n + ' manqu\u00e9 : ' + e.o + '.');
+  }
+  return { reussi:reussi, prime:prime, texte:e.o };
+}
 function numeroEtape(jour){
   return Math.min(ETAPES.length + 1, Math.floor((Math.max(1, jour) - 1) / JOURS_ETAPE) + 1);
 }
@@ -5113,18 +5215,18 @@ function afficherEtape(){
   document.getElementById('etapeObjectif').textContent = e
     ? 'Objectif : tenir jusqu’à la fin du jour ' + n * JOURS_ETAPE + ' sans perdre trois Dames.'
     : 'Tiens le plus longtemps possible.';
-  document.getElementById('etapeConseil').textContent = e ? e.s : 'Les prix et les besoins continuent d’augmenter.';
+  document.getElementById('etapeConseil').textContent = e ? (e.s + (e.o ? ' \u2606 Objectif : ' + e.o + '.' : '')) : 'Les prix et les besoins continuent d’augmenter.';
   document.getElementById('etapeAvance').value = e ? (S.jour - 1) % JOURS_ETAPE : JOURS_ETAPE;
 }
 function afficherParcours(){
   var z = document.getElementById('parcoursListe');
   if (!z) return;
-  var pr = lireProgres(), atteint = pr ? pr.niveau : 1;
+  var pr = lireProgres(), atteint = pr ? pr.niveau : 1, etoiles = etoilesLues();
   z.innerHTML = ETAPES.map(function(e, i){
     var n = i + 1, statut = n < atteint ? 'Terminé' : (n === atteint ? 'À jouer' : 'À venir');
     return '<li class="' + (n < atteint ? 'termine' : (n === atteint ? 'actuel' : '')) + '">' +
-      '<b>' + n + '. ' + e.t + '</b><small>Jours ' + (i * JOURS_ETAPE + 1) + '–' + n * JOURS_ETAPE +
-      ' · ' + statut + '</small><span>' + e.s + '</span></li>';
+      '<b>' + (etoiles[n] ? '\u2605 ' : '') + n + '. ' + e.t + '</b><small>Jours ' + (i * JOURS_ETAPE + 1) + '–' + n * JOURS_ETAPE +
+      ' · ' + statut + '</small><span>' + e.s + (e.o ? '<br>\u2606 ' + e.o : '') + '</span></li>';
   }).join('');
 }
 function peutFeter(){
@@ -5149,8 +5251,11 @@ function ouvrirLeChapitre(){
       '<div class="chPartie">NIVEAU ' + niveau + ' / ' + ETAPES.length + ' TERMINÉ</div>' +
       '<div class="chGrade">' + statutActuel().nom + ' · paye ×' + statutActuel().paye.toFixed(2).replace('.', ',') + '</div>' +
       '<div class="chTitre">' + (suivant ? 'BRAVO !' : 'DOMAINE MAÎTRISÉ !') + '</div>' +
-      '<div class="chSous">' + C.t + ' : dix jours tenus.<br><br>' +
-      (suivant ? '<b>À suivre : ' + suivant.t + '</b><br>' + suivant.s : 'Les 18 niveaux sont terminés. Continue en survie libre pour battre ton record.') +
+      '<div class="chSous">' + C.t + ' : dix jours tenus.<br>' +
+      (S.verdictNiveau ? (S.verdictNiveau.reussi
+        ? '<b class="chEtoile">\u2605 Objectif r\u00e9ussi \u2014 ' + S.verdictNiveau.texte + ' \u00b7 +' + S.verdictNiveau.prime + ' F</b>'
+        : '<span class="chRate">\u2606 Objectif manqu\u00e9 \u2014 ' + S.verdictNiveau.texte + '</span>') + '<br><br>' : '<br>') +
+      (suivant ? '<b>À suivre : ' + suivant.t + '</b><br>' + suivant.s + (suivant.o ? '<br>\u2606 Objectif : ' + suivant.o : '') : 'Les 18 niveaux sont terminés. Continue en survie libre pour battre ton record.') +
       '</div></div><div class="chBoutons">' +
       '<button class="cta" id="chContinuer">' + (suivant ? 'Niveau ' + (niveau + 1) : 'Continuer en survie libre') + '</button>' +
       '<button class="cta ghost" id="chMenu">Sauvegarder et quitter</button></div>';
@@ -5159,6 +5264,7 @@ function ouvrirLeChapitre(){
   parler('Niveau ' + niveau + ' terminé. ' + (suivant ? suivant.s : 'Place à la survie libre !'), VOIX_MODOU);
   noter(S.jour, 'Niveau ' + niveau + ' terminé : ' + C.t + '.');
   ecrireProgres();
+  S.suivi = nouveauSuivi();     // le niveau suivant repart de zéro
   sauvegarder();
 }
 
@@ -5196,7 +5302,9 @@ function fermerLeChapitre(continuer){
 
 /* Une pause à chaque étape ; les fêtes mensuelles restent une statistique distincte. */
 function lancerLaFete(){
-  S.etapesTerminees = etapesAcquises(S.jour);
+  var n = etapesAcquises(S.jour);
+  S.verdictNiveau = jugerObjectif(n);
+  S.etapesTerminees = n;
   S.derniereFete = S.jour;
   if (S.etapesTerminees % 3 === 0 && S.parties.every(function(p){ return !p; })) S.fetes++;
   ouvrirLeChapitre();
@@ -5765,7 +5873,7 @@ function normaliserProgres(d){
     : Math.max(numeroEtape(jour), (Math.max(1, Number(d.partie) || 1) - 1) * 3 + 1);
   niveau = Math.min(ETAPES.length + 1, Math.max(1, Math.floor(niveau)));
   return { schema:2, niveau:niveau, jours:jour, fetes:Number(d.fetes) || 0,
-    ane:!!d.ane, moto:!!d.moto, toit:!!d.toit };
+    ane:!!d.ane, moto:!!d.moto, toit:!!d.toit, etoiles:(d.etoiles && typeof d.etoiles === 'object') ? d.etoiles : {} };
 }
 function lireProgres(){
   try { return normaliserProgres(JSON.parse(localStorage.getItem(CLE_PROGRES()) || 'null')); }
@@ -5777,7 +5885,8 @@ function ecrireProgres(){
   var d = { schema:2,
     niveau:Math.max(ancien.niveau, numeroEtape(S.jour)),
     ane:!!(S.ane || ancien.ane), moto:!!(S.moto || ancien.moto), toit:!!(S.toitRepare || ancien.toit),
-    jours:Math.max(ancien.jours || 0, S.jour), fetes:Math.max(ancien.fetes || 0, S.fetes || 0)
+    jours:Math.max(ancien.jours || 0, S.jour), fetes:Math.max(ancien.fetes || 0, S.fetes || 0),
+    etoiles:Object.assign({}, ancien.etoiles || {}, S.etoiles || {})
   };
   try { localStorage.setItem(CLE_PROGRES(), JSON.stringify(d)); } catch (e) {}
 }
@@ -5808,6 +5917,9 @@ function appliquerLaProgression(pr){
 }
 function migrerSauvegarde(d){
   if (typeof d.etapesTerminees !== 'number') d.etapesTerminees = etapesAcquises(d.jour);
+  if (!d.suivi) d.suivi = nouveauSuivi();
+  if (!d.etoiles) d.etoiles = {};
+  if (!d.departs) d.departs = [null,null,null,null];
   d.chapitre = null; // l'ancien écran de fête ne doit jamais bloquer la reprise
   if (!d.difficulte){
     var ancienneDifficulte = null;
@@ -6089,6 +6201,12 @@ var AIDE = [
     'Sa bulle dit \u00ab Et moi, Modou ? \u00bb tant que l\u2019\u00e9cart dure.',
     'Le rem\u00e8de : tenir les quatre ensemble, pas en g\u00e2ter une seule. C\u2019est l\u2019\u00c9quilibre.'
   ]},
+  { t:'Quatre temp\u00e9raments', l:[
+    'Premi\u00e8re Dame, la fid\u00e8le : elle tient, ses soins la remettent vraiment (+45).',
+    'Deuxi\u00e8me Dame, l\u2019impatiente : elle r\u00e9clame souvent, mais ses fleurs sont les moins ch\u00e8res (+45).',
+    'Troisi\u00e8me Dame, la discr\u00e8te : sa jauge monte quand Modou est au foyer, sans un franc. Ses pri\u00e8res rendent moins (+30).',
+    'Quatri\u00e8me Dame, l\u2019exigeante : elle co\u00fbte cher, mais elle tient longtemps (+55).'
+  ]},
   { t:'Ce que les Dames apportent', l:[
     'Première Dame — Santé : récupération au foyer augmentée de 20 %.',
     'Deuxième Dame — Amour : fatigue des déplacements réduite de 15 %.',
@@ -6244,6 +6362,7 @@ function demarrerA(pr){
   audioInit();
   if (AC && AC.state === 'suspended') AC.resume();
   S = nouvelEtat();
+  S.suivi = nouveauSuivi();
   appliquerLaProgression(pr);
   CAM.x = 50; CAM.y = 55; CAM.z = CFG.Z_LIBRE;
   CAM.tx = 50; CAM.ty = 55; CAM.tz = CFG.Z_LIBRE;
@@ -6278,6 +6397,7 @@ function demarrer(){
   audioInit();
   if (AC && AC.state === 'suspended') AC.resume();
   S = nouvelEtat();
+  S.suivi = nouveauSuivi();
   CAM.x = 50; CAM.y = 40; CAM.z = CFG.Z_LIBRE;
   CAM.tx = 50; CAM.ty = 40; CAM.tz = CFG.Z_LIBRE;
   construire();
