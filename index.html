@@ -1283,6 +1283,7 @@ function carteSVG(){
     s += '<circle cx="'+(arbres[r][0]-7)+'" cy="'+(arbres[r][1]-7)+'" r="8" fill="#79C46B"/>';
   }
 
+  s += '<g id="barrieres"></g>';   // rempli par dessinerBarrieres()
   s += '</svg>';
   return s;
 }
@@ -1379,7 +1380,7 @@ function dameSVG(i){
    ========================================================= */
 'use strict';
 
-var BUILD_TAG = 'LQD-v13.0';
+var BUILD_TAG = 'LQD-v13.1';
 document.getElementById('build').textContent = BUILD_TAG;
 var vIntro = document.getElementById('versionIntro');
 if (vIntro) vIntro.textContent = BUILD_TAG;
@@ -1747,7 +1748,11 @@ var NIVEAUX = [
     inflation:0.20, pressionMax:1.00, usure:0.90, paye:1.20, mandat:0.70,
     dit:'Les prix montent moins vite et Modou s\u2019use moins. Pour d\u00e9couvrir.' },
   { cle:'dur',     nom:'Difficile',
-    inflation:0.30, pressionMax:1.60, usure:1.25, paye:1.00, mandat:1.00,
+    /* 31 oct. 2026 : 1,25 → 1,15. Les allées barrées ajoutent de la
+       difficulté par le trajet ; sans rendre un peu de mou sur l'usure, le
+       robot tombait au jour 83 et ne passait plus que 13 niveaux sur 18.
+       À 1,15 : jour 96, 18 niveaux sur 18. La pente reste celle du 30. */
+    inflation:0.30, pressionMax:1.60, usure:1.15, paye:1.00, mandat:1.00,
     dit:'Le r\u00e9glage normal du jeu. Les scores de r\u00e9f\u00e9rence.' },
   { cle:'tresdur', nom:'Très difficile',
     inflation:0.40, pressionMax:2.20, usure:1.50, paye:0.85, mandat:1.30,
@@ -1954,6 +1959,52 @@ var VOISINS = {};
     VOISINS[ARETES[i][1]].push(ARETES[i][0]);
   }
 })();
+/* ---------- LES ALLÉES QUI SE FERMENT ----------
+   Lamine, le 31 octobre 2026 : « quand une dame part, elle doit fermer
+   automatiquement les accès les plus proches […] ça rend le jeu beaucoup
+   plus palpitant. » Celle qui s'en va ne punit pas Modou : elle coupe le
+   ravitaillement de sa voisine. La 1re étrangle la 2e, la 2e la 3e, la 3e
+   la 4e, la 4e la 1re. Perdre une Dame rend la suivante plus dure à tenir.
+
+   LES QUATRE RÈGLES QUI ONT DÉCIDÉ DE CE TABLEAU — toutes mesurées sur le
+   graphe avant d'écrire une ligne, pas devinées :
+
+   1. LE CHANTIER N'EST JAMAIS TOUCHÉ. Sans paye, pas de rappel, pas de
+      courses : le joueur serait fini sans être fini, et continuerait de
+      jouer une partie déjà perdue. Mesuré : la route de la paye vaut 305
+      au départ et 305 dans les dix situations possibles.
+   2. AUCUNE BOUTIQUE N'EST JAMAIS INJOIGNABLE. Vérifié à un départ, puis
+      sur les six couples de deux départs. Il n'y en a pas d'autres : trois
+      départs arrêtent la partie (SORTIES_FATALES), donc jamais plus de
+      deux Dames dehors en même temps.
+   3. ON NE FERME JAMAIS L'ALLÉE PRIVÉE D'UNE BOUTIQUE (AK-AP, TK-TP,
+      BK-BP, SK-SP). Ce sont des culs-de-sac : les fermer rendrait la
+      boutique inaccessible pour toujours, et la Dame impossible à servir.
+   4. LES QUATRE PUNITIONS SONT AUSSI PROCHES QUE LA GÉOMÉTRIE LE PERMET :
+      +214, +214, +156 et +134 % de trajet. Sur les 21 allées du domaine,
+      six seulement ont un effet quand on les ferme ; les onze autres se
+      contournent sans rien changer. Une répartition sans chevauchement
+      n'existe pas — c'est pourquoi deux Dames partagent CX-TK, et deux
+      autres CX-BF. */
+var FERMETURES = [
+  ['AK-CX'],            // la 1re partie coupe les FLEURS de la 2e    +214 %
+  ['CX-TK'],            // la 2e  partie coupe les PRIÈRES de la 3e   +214 %
+  ['GO-BL','CX-BF'],    // la 3e  partie coupe l'ARGENT de la 4e      +156 %
+  ['CX-TK','CX-BF']     // la 4e  partie coupe les SOINS de la 1re    +134 %
+];
+/* Qui souffre du départ de qui : la chaîne 1 → 2 → 3 → 4 → 1. */
+function victimeDe(i){ return (i + 1) % 4; }
+var FERMEES = {};
+function alleeFermee(a, b){ return !!(FERMEES[a + '-' + b] || FERMEES[b + '-' + a]); }
+function majFermetures(){
+  FERMEES = {};
+  if (!S) return;
+  for (var i=0;i<FERMETURES.length && i<DAMES.length;i++){
+    if (!S.parties[i]) continue;
+    for (var j=0;j<FERMETURES[i].length;j++) FERMEES[FERMETURES[i][j]] = true;
+  }
+}
+
 var PLACE = { x0:PLAN.C.x-PLAN.PLACE.w/2-12, y0:PLAN.C.y-PLAN.PLACE.h/2-12, x1:PLAN.C.x+PLAN.PLACE.w/2+12, y1:PLAN.C.y+PLAN.PLACE.h/2+12 };
 var DEMI = 30;
 
@@ -1970,6 +2021,9 @@ function marchable(xPct, yPct){
   if (X > PLACE.x0 - DEMI && X < PLACE.x1 + DEMI &&
       Y > PLACE.y0 - DEMI && Y < PLACE.y1 + DEMI) return true;
   for (var i=0;i<VOIES.length;i++){
+    /* Une allée fermée n'est plus un sol : sinon le joystick traverserait
+       la barrière à la main et toute la règle ne serait qu'un dessin. */
+    if (alleeFermee(ARETES[i][0], ARETES[i][1])) continue;
     var v = VOIES[i];
     if (distSeg(X, Y, v[0], v[1], v[2], v[3]).d <= DEMI) return true;
   }
@@ -1977,10 +2031,11 @@ function marchable(xPct, yPct){
 }
 
 /* projette un point sur l'allée la plus proche et rend ses deux extrémités */
-function surLAllee(X, Y){
+function surLAllee(X, Y, memeFermees){
   var best = null;
   for (var i=0;i<ARETES.length;i++){
     var a = ARETES[i][0], b = ARETES[i][1];
+    if (!memeFermees && alleeFermee(a, b)) continue;
     var r = distSeg(X, Y, NOEUDS[a][0], NOEUDS[a][1], NOEUDS[b][0], NOEUDS[b][1]);
     if (!best || r.d < best.d) best = { d:r.d, x:r.x, y:r.y, a:a, b:b };
   }
@@ -2003,7 +2058,9 @@ function routeEntre(depart, arrivee){
     vus[u] = true;
     var vs = VOISINS[u];
     for (var i=0;i<vs.length;i++){
-      var v = vs[i], alt = dist[u] + ecart(u, v);
+      var v = vs[i];
+      if (alleeFermee(u, v)) continue;      // barrière : on fait le tour
+      var alt = dist[u] + ecart(u, v);
       if (alt < dist[v]){ dist[v] = alt; prec[v] = u; }
     }
   }
@@ -2020,7 +2077,9 @@ function routeEntre(depart, arrivee){
 function trajetVers(cibleXpct, cibleYpct){
   var MX = S.modou.x * 14, MY = S.modou.y * 8;
   var CX2 = cibleXpct * 14, CY2 = cibleYpct * 8;
-  var dep = surLAllee(MX, MY), arr = surLAllee(CX2, CY2);
+  /* Modou peut se trouver SUR une allée qui vient de fermer : il doit
+     pouvoir en sortir. La destination, elle, ne peut pas être dessus. */
+  var dep = surLAllee(MX, MY, true), arr = surLAllee(CX2, CY2);
   if (!dep || !arr) return null;
 
   var meilleur = null;
@@ -3889,6 +3948,74 @@ function leFilsRepart(){
   noter(S.jour, 'Fin des vacances du fils.');
 }
 
+/* ---------- LES BARRIÈRES À L'ÉCRAN ----------
+   Une allée fermée qui ne se voit pas est un bug aux yeux du joueur : il
+   croirait Modou devenu bête. Chaque fermeture pose donc une barrière en
+   travers de l'allée, au milieu du segment, tournée avec lui. */
+/* OÙ SE POSE LA BARRIÈRE. Pas au milieu du segment : la moitié des allées
+   qui se ferment partent du foyer, et leur milieu tombe dans la cour
+   centrale — qui est marchable. La barrière y serait décorative, et le
+   joueur passerait à côté. On la pose donc aux 62 % du trajet en partant
+   du bout le plus proche du foyer : toujours en plein sur l'allée, jamais
+   dans la cour. tests/progression.test.cjs le vérifie allée par allée. */
+function pointBarriere(a, b){
+  var A = NOEUDS[a], B = NOEUDS[b];
+  if (!A || !B) return null;
+  var dA = Math.hypot(A[0] - PLAN.C.x, A[1] - PLAN.C.y);
+  var dB = Math.hypot(B[0] - PLAN.C.x, B[1] - PLAN.C.y);
+  var P = dA <= dB ? A : B, Q = dA <= dB ? B : A;
+  return { x: P[0] + (Q[0] - P[0]) * 0.62, y: P[1] + (Q[1] - P[1]) * 0.62,
+           angle: Math.atan2(Q[1] - P[1], Q[0] - P[0]) * 180 / Math.PI + 90 };
+}
+function dessinerBarrieres(){
+  var g = document.getElementById('barrieres');
+  if (!g) return;
+  var out = '';
+  for (var cle in FERMEES){
+    var bouts = cle.split('-'), pt = pointBarriere(bouts[0], bouts[1]);
+    if (!pt) continue;
+    var mx = pt.x, my = pt.y, angle = pt.angle;
+    out += '<g transform="translate(' + mx.toFixed(1) + ',' + my.toFixed(1) + ') rotate(' + angle.toFixed(1) + ')">' +
+           '<circle cx="-36" cy="0" r="10" fill="#5B4430" stroke="#2B2118" stroke-width="4"/>' +
+           '<circle cx="36" cy="0" r="10" fill="#5B4430" stroke="#2B2118" stroke-width="4"/>' +
+           '<rect x="-40" y="-12" width="80" height="24" rx="8" fill="#F2F0E6" stroke="#2B2118" stroke-width="5"/>' +
+           '<rect x="-34" y="-7" width="22" height="14" fill="#C9452F"/>' +
+           '<rect x="12" y="-7" width="22" height="14" fill="#C9452F"/>' +
+           '</g>';
+  }
+  g.innerHTML = out;
+}
+/* Modou ne doit jamais rester coincé SUR une allée qui vient de fermer :
+   on le repose sur l'allée ouverte la plus proche et on annule son trajet. */
+function degagerModou(){
+  if (!S || !S.modou) return;
+  S.auto = null;
+  if (marchable(S.modou.x, S.modou.y)) return;
+  var MX = S.modou.x * 14, MY = S.modou.y * 8, best = null;
+  for (var i=0;i<ARETES.length;i++){
+    var a = ARETES[i][0], b = ARETES[i][1];
+    if (alleeFermee(a, b)) continue;
+    var r = distSeg(MX, MY, NOEUDS[a][0], NOEUDS[a][1], NOEUDS[b][0], NOEUDS[b][1]);
+    if (!best || r.d < best.d) best = r;
+  }
+  if (best){ S.modou.x = best.x / 14; S.modou.y = best.y / 8; }
+}
+/* Appelée à chaque image, mais ne travaille que si quelque chose a changé :
+   un départ, un rappel, une reprise de partie, ou une carte reconstruite. */
+var signatureFermetures = null;
+function appliquerFermetures(){
+  if (!S || !S.parties) return;
+  var g = document.getElementById('barrieres');
+  var sig = S.parties.join('') + '|' + (g && g.innerHTML ? '1' : '0');
+  if (sig === signatureFermetures) return;
+  signatureFermetures = sig;
+  majFermetures();
+  dessinerBarrieres();
+  degagerModou();
+  var g2 = document.getElementById('barrieres');
+  signatureFermetures = S.parties.join('') + '|' + (g2 && g2.innerHTML ? '1' : '0');
+}
+
 /* ---------- LA JALOUSIE À L'ÉCRAN ---------- */
 var jalousieVue = [false,false,false,false];
 function majJalousie(jal){
@@ -4123,6 +4250,10 @@ function faireRevenir(i, prixConfirme){
   if (pos >= 0) S.ordreDepart.splice(pos, 1);
 
   rouvrirLeFoyer(i);
+  /* Elle rentre, sa barrière tombe. C'est la vraie récompense du rappel :
+     on ne rachète pas une statistique, on rouvre une route. */
+  appliquerFermetures();
+  if (FERMETURES[i] && FERMETURES[i].length) noter(S.jour, 'Allée rouverte par son retour.');
 
   // elle rentre par où elle est sortie, mais d'un pas décidé
   var el = damesEl[i];
@@ -4165,14 +4296,35 @@ function faitPartir(i){
     flash('Trois Dames sont parties. Le domaine est vide.', 3000);
     setTimeout(function(){ if (S.enCours) finir('abandon'); }, 1400);
   } else {
-    var reste = CFG.SORTIES_FATALES - S.sorties;
     flash(DAMES[i].nom + ' est partie. Rappel sur sa case.', 4200);
     noter(S.jour, 'Avantage perdu : ' + AVANTAGES[i].texte + '.');
+    fermerSonAllee(i);
   }
+}
+
+/* En partant, elle barre l'allée qui nourrit sa voisine. On le dit en
+   clair : la punition ne tombe pas sur Modou, elle tombe sur une autre. */
+function fermerSonAllee(i){
+  if (!FERMETURES[i] || !FERMETURES[i].length) return;
+  appliquerFermetures();
+  var v = victimeDe(i);
+  if (S.parties[v]) return;                 // sa voisine est déjà dehors : rien à annoncer
+  var ou = LIEUX[DAMES[v].lieu];
+  setTimeout(function(){
+    if (!S || !S.enCours) return;
+    flash(DAMES[i].nom + ' a barré l\u2019allée en partant. La route vers ' +
+          ou.nom + ' est bien plus longue pour ' + DAMES[v].nom + '.', 4600);
+    noter(S.jour, 'Allée barrée : ' + ou.nom + ' s\u2019éloigne pour ' + DAMES[v].nom + '.');
+    if (!S.vu.fermeture){
+      S.vu.fermeture = true;
+      modouDit('Elle a ferm\u00e9 le passage\u2026 il va falloir faire le tour.', 3200);
+    }
+  }, 4400);
 }
 
 /* ---------- RENDU ---------- */
 function rendre(){
+  appliquerFermetures();
   for (var i=0;i<DAMES.length;i++){
     if (S.parties[i]) continue;
     var v = Math.round(S.jauges[i]);
@@ -5862,6 +6014,14 @@ var AIDE = [
     'La contribution suit le grade et la difficulté, sans les primes ni les bonus de travail.',
     'Un seul versement par visite, avec une journée de jeu minimum entre deux versements.',
     'Modou donne au maximum ce qu’il possède et peut toujours récupérer, même sans argent.'
+  ]},
+  { t:'Les all\u00e9es barr\u00e9es', l:[
+    'Une Dame qui s\u2019en va barre une all\u00e9e derri\u00e8re elle.',
+    'Elle ne te punit pas toi : elle coupe la route de sa voisine.',
+    'La premi\u00e8re coupe les fleurs, la deuxi\u00e8me les pri\u00e8res,',
+    'la troisi\u00e8me l\u2019argent, la quatri\u00e8me les soins.',
+    'La route du chantier, elle, n\u2019est jamais barr\u00e9e : la paye rentre toujours.',
+    'Rappeler la Dame fait tomber sa barri\u00e8re.'
   ]},
   { t:'La jalousie', l:[
     'Une Dame au-dessus de 78 pendant qu\u2019une autre est sous 40 : la n\u00e9glig\u00e9e se vide 60 % plus vite.',

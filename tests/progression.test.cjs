@@ -305,4 +305,69 @@ test('Share text names the days held and the difficulty',()=>{
   g.iNiveau=0;state(37);assert.match(g.texteDePartage(),/Modou a tenu 37 jours \(Facile\)/);
   const actions=html.match(/<div class="screen hide" id="scrFin">([\s\S]*?)<\/div>\s*<\/div>/)[1];assert.ok(actions.includes('id="btnPartager"'));
 });
-console.log(`TOTAL: ${checks} tests passed, 30 octobre inclus.`);
+
+/* ── 31 octobre 2026 : les allées que barre une Dame qui s'en va ──
+   Ces épreuves ne jugent pas si le jeu est trop dur — c'est le rôle du robot
+   d'économie. Elles vérifient qu'il reste JOUABLE : rien d'injoignable,
+   la paye toujours accessible, et une barrière qu'on ne traverse pas. */
+const PORTE_DE = ['SP','AP','TP','BP'];            // la boutique de chaque Dame
+const NOM_DE = {AP:'fleurs', TP:'prieres', BP:'argent', SP:'soins'};
+function seules(...qui){ state(40); g.S.parties = [0,1,2,3].map(k => qui.includes(k)); g.majFermetures(); }
+function longueur(de, vers){
+  const r = g.routeEntre(de, vers); if (!r) return null;
+  let L = 0; for (let i=0;i<r.length-1;i++) L += g.ecart(r[i], r[i+1]); return L;
+}
+test('A departing Dame bars a lane, and it is her neighbour she starves',()=>{
+  for (let i=0;i<4;i++){
+    seules(i);
+    assert.ok(g.FERMETURES[i].length > 0, `la Dame ${i+1} ne ferme rien`);
+    for (const cle of g.FERMETURES[i]){ const [a,b] = cle.split('-'); assert.equal(g.alleeFermee(a,b), true, cle); }
+    assert.equal(g.victimeDe(i), (i+1) % 4);
+    const avant = (seules(), longueur('CX', PORTE_DE[g.victimeDe(i)]));
+    seules(i);
+    assert.ok(longueur('CX', PORTE_DE[g.victimeDe(i)]) > avant * 1.3,
+      `le depart de la Dame ${i+1} n'allonge pas assez la route de sa voisine`);
+  }
+});
+test('No shop is ever cut off: one departure, then all six pairs of two',()=>{
+  const verifier = (...qui) => { seules(...qui);
+    for (const c of Object.keys(NOM_DE))
+      assert.ok(longueur('CX', c) !== null, `${NOM_DE[c]} injoignable avec ${qui.join('+')}`); };
+  for (let i=0;i<4;i++) verifier(i);
+  for (let i=0;i<4;i++) for (let j=i+1;j<4;j++) verifier(i,j);   // trois departs = partie perdue
+});
+test('The road to the worksite is never barred, whoever leaves',()=>{
+  seules(); const base = Math.round(longueur('CX','CH'));
+  for (let i=0;i<4;i++) for (let j=i;j<4;j++){
+    seules(i,j);
+    assert.equal(Math.round(longueur('CX','CH')), base, `la paye s'allonge avec ${i}+${j}`);
+  }
+});
+test('A private shop lane is never barred: a dead end would strand its Dame',()=>{
+  const culsDeSac = ['AK-AP','TK-TP','BK-BP','SK-SP','HE-CH'];
+  for (const liste of g.FERMETURES) for (const cle of liste){
+    const [a,b] = cle.split('-');
+    assert.ok(!culsDeSac.includes(cle) && !culsDeSac.includes(b+'-'+a), cle);
+  }
+});
+test('A barred lane is no longer ground: the joystick cannot cross it',()=>{
+  for (let i=0;i<4;i++) for (const cle of g.FERMETURES[i]){
+    const [a,b] = cle.split('-');
+    const pt = g.pointBarriere(a,b);
+    seules();  assert.equal(g.marchable(pt.x/14, pt.y/8), true,  `${cle} devrait etre un sol quand tout est ouvert`);
+    seules(i); assert.equal(g.marchable(pt.x/14, pt.y/8), false, `${cle} se traverse encore a pied`);
+  }
+});
+test('Modou caught on a lane that closes is put back on an open one',()=>{
+  seules(); const pt = g.pointBarriere('AK','CX');
+  g.S.modou.x = pt.x/14; g.S.modou.y = pt.y/8;
+  g.S.parties = [true,false,false,false]; g.majFermetures(); g.degagerModou();
+  assert.equal(g.marchable(g.S.modou.x, g.S.modou.y), true, 'Modou reste coince derriere la barriere');
+  assert.equal(g.S.auto, null, 'son trajet en cours traversait la barriere');
+});
+test('Recalling a Dame takes her barrier down again',()=>{
+  seules(0); assert.equal(g.alleeFermee('AK','CX'), true);
+  g.S.parties[0] = false; g.majFermetures();
+  assert.equal(g.alleeFermee('AK','CX'), false, 'la barriere reste apres le rappel');
+});
+console.log(`TOTAL: ${checks} tests passed, 31 octobre inclus.`);
