@@ -132,11 +132,11 @@ test('The actual game loop introduces features at the announced levels',()=>{
     assert.equal(g.S.jour,day-1);
     g.fermerLeMoisTenu(false);g.last=1000;g.tourDeBoucle(1000);
     assert.equal(g.S.jour,day);
-    if(day===78)assert.equal(g.S.enfant,null);
-    if(day===79)assert.ok(g.S.enfant);                       // mois 3 : le fils arrive
-    if(day===80){assert.equal(g.S.filsParti,true);assert.equal(g.S.enfant,null);   // mois 4 : il part
+    if(day===78)assert.ok(g.S.enfant);                       // mois 2 : le fils arrive
+    // (22 nov. : le fils arrive au mois 2, part au mois 3)
+    if(day===79){assert.equal(g.S.filsParti,true);assert.equal(g.S.enfant,null);   // mois 4 : il part
       assert.equal(g.S.moto,true);assert.equal(g.S.ane,false);assert.equal(g.S.dette,0);} // vélo échangé contre la moto
-    if(day===80)assert.equal(g.S.mandatsEnvoyes,1);   // dès la semaine qui suit son départ
+    if(day===79)assert.equal(g.S.mandatsEnvoyes,1);   // dès la semaine qui suit son départ
     if(day===91)assert.equal(g.S.saisonPluies,true);
     if(day===92)assert.equal(g.S.toitPropose,true);
     if(day===111){assert.equal(g.S.vacances,true);assert.ok(g.S.enfant);}
