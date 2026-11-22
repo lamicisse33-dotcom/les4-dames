@@ -1257,7 +1257,7 @@ function dameSVG(i){
    ========================================================= */
 'use strict';
 
-var BUILD_TAG = 'LQD-v14.2';
+var BUILD_TAG = 'LQD-v14.3';
 document.getElementById('build').textContent = BUILD_TAG;
 var vIntro = document.getElementById('versionIntro');
 if (vIntro) vIntro.textContent = BUILD_TAG;
@@ -3701,9 +3701,17 @@ function majCamera(dt){
     cz = 2.7 + S.fete.niveau * 0.12;
   }
   else if (CAM.libre){
-    cx = 50; cy = 54;   // un peu plus bas : la rivière et la pirogue restent dans l'écran
+    /* 22 nov. 2026 : le décor déborde de l'écran ; la caméra suit Modou (ou la Dame
+       qui s'en va) pour que le chantier, les maisons et la rivière soient bien cadrés. */
+    var vL = vue(S.modou.x, S.modou.y);
+    cx = vL.x; cy = vL.y;
+    if (S.sortieVue > 0){
+      for (var e2=0;e2<DAMES.length;e2++){
+        if (S.exode[e2] && !S.exode[e2].retour && damesEl[e2] && damesEl[e2]._vx !== undefined){ cx = damesEl[e2]._vx; cy = damesEl[e2]._vy; }
+      }
+    }
     // on garde 48 px en haut (jauges) et 48 px en bas (force) : le chantier et la banque restent entièrement visibles
-    cz = couvrir();   // 22 nov. 2026 : le décor remplit tout l'écran, sans rebord
+    cz = couvrir() * 1.12;   // 22 nov. 2026 : plein écran, un peu rapproché pour que la caméra accompagne Modou
   }
   else if (S.sortieVue > 0){
     qui = -1;
