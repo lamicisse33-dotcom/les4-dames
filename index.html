@@ -557,6 +557,13 @@ html,body{height:100%;overflow:hidden;background:#1B2A1B;font-family:var(--ui);c
   border-radius:50%;background:rgba(255,255,255,.92);border:3px solid var(--trait);
   box-shadow:0 3px 0 rgba(43,33,24,.4);transform:translate(-50%,-50%)}
 
+#rebours{position:fixed;left:50%;top:38%;transform:translate(-50%,-50%);z-index:60;pointer-events:none;
+  font:900 clamp(64px,16vmin,150px)/1 system-ui,sans-serif;color:#fff3c4;opacity:0;
+  text-shadow:0 0 18px rgba(255,160,40,.85),0 4px 0 #7a3b00,0 8px 22px rgba(0,0,0,.55)}
+#rebours.on{opacity:1}
+#rebours.bat{animation:rebBat .9s ease-out}
+#rebours small{display:block;font-size:.2em;letter-spacing:.12em;margin-top:.3em}
+@keyframes rebBat{0%{transform:translate(-50%,-50%) scale(1.45)}60%{transform:translate(-50%,-50%) scale(1)}}
 #flash{position:fixed;top:calc(52px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);
   z-index:46;background:var(--blanc);border:3px solid var(--trait);box-shadow:var(--ombre);
   padding:6px 14px;border-radius:18px;font-size:11.5px;font-weight:900;
@@ -945,6 +952,7 @@ body.playing #etapeJeu.visible{display:block}
 
 <div id="scene"><div id="board"><div id="layer"></div></div></div>
 <div id="flash"></div>
+<div id="rebours" aria-live="polite"></div>
 <div id="tuto"></div>
 
 <div id="top">
@@ -1260,7 +1268,7 @@ function dameSVG(i){
    ========================================================= */
 'use strict';
 
-var BUILD_TAG = 'LQD-v16.1';
+var BUILD_TAG = 'LQD-v16.2';
 document.getElementById('build').textContent = BUILD_TAG;
 var vIntro = document.getElementById('versionIntro');
 if (vIntro) vIntro.textContent = BUILD_TAG;
@@ -1478,7 +1486,8 @@ document.addEventListener('touchend', surAppui, {passive:false});
 /* ---------- RÉGLAGES ---------- */
 var CFG = {
   SEC_PAR_JOUR: 300,      // 22 nov. 2026 : un mois dure cinq minutes
-  SEC_PAR_SEMAINE: 75,    // quatre semaines par mois : le rythme de l'argent et de la difficulté
+  SEC_PAR_SEMAINE: 75,
+  REBOURS: 10,            // la veille de la fin du mois (300 s / 30 jours)    // quatre semaines par mois : le rythme de l'argent et de la difficulté
   SEC_PAR_CYCLE: 13,      // à l'intérieur du mois, le chantier ouvre 8 s et ferme 5 s, comme avant
   PART_JOUR: 0.62,
   TRANSITION: 0.09,       // douceur de l'aube et du crépuscule
@@ -2932,6 +2941,7 @@ function audioInit(){
     MUS.depart = AC.currentTime + 0.25;
     monter(BUS_MUS, 0.15, 2.5);
   } catch (e) { AC = null; }
+  try { chargerVoixDuJeu(); } catch (e) {}
 }
 function monter(bus, cible, duree){
   if (!AC || !bus) return;
@@ -4242,12 +4252,66 @@ var SUITES_MODOU = [
   'Que ta m\u00e8re soit fi\u00e8re de toi.'
 ];
 
+/* La voix du jeu : grave, forte, avec de l'écho (fichier sons/). Lamine peut
+   remplacer le fichier par son propre enregistrement, sous le même nom. */
+var VOIX_JEU = { semaine:'sons/semaine-tenue.mp3' }, VOIX_JEU_BUF = {};
+function chargerVoixDuJeu(){
+  if (!AC || !window.fetch) return;
+  Object.keys(VOIX_JEU).forEach(function(k){
+    if (VOIX_JEU_BUF[k]) return;
+    VOIX_JEU_BUF[k] = 'charge';
+    fetch(VOIX_JEU[k]).then(function(r){ return r.arrayBuffer(); }).then(function(a){
+      AC.decodeAudioData(a, function(b){ VOIX_JEU_BUF[k] = b; }, function(){ VOIX_JEU_BUF[k] = null; });
+    }).catch(function(){ VOIX_JEU_BUF[k] = null; });
+  });
+}
+function voixDuJeu(k){
+  if (!AC || !SON_ON) return;
+  var b = VOIX_JEU_BUF[k];
+  if (!b || b === 'charge'){ chargerVoixDuJeu(); return; }
+  try {
+    couperLaParole();
+    var src = AC.createBufferSource(), g = AC.createGain();
+    src.buffer = b; g.gain.value = 1.0;
+    src.connect(g); g.connect(AC.destination);
+    monter(BUS_MUS, 0.04, 0.3);                       // la musique s'efface derrière la voix
+    src.onended = function(){ monter(BUS_MUS, SON_ON ? 0.15 : 0, 1.5); };
+    src.start();
+  } catch (e) {}
+}
+/* 22 nov. 2026, demandé par Lamine : le compte à rebours commence à la veille
+   de la fin du mois. Un mois = 30 jours = 300 s, la veille = les 10 dernières s. */
+var dernierRebours = 0;
+function cacherRebours(){
+  dernierRebours = 0;
+  var el = document.getElementById('rebours');
+  if (el){ el.className = ''; el.innerHTML = ''; }
+}
+function majRebours(){
+  var el = document.getElementById('rebours');
+  if (!el) return;
+  var reste = CFG.SEC_PAR_JOUR - (S.temps % CFG.SEC_PAR_JOUR);
+  var n = (S.jour >= CFG.DEBUT_JOUR && !S.chapitre && reste <= CFG.REBOURS) ? Math.ceil(reste) : 0;
+  if (n !== dernierRebours){
+    dernierRebours = n;
+    if (n > 0){
+      el.innerHTML = n + '<small>FIN DU MOIS</small>';
+      el.className = 'on';
+      void el.offsetWidth;
+      el.className = 'on bat';
+      note(n <= 3 ? 1180 : 880, 0.09, 'square', 0.22);
+    } else { el.className = ''; el.innerHTML = ''; }
+  }
+}
 function nouvelleSemaine(){
   var hp = Math.round((NIV().hausseHebdo || 0) * 1000) / 10;
   var hy = Math.round((NIV().payeHebdo || 0) * 1000) / 10;
   var txt = 'Semaine ' + semaineDuMois() + ' \u2014 les prix montent de ' + String(hp).replace('.', ',') +
             ' %, ta paye de ' + String(hy).replace('.', ',') + ' %.';
-  if (semaineDuMois() !== 1) flash(txt, 3200);    // la semaine 1 s'ouvre avec le nouveau mois
+  if (semaineDuMois() !== 1){                      // la semaine 1 s'ouvre avec le nouveau mois
+    flash('<b>UNE SEMAINE TENUE ! BRAVO !</b><br>' + txt, 3600);
+    voixDuJeu('semaine');
+  }
   noter(S.jour, txt);
   marquerHausse();
   if (S.filsParti && !S.vacances) envoyerLeMandatSeul();
@@ -5377,6 +5441,7 @@ function tourDeBoucle(ts){
         modouDit('Un mois. Je tiens encore.', 3000);
       }
     }
+    if (jour > CFG.DEBUT_JOUR) nouveauDepartDuMois();
     sauverDebutDuMois();
   }
 
@@ -5387,6 +5452,8 @@ function tourDeBoucle(ts){
     S.semaine = sem;
     nouvelleSemaine();
   }
+
+  majRebours();
 
   // cycle jour / nuit
   S.nuit = calculerNuit();
@@ -5480,6 +5547,7 @@ var TITRES = [
   { min:30, t:'L\u2019ÉQUILIBRE' }
 ];
 function finir(cause){
+  cacherRebours();
   S.enCours = false;
   gamePaused = false;
   majPauseBtn();
@@ -5738,6 +5806,7 @@ function ouvrirLeChapitre(){
 /* 22 nov. 2026 : le tableau de victoire, à la fin de chaque mois */
 function ouvrirLeMoisTenu(){
   var mois = moisDe(S.jour);
+  cacherRebours();
   noterAction('mois tenu');
   S.chapitre = { niveau: Math.min(15, mois * 3), t:0, prochain:0, mois:mois };
   document.body.classList.remove('playing');
@@ -6297,6 +6366,7 @@ function ouvrirLeBord(){
 }
 /* revenir au menu sans rien perdre : la partie est sauvegardée */
 function retourAuMenu(){
+  cacherRebours();
   if (!S) return;
   sauvegarder();
   ecrireProgres();
@@ -6517,20 +6587,8 @@ function restaurerLeDecor(){
   afficherAvantages();
 }
 
-function reprendreLaPartie(){
-  noterAction('reprise de la partie sauvegardée');
-  var d = partieEnAttente();
-  if (!d) { majBoutonReprendre(); return; }
-  audioInit();
-  if (AC && AC.state === 'suspended') AC.resume();
-
-  S = migrerSauvegarde(d);
-  for (var q=0;q<NIVEAUX.length;q++) if (NIVEAUX[q].cle === S.difficulte) iNiveau = q;
-  try { localStorage.setItem('lqd_niveau', NIV().cle); } catch (e) {}
-  chargerRecord();
-  S.fete = null; S.auto = null; S.cool = 0; S.sortieVue = 0;
-  S.vu = S.vu || {}; S.rappels = S.rappels || {};
-
+/* Remet le plateau exactement dans l'état de S (reprise, nouveau mois). */
+function reconstruireLaScene(){
   construire();
   finirLaFete();
   restaurerLeDecor();
@@ -6547,6 +6605,45 @@ function reprendreLaPartie(){
     else if (S.ane) modouEl.classList.add('surLane');
   }
   redimensionner();
+}
+/* 22 nov. 2026, demandé par Lamine : « le mois suivant, tout doit démarrer à
+   nouveau » — les quatre Dames à leur place, Modou reposé, et une caisse
+   raisonnable pour tenir. La difficulté, elle, continue de monter à la semaine. */
+function argentDuNouveauMois(){
+  return Math.round(CFG.ARGENT_DEPART * Math.pow(1 + NIV().inflation, palierActuel(CFG.DEBUT_JOUR)) * facteurPrix());
+}
+function nouveauDepartDuMois(){
+  var n = nouvelEtat();
+  S.jauges = n.jauges.slice();
+  S.force = 100;
+  S.argent = argentDuNouveauMois();
+  S.crise = [0,0,0,0];
+  S.parties = [false,false,false,false];
+  S.departs = [null,null,null,null];
+  S.exode = [null,null,null,null];
+  S.ordreDepart = [];
+  S.sorties = 0;
+  S.alerte = 0; S.attente = 0; S.sortieVue = 0;
+  S.fete = null; S.auto = null;
+  dameSuivie = -1;
+  majFermetures();
+  reconstruireLaScene();
+}
+function reprendreLaPartie(){
+  noterAction('reprise de la partie sauvegardée');
+  var d = partieEnAttente();
+  if (!d) { majBoutonReprendre(); return; }
+  audioInit();
+  if (AC && AC.state === 'suspended') AC.resume();
+
+  S = migrerSauvegarde(d);
+  for (var q=0;q<NIVEAUX.length;q++) if (NIVEAUX[q].cle === S.difficulte) iNiveau = q;
+  try { localStorage.setItem('lqd_niveau', NIV().cle); } catch (e) {}
+  chargerRecord();
+  S.fete = null; S.auto = null; S.cool = 0; S.sortieVue = 0;
+  S.vu = S.vu || {}; S.rappels = S.rappels || {};
+
+  reconstruireLaScene();
 
   CAM.x = S.modou.x; CAM.y = S.modou.y; CAM.z = CFG.Z_LIBRE;
   CAM.tx = CAM.x; CAM.ty = CAM.y; CAM.tz = CFG.Z_LIBRE;

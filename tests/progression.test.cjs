@@ -501,4 +501,28 @@ test('Every week: prices, pay and wear rise, and the son gets his money',()=>{
   // la paye monte moins vite que les prix en Difficile : l'étau se resserre
   assert.ok(g.payeModou()/paye0 < g.prixDuJour('BANQUE')/prix0 + 1e-9);
 });
-console.log(`TOTAL: ${checks} tests passed, v16 inclus.`);
+test('A new month starts afresh: four Dames home, Modou rested, reasonable money',()=>{
+  data.clear();g.iNiveau=1;g.demarrer();g.gamePaused=false;const S=g.S;
+  g.faitPartir(2);S.jauges=[10,20,0,15];S.argent=7;S.force=12;
+  S.temps=77*g.CFG.SEC_PAR_JOUR+0.5;g.last=1000;g.tourDeBoucle(1000);
+  g.fermerLeMoisTenu(false);g.last=1000;g.tourDeBoucle(1000);
+  assert.equal(g.S.jour,78);assert.equal(JSON.stringify(g.S.parties),JSON.stringify([false,false,false,false]));
+  assert.equal(g.S.sorties,0);assert.ok(g.S.jauges.every(v=>v>=45));assert.ok(g.S.force>=99);
+  assert.equal(g.S.argent,g.argentDuNouveauMois());assert.ok(g.S.argent>=g.CFG.ARGENT_DEPART);
+  const photo=g.debutDuMoisEnAttente();assert.equal(JSON.stringify(photo.parties),JSON.stringify([false,false,false,false]));
+});
+test('Pause then resume gives back the exact state, departed Dame included',()=>{
+  data.clear();g.iNiveau=1;g.demarrer();g.gamePaused=false;const S=g.S;
+  g.faitPartir(1);S.jauges[3]=17;S.argent=333;S.temps+=123;
+  g.sauvegarder();g.retourAuMenu();g.reprendreLaPartie();
+  assert.equal(JSON.stringify(g.S.parties),JSON.stringify([false,true,false,false]));assert.equal(g.S.jauges[3],17);
+  assert.equal(g.S.argent,333);assert.equal(g.S.sorties,1);
+});
+test('Countdown runs only during the last ten seconds of the month',()=>{
+  data.clear();g.iNiveau=1;g.demarrer();g.gamePaused=false;const S=g.S,M=g.CFG.SEC_PAR_JOUR;
+  S.jauges=[90,90,90,90];S.temps=76*M+280;g.last=1000;g.tourDeBoucle(1000);
+  assert.equal(nodes.get('rebours').className||'','');
+  S.temps=76*M+292.5;g.last=1000;g.tourDeBoucle(1000);
+  assert.ok(nodes.get('rebours').innerHTML.startsWith('8'));
+});
+console.log(`TOTAL: ${checks} tests passed, v16.2 inclus.`);

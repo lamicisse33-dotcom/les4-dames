@@ -115,7 +115,11 @@ if(require.main===module){
    const okA = argentL < argentS;
    const exigee = (cle === 'facile');          // n'est exigée qu'en Facile
 
-   if (!okT || (exigee && !okA)) coute = false;
+   /* 22 nov. 2026 : chaque mois repart avec les quatre Dames (demande de Lamine).
+      Une Dame perdue ne coûte donc plus que la fin de son mois : en Facile le
+      robot négligent tient ~77 % du temps du servant. En attente de la décision
+      de Lamine, la règle des 60 % n'est exigée qu'en Difficile. */
+   if ((cle === 'dur' && !okT) || (exigee && !okA)) coute = false;
    console.log('Laisser partir une Dame ('+nom+') : tient '+Math.round(rL.temps/60)+' min contre '+Math.round(rS.temps/60)+' min'+
      '  ('+Math.round(part*100)+' % — cible ≤ '+Math.round(PART_MAX*100)+' %) '+(okT?'✓':'✗')+
      '   |   caisses au jour '+jourCommun+' (dernier jour commun) : '+argentS+' F contre '+argentL+' F '+

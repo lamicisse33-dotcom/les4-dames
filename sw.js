@@ -2,7 +2,7 @@
    Règle d'or : le HTML passe TOUJOURS par le réseau d'abord.
    Sinon une mise à jour du jeu ne remonte jamais sur l'appareil. */
 
-var CACHE = 'lqd-v16.1';
+var CACHE = 'lqd-v16.2';
 var FICHIERS = [
   './',
   './index.html',
@@ -12,6 +12,7 @@ var FICHIERS = [
   './icon-maskable-512.png',
   './apple-touch-icon.png',
   './decor/plateau.webp',
+  './sons/semaine-tenue.mp3',
   './decor/pirogue_senegalaise_vide_jeu_2x.png',
   './decor/chevre_blanche_broute_jeu_2x.png',
   './decor/chevre_blanche_tete_levee_jeu_2x.png',
