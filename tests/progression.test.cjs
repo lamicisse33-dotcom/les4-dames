@@ -551,6 +551,6 @@ test('A departed Dame costs a weekly pension, stopped when she is back',()=>{
   assert.equal(g.CFG.DESEQUILIBRE_PAYE,0);
   S.parties[2]=false;const a=S.argent;S.temps=T0+2*W+0.5;g.last=1000;g.tourDeBoucle(1000);
   assert.ok(S.argent>=a-50,'plus de pension quand elle est revenue');
-  assert.equal(String(nodes.get('semaineNum').textContent),'3');
+  assert.equal(String(nodes.get('semaineNum').textContent),'2');   // deux semaines tenues
 });
 console.log(`TOTAL: ${checks} tests passed, v16.5 inclus.`);

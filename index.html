@@ -978,7 +978,7 @@ body.playing #etapeJeu.visible{display:block}
     <button id="menuBtn">⌂</button>
     <div id="sous"><span class="pic">&#128176;</span><span id="sousVal">0</span></div>
     <div id="jourBox"><small>MOIS</small><div id="jour">1</div><b id="nomJour">Janvier</b></div>
-    <div id="semaineBox"><small>SEMAINE</small><div id="semaineNum">1</div><b>sur 4</b></div>
+    <div id="semaineBox"><small>SEMAINES</small><div id="semaineNum">0</div><b>tenues sur 4</b></div>
   </div>
 </div>
 
@@ -1285,7 +1285,7 @@ function dameSVG(i){
    ========================================================= */
 'use strict';
 
-var BUILD_TAG = 'LQD-v16.7';
+var BUILD_TAG = 'LQD-v16.8';
 document.getElementById('build').textContent = BUILD_TAG;
 var vIntro = document.getElementById('versionIntro');
 if (vIntro) vIntro.textContent = BUILD_TAG;
@@ -5064,7 +5064,7 @@ function rendre(){
   if (bp) bp.textContent = S.foyer ? 'FOYER' : 'REVIENS ICI D\u2019ABORD';
   elJour.textContent = moisDe(S.jour);
   var elSem = document.getElementById('semaineNum');
-  if (elSem) elSem.textContent = semaineDuMois();
+  if (elSem) elSem.textContent = semaineDuMois() - 1;   // 22 nov. : les semaines TENUES ; à la 4e, c'est l'écran du mois
   afficherEtape();
 
   // prix du jour sur les badges + zone trop chère
