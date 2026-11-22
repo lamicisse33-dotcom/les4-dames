@@ -1285,7 +1285,7 @@ function dameSVG(i){
    ========================================================= */
 'use strict';
 
-var BUILD_TAG = 'LQD-v17.1';
+var BUILD_TAG = 'LQD-v17.2';
 document.getElementById('build').textContent = BUILD_TAG;
 var vIntro = document.getElementById('versionIntro');
 if (vIntro) vIntro.textContent = BUILD_TAG;
@@ -1607,8 +1607,8 @@ var CFG = {
   /* ancien : 0,15 */   // +15 % d'usure par Dame absente (30 % à deux) — la montée sur deux jours rend ce taux tenable
   DESEQUILIBRE_PAYE: 0,     // 22 nov. 2026 : remplacée par la pension, visible, à chaque semaine
   PAYE_BASE: 1.80,        // la paye de l'apprenti du mois 1 (inchangée : l'équilibre des prix en dépend)
-  VELO_FOIS: 2,           // le vélo coûte deux courses au temple
-  MOTO_FOIS: 6,           // la moto, six — à crédit, retenue sur la paye
+  VELO_FOIS: 0.6,         // le vélo : 0,6 semaine de paye pleine — remboursé en 2 à 3 semaines de retenue
+  MOTO_FOIS: 1.0,         // la moto : une semaine de paye pleine
   PENSION_PART: 0.50,     // la pension d'une Dame partie : 50 % d'une semaine de paye pleine du chantier
   MOIS_CHAMPION: 12,      // tenir un an = champion (Lamine, 22 nov.)
      // -15 % de paye par Dame absente (30 % à deux)
@@ -2778,7 +2778,7 @@ function construire(){
   bp.id = 'btnPret';
   bp.className = 'pret pos dette';
   bp.hidden = true;
-  poserImage(bp, [1105, 176]);          // ce qui reste à rendre, à la hauteur du chantier
+  poserImage(bp, [1105, 262]);          // ce qui reste à rendre du crédit de boutique, sous le bouton du prêt
   layer.appendChild(bp);
   var bv = document.createElement('button');
   bv.id = 'btnVehicule';
@@ -4272,17 +4272,21 @@ function proposerLAne(delai){
   S.rappelAne = 0;
   setTimeout(function(){
     if (!S || !S.enCours || S.ane || S.moto) return;
-    flash('Un v\u00e9lo au temple : ' + fmtF(prixDuVelo()) +
-          ', pay\u00e9s petit \u00e0 petit. \u00c0 toi de choisir.', 2600);
+    flash('Le chef de chantier te pr\u00eate de quoi prendre un v\u00e9lo : ' + fmtF(prixDuVelo()) +
+          ', retenus sur ta paye.', 2600);
     if (premier) parler('Un v\u00e9lo\u2026 je n\u2019aurais plus mal aux jambes.', VOIX_MODOU);
   }, delai || 0);
-  if (premier) noter(S.jour, 'Un v\u00e9lo est \u00e0 vendre au temple.');
-  var b = badgesEl.TEMPLE;
-  if (b) b.classList.add('dernier');
+  if (premier) noter(S.jour, 'Le chef de chantier propose un pr\u00eat pour un v\u00e9lo.');
 }
 
-function prixDuVelo(){ return Math.round(CFG.VELO_FOIS * prixDuJour('TEMPLE')); }
-function prixDeLaMoto(){ return Math.round(CFG.MOTO_FOIS * prixDuJour('TEMPLE')); }
+/* 22 nov. 2026, 18 h 22, Lamine : le vélo est un PRÊT du chef de chantier,
+   proposé dès la 2e semaine, et il doit être entièrement remboursé avant la
+   moto (mois 3). Les prix sont comptés en « semaines de paye pleine » pour que
+   la retenue (un cinquième de la paye) le rembourse en deux à trois semaines. */
+function semaineDePaye(){ return CFG.GAIN_CHANTIER * payeModou() * NIV().paye * CFG.SEC_PAR_SEMAINE; }
+function arrondi100(x){ return Math.max(100, Math.round(x / 100) * 100); }
+function prixDuVelo(){ return arrondi100(CFG.VELO_FOIS * semaineDePaye()); }
+function prixDeLaMoto(){ return arrondi100(CFG.MOTO_FOIS * semaineDePaye()); }
 /* 22 nov. 2026, 18 h 13, Lamine : « tout se paye progressivement, suivant les
    possibilités » et « il faut un peu de stratégie sur les choix ». Le vélo et la
    moto se prennent donc par un BOUTON (jamais tout seuls), sans rien payer
@@ -4294,11 +4298,10 @@ function acheterLAne(){
   S.dette = (S.dette || 0) + pv;
   S.dettePrix = S.dette;
   sonCaisse();
-  var b = badgesEl.TEMPLE;
-  if (b) b.classList.remove('dernier');
   if (modouEl) modouEl.classList.add('surLane');
-  flash('Modou a son v\u00e9lo : ' + fmtF(pv) + ', pay\u00e9s petit \u00e0 petit sur sa paye.', 2600);
-  parler('Merci Serigne ! Je vais voler maintenant !', VOIX_MODOU);
+  flash('Modou a son v\u00e9lo. Le chef retiendra ' + Math.round(CFG.MOTO_RETENUE * 100) +
+        ' % de chaque paye jusqu\u2019\u00e0 ' + fmtF(pv) + '.', 2600);
+  parler('Merci chef ! Je vais voler maintenant !', VOIX_MODOU);
   noter(S.jour, 'Modou prend le v\u00e9lo : ' + fmtF(pv) + ', pay\u00e9s petit \u00e0 petit.');
   signatureVehicule = null;
   return true;
@@ -4307,8 +4310,8 @@ function acheterLAne(){
 var signatureVehicule = null;
 function vehiculeIci(){
   if (!S || !S.enCours) return '';
-  if (S.zone === 'TEMPLE' && S.aneOffert && !S.ane && !S.moto) return 'velo';
-  if (S.zone === 'CHANTIER' && S.motoOfferte && !S.moto) return 'moto';
+  if (S.aneOffert && !S.ane && !S.moto) return 'velo';
+  if (S.motoOfferte && !S.moto && !(S.dette > 0)) return 'moto';     // le vélo d'abord remboursé
   return '';
 }
 function majBoutonVehicule(){
@@ -4318,10 +4321,9 @@ function majBoutonVehicule(){
   if (v === signatureVehicule) return;
   signatureVehicule = v;
   if (!v){ b.hidden = true; return; }
-  var pos = VUE_LIEUX[v === 'velo' ? 'TEMPLE' : 'CHANTIER'].badge;
-  poserImage(b, [pos[0], pos[1] - 150]);
-  b.innerHTML = (v === 'velo' ? 'Prendre le v\u00e9lo' : 'Prendre la moto') +
-    '<small>' + fmtF(v === 'velo' ? prixDuVelo() : prixDeLaMoto()) + ' \u00b7 pay\u00e9s petit \u00e0 petit</small>';
+  poserImage(b, [1105, 176]);                       // à la hauteur du chantier : c'est le chef qui prête
+  b.innerHTML = (v === 'velo' ? 'Pr\u00eat pour un v\u00e9lo' : 'Pr\u00eat pour une moto') +
+    '<small>' + fmtF(v === 'velo' ? prixDuVelo() : prixDeLaMoto()) + ' \u00b7 retenus sur ta paye</small>';
   b.hidden = false;
 }
 
@@ -4531,8 +4533,8 @@ function proposerLaMoto(delai){
   S.motoOfferte = true;
   setTimeout(function(){
     if (!S || !S.enCours || S.moto) return;
-    flash('Une moto au chantier : ' + fmtF(prixDeLaMoto()) +
-          ', pay\u00e9s petit \u00e0 petit. \u00c0 toi de choisir.', 2600);
+    flash(S.dette > 0 ? 'Une moto t\u2019attend au chantier \u2014 finis d\u2019abord de payer le v\u00e9lo.'
+                      : 'Le chef de chantier te pr\u00eate de quoi prendre une moto : ' + fmtF(prixDeLaMoto()) + ', retenus sur ta paye.', 2600);
     parler('Une moto\u2026 \u00e0 cr\u00e9dit. Est-ce que j\u2019ose ?', VOIX_MODOU);
   }, delai || 0);
   noter(S.jour, 'Le patron propose une moto \u00e0 cr\u00e9dit.');
@@ -4541,7 +4543,7 @@ function proposerLaMoto(delai){
 }
 
 function prendreLaMoto(){
-  if (S.moto || !S.motoOfferte) return false;
+  if (S.moto || !S.motoOfferte || S.dette > 0) return false;
   S.moto = true;
   S.motoPrix = prixDeLaMoto();
   S.dette = (S.dette || 0) + S.motoPrix;      // ce qui restait du vélo s'ajoute
@@ -5586,7 +5588,7 @@ function tourDeBoucle(ts){
     if (S.aneOffert && !S.ane && !S.moto){
       S.rappelAne = (S.rappelAne || 0) + 1;
       if (S.rappelAne % 5 === 0){
-        flash('Le v\u00e9lo t\u2019attend au temple \u2014 ' + fmtF(prixDuVelo()) + '.', 3000);
+        flash('Le pr\u00eat pour le v\u00e9lo t\u2019attend \u2014 ' + fmtF(prixDuVelo()) + '.', 2600);
         var bt = badgesEl.TEMPLE;
         if (bt) bt.classList.add('dernier');
       }

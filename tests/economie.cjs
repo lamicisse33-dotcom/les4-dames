@@ -24,12 +24,13 @@ function monde(niveau){
 function jouer(niveau,politique,maxJours=200,over={},depart=null){
  const g=monde(niveau);for(const k in over.cfg||{})g.CFG[k]=over.cfg[k];for(const i in over.niv||{})Object.assign(g.NIVEAUX[i],over.niv[i]);if(over.prix)for(const k in g.LIEUX)g.LIEUX[k].prix=Math.round(g.LIEUX[k].prix*over.prix);
  if(depart){g.demarrerA({schema:2,niveau:depart,jours:(depart-1)*10+1,ane:depart>=7,moto:depart>=13,toit:depart>=10});}else g.demarrer();g.gamePaused=false;const S=g.S;if(depart)maxJours=(depart-1)*10+10;
- let t=1000,cible=null,fin=null,perdu=null,trace=[];g.finir=(c)=>{fin=c;S.enCours=false;};const gf=g.faitPartir;g.faitPartir=(i)=>{gf(i);if(S.sorties>=3&&!perdu){perdu=S.jour;S.enCours=false;}};let dernierJour=0;
+ let t=1000,cible=null,fin=null,perdu=null,trace=[];g.finir=(c)=>{fin=c;S.enCours=false;};const gf=g.faitPartir;g.faitPartir=(i)=>{gf(i);if(S.sorties>=3&&!perdu){perdu=S.jour;S.enCours=false;}};let dernierJour=0,veloPaye=null,motoPayee=null;
  const L=g.LIEUX,C=g.CENTRE,CH=g.CHANTIER;
  const aller=(x,y,nom)=>{if(cible===nom&&S.auto)return;const r=g.trajetVers(x,y);if(r&&r.length>=2){S.auto={pts:r,i:1};cible=nom;}};
  while(S.enCours&&S.jour<=maxJours){
   if(S.chapitre){if(S.chapitre.mois)g.fermerLeMoisTenu(false);else g.fermerLeChapitre(true);}
-  if(S.aneOffert&&!S.ane&&!S.moto)g.acheterLAne();if(S.motoOfferte&&!S.moto)g.prendreLaMoto();   // v17.1 : le robot choisit de les prendre
+  if(S.aneOffert&&!S.ane&&!S.moto)g.acheterLAne();if(S.motoOfferte&&!S.moto&&!(S.dette>0))g.prendreLaMoto();   // v17.2 : le robot prend les prêts
+  if(S.ane&&!S.moto&&!(S.dette>0)&&veloPaye==null)veloPaye=g.semaineDe()+1;if(S.moto&&!(S.dette>0)&&motoPayee==null)motoPayee=g.semaineDe()+1;
   // décision
   const prix=i=>g.prixDuJour(g.DAMES[i].lieu);
   let urgent=-1,bas=999;for(let i=0;i<4;i++){if(S.parties[i]||politique.abandonne===i)continue;if(S.jauges[i]<bas){bas=S.jauges[i];urgent=i;}}
@@ -44,7 +45,7 @@ function jouer(niveau,politique,maxJours=200,over={},depart=null){
   if(S.zone===C&&cible==='C')S.auto=null;
   t+=50;g.last=t-50;g.tourDeBoucle(t);if(S.jour!==dernierJour){dernierJour=S.jour;if(S.jour%25===0)trace.push(S.jour+':'+Math.round(S.argent)+'F/prix'+g.prixDuJour('BANQUE'));}
  }
- return {jours:S.jour,temps:S.temps-(g.CFG.DEBUT_JOUR-1)*g.CFG.SEC_PAR_JOUR,perdu,sorties:S.sorties,argent:Math.round(S.argent),gagne:Math.round(S.gagne||0),trace:trace.join(' ')};
+ return {jours:S.jour,temps:S.temps-(g.CFG.DEBUT_JOUR-1)*g.CFG.SEC_PAR_JOUR,perdu,sorties:S.sorties,argent:Math.round(S.argent),gagne:Math.round(S.gagne||0),veloPaye,motoPayee,trace:trace.join(' ')};
 }
 
 module.exports={jouer};
@@ -57,6 +58,11 @@ if(require.main===module){
  const dur=jouer('dur',{seuil:45,repos:35},FIN),tres=jouer('tresdur',{seuil:45,repos:35},FIN),fac=jouer('facile',{seuil:45,repos:35},FIN);
  for(const [nom,r] of [['Facile        ',fac],['Difficile     ',dur],['Très difficile',tres]])
    console.log(nom,':',r.perdu?'perdu au mois '+mois(r):'tient 24 mois','|',r.argent+' F en caisse');
+ /* v17.2 : le vélo (prêt de la semaine 2) doit être remboursé avant la moto (mois 3 = semaine 9) */
+ for(const [nom,r] of [['Facile',fac],['Difficile',dur],['Très difficile',tres]]){
+   console.log('  '+nom+' : vélo remboursé en semaine '+r.veloPaye+', moto remboursée en semaine '+r.motoPayee);
+   assert.ok(r.veloPaye&&r.veloPaye<=8,nom+' : le vélo n est pas remboursé avant la moto');
+ }
  assert.ok(mois(dur)&&mois(dur)>=4&&mois(dur)<=8,'Difficile hors cible');
  assert.ok(mois(tres)&&mois(tres)>=2&&mois(tres)<=4,'Très difficile hors cible');
  assert.ok(fac.perdu&&mois(fac)>=8&&mois(fac)<=11,'Facile hors cible (le robot moyen ne doit pas être champion)');
