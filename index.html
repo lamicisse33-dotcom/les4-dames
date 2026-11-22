@@ -196,7 +196,7 @@ html,body{height:100%;overflow:hidden;background:#1B2A1B;font-family:var(--ui);c
 
 /* ---- L'ENFANT ---- */
 .enfant{width:44px;height:60px;pointer-events:none;
-  transform:translate(-50%,-80%) scaleY(1);
+  transform:translate(-50%,-94%) scaleY(1);
   filter:drop-shadow(0 3px 4px rgba(0,0,0,.4))}
 .enfant.marche .ebuste{animation:enfMarche .4s ease-in-out infinite}
 @keyframes enfMarche{0%,100%{transform:translateY(0) rotate(-4deg)}
@@ -226,7 +226,7 @@ html,body{height:100%;overflow:hidden;background:#1B2A1B;font-family:var(--ui);c
 #enfantBtn:active{transform:translateY(2px);box-shadow:0 1px 0 var(--trait)}
 
 /* ---- MODOU ---- */
-#modou{width:94px;height:122px;transform:translate(-50%,-80%) scaleY(1);
+#modou{width:94px;height:122px;transform:translate(-50%,-94%) scaleY(1);
   filter:drop-shadow(0 5px 6px rgba(0,0,0,.4));transition:opacity .3s}
 #modou .jambe{transform-origin:32px 56px}
 #modou .bras{transform-origin:32px 40px}
@@ -593,10 +593,10 @@ html,body{height:100%;overflow:hidden;background:#1B2A1B;font-family:var(--ui);c
 /* Modou danse, et les Dames avec lui à partir du troisième niveau */
 #modou.danse{animation:danse .5s ease-in-out infinite}
 @keyframes danse{
-  0%,100%{transform:translate(-50%,-80%) scaleY(1) rotate(-9deg)}
-  25%{transform:translate(-50%,-92%) scaleY(1) rotate(0deg)}
-  50%{transform:translate(-50%,-80%) scaleY(1) rotate(9deg)}
-  75%{transform:translate(-50%,-92%) scaleY(1) rotate(0deg)}}
+  0%,100%{transform:translate(-50%,-94%) scaleY(1) rotate(-9deg)}
+  25%{transform:translate(-50%,-106%) scaleY(1) rotate(0deg)}
+  50%{transform:translate(-50%,-94%) scaleY(1) rotate(9deg)}
+  75%{transform:translate(-50%,-106%) scaleY(1) rotate(0deg)}}
 .dame.danse .pastille{animation:dansePastille .45s ease-in-out infinite}
 @keyframes dansePastille{
   0%,100%{transform:scaleY(1) rotate(-14deg)}
@@ -1257,7 +1257,7 @@ function dameSVG(i){
    ========================================================= */
 'use strict';
 
-var BUILD_TAG = 'LQD-v14.3';
+var BUILD_TAG = 'LQD-v14.4';
 document.getElementById('build').textContent = BUILD_TAG;
 var vIntro = document.getElementById('versionIntro');
 if (vIntro) vIntro.textContent = BUILD_TAG;
@@ -2215,7 +2215,7 @@ var VUE_COUSSINS = [[745,375],[925,375],[745,468],[925,468]];
    rejoint la berge et monte dans la pirogue, qui file sous le pont. */
 var VUE_MARCHE_DAME = [[835,505],[835,600],[835,700],[846,742],[900,750],[942,754],[975,786],[1000,822],[1008,848]];
 var VUE_PIROGUE = [[1012,872],[950,870],[886,852],[853,818],[840,790]];
-var PIEDS_DAME = 4.4;   // la Dame est posée par le centre : on remonte de ses demi-pieds
+var PIEDS_DAME = 3.1;   // la Dame est posée par le centre : on remonte de ses demi-pieds
 
 function vuePolyPrep(pts){
   var n = pts.length, L = [0];
@@ -2356,6 +2356,15 @@ function vueDame(i, xPct, yPct){
   return out;
 }
 var pirogues = [];
+/* La profondeur : plus on monte sur l'image, plus on est loin, plus on est petit. */
+var TAILLES = { dame:null, modou:null, enfant:null };
+function profondeur(yPct){ return 0.8 + 0.4 * Math.max(0, Math.min(1, (yPct || 50) / 100)); }
+function tailler(el, base, yPct){
+  if (!el || !base) return;
+  var k = profondeur(yPct);
+  el.style.width = (base[0] * k).toFixed(1) + 'px';
+  el.style.height = (base[1] * k).toFixed(1) + 'px';
+}
 function poserDame(i, xPct, yPct, partie){
   var el = damesEl[i];
   if (!el) return;
@@ -2365,6 +2374,7 @@ function poserDame(i, xPct, yPct, partie){
   el.style.top  = (Y - PIEDS_DAME).toFixed(3) + '%';
   el.style.opacity = partie ? '' : (v.o < 1 ? v.o.toFixed(2) : '');
   el.classList.toggle('assise', !!v.assise && !partie);
+  if (Math.abs((el._vy || 0) - Y) > 0.4) tailler(el, TAILLES.dame, Y);
   el._vx = X; el._vy = Y;
   var p = pirogues[i];
   if (p){
@@ -3694,38 +3704,30 @@ function clavier(){
 var BW = 0, BH = 0, VW = 0, VH = 0, RATIO = 1400/800, TOP_PAD = 0;
 /* 30 oct. 2026 : le domaine entier tient sur l'écran, c'est la vue par défaut. ⊕ zoome sur Modou. */
 var CAM = { x:50, y:50, z:1.45, tx:50, ty:50, tz:1.45, libre:true };
+var dameSuivie = -1;
 function majCamera(dt){
-  var cx = S.modou.x, cy = S.modou.y, cz = CFG.Z_LIBRE, qui = -1;
+  var cx = 50, cy = 50, cz = CFG.Z_LIBRE;
+  /* 22 nov. 2026, Lamine : la Dame qui s'en va est PRIORITAIRE. La caméra la suit
+     jusqu'à ce qu'elle disparaisse en pirogue, puis revient sur Modou. */
+  var qui = -1;
+  for (var e=0;e<DAMES.length;e++){ if (S.exode[e] && !S.exode[e].retour && !S.parties[e]) qui = e; }
+  if (qui >= 0) dameSuivie = qui;
+  else if (dameSuivie >= 0 && !(S.parties[dameSuivie] && S.sortieVue > 0)) dameSuivie = -1;
+  var elD = dameSuivie >= 0 ? damesEl[dameSuivie] : null;
   if (S.fete){                       // plan très rapproché sur le foyer
-    cx = CENTRE.x; cy = CENTRE.y - 2;
+    var vF = vue(CENTRE.x, CENTRE.y - 2);
+    cx = vF.x; cy = vF.y;
     cz = 2.7 + S.fete.niveau * 0.12;
   }
-  else if (CAM.libre){
-    /* 22 nov. 2026 : le décor déborde de l'écran ; la caméra suit Modou (ou la Dame
-       qui s'en va) pour que le chantier, les maisons et la rivière soient bien cadrés. */
-    var vL = vue(S.modou.x, S.modou.y);
-    cx = vL.x; cy = vL.y;
-    if (S.sortieVue > 0){
-      for (var e2=0;e2<DAMES.length;e2++){
-        if (S.exode[e2] && !S.exode[e2].retour && damesEl[e2] && damesEl[e2]._vx !== undefined){ cx = damesEl[e2]._vx; cy = damesEl[e2]._vy; }
-      }
-    }
-    // on garde 48 px en haut (jauges) et 48 px en bas (force) : le chantier et la banque restent entièrement visibles
-    cz = couvrir() * 1.12;   // 22 nov. 2026 : plein écran, un peu rapproché pour que la caméra accompagne Modou
+  else if (elD && elD._vx !== undefined){
+    cx = elD._vx; cy = elD._vy;
+    cz = CAM.libre ? couvrir() * 1.12 : CFG.Z_SORTIE;
   }
-  else if (S.sortieVue > 0){
-    qui = -1;
-    for (var e=0;e<DAMES.length;e++){ if (S.exode[e] && !S.exode[e].retour) qui = e; }
-    if (qui >= 0){ cx = S.exode[qui].x; cy = S.exode[qui].y; cz = CFG.Z_SORTIE; }
-    else { cx = 50; cy = 60; cz = CFG.Z_SORTIE; }
-  }
-  else if (S.zone){ cz = CFG.Z_TRAVAIL; }
-  if (!CAM.libre || S.fete){
-    var vC = null;
-    if (!S.fete && S.sortieVue > 0 && qui >= 0 && damesEl[qui] && damesEl[qui]._vx !== undefined)
-      vC = { x:damesEl[qui]._vx, y:damesEl[qui]._vy };
-    else if (!(S.sortieVue > 0 && !S.fete && qui < 0)) vC = vue(cx, cy);
-    if (vC){ cx = vC.x; cy = vC.y; }
+  else {
+    var vM = vue(S.modou.x, S.modou.y);
+    cx = vM.x; cy = vM.y;
+    if (CAM.libre) cz = couvrir() * 1.12;   // plein écran, un peu rapproché : la caméra accompagne Modou
+    else if (S.zone) cz = CFG.Z_TRAVAIL;
   }
   CAM.tx = cx; CAM.ty = cy; CAM.tz = cz;
   var k = 1 - Math.exp(-dt * CFG.CAM_SOUPLESSE);
@@ -3927,8 +3929,8 @@ function faireVenirLEnfant(){
 function dimensionnerEnfant(){
   if (!enfantEl || !BW) return;
   var s2 = Math.max(0.6, Math.min(1.1, BW / 900));
-  enfantEl.style.width  = (44*s2) + 'px';
-  enfantEl.style.height = (60*s2) + 'px';
+  TAILLES.enfant = [44*s2*0.55, 60*s2*0.55];
+  tailler(enfantEl, TAILLES.enfant, enfantEl._vy);
 }
 
 /* un seul appui : il part de lui-même vers la Dame la plus basse */
@@ -4035,7 +4037,7 @@ function majEnfant(dt){
   }
 
   var vE = poser(enfantEl, E.x, E.y);
-  enfantEl._vy = vE ? vE.y : E.y;
+  if (vE && Math.abs((enfantEl._vy || 0) - vE.y) > 0.4){ enfantEl._vy = vE.y; tailler(enfantEl, TAILLES.enfant, vE.y); }
   var bulle = enfantEl.querySelector('.edit');
   if (bulle) bulle.textContent = (E.phase === 'achat') ? E.objet : '';
 }
@@ -4874,6 +4876,7 @@ function rendre(){
   boxSous.classList.toggle('vide', pasAssez && S.argent < 40);
 
   var vM = poser(modouEl, S.modou.x, S.modou.y);
+  if (Math.abs((modouEl._vy || 0) - vM.y) > 0.4){ modouEl._vy = vM.y; tailler(modouEl, TAILLES.modou, vM.y); }
   modouEl.style.zIndex = 20 + Math.round(vM.y * 2);
   for (var p2=0;p2<DAMES.length;p2++){
     if (!damesEl[p2]) continue;
@@ -6679,11 +6682,11 @@ function redimensionner(){
   board.style.width = w + 'px';
   board.style.height = h + 'px';
   var s = Math.max(0.6, Math.min(1.1, w / 900));
+  /* 22 nov. 2026 : à l'échelle du village peint (Modou était aussi haut qu'une maison) */
+  TAILLES.dame = [54*s*0.72, 54*s*0.72];
+  TAILLES.modou = [74*s*0.52, 96*s*0.52];
   var dames = layer.querySelectorAll('.dame');
-  for (var i=0;i<dames.length;i++){
-    dames[i].style.width = (54*s) + 'px';
-    dames[i].style.height = (54*s) + 'px';
-  }
+  for (var i=0;i<dames.length;i++) tailler(dames[i], TAILLES.dame, dames[i]._vy);
   var vgs = layer.querySelectorAll('.vignette');
   for (var g=0;g<vgs.length;g++){
     vgs[g].style.width = (186*s) + 'px';
@@ -6697,13 +6700,10 @@ function redimensionner(){
   }
   var vds = layer.querySelectorAll('.vendeur');
   for (var v=0;v<vds.length;v++){
-    vds[v].style.width = (62*s) + 'px';
-    vds[v].style.height = (82*s) + 'px';
+    vds[v].style.width = (62*s*0.6) + 'px';    // le patron à la même échelle que Modou
+    vds[v].style.height = (82*s*0.6) + 'px';
   }
-  if (modouEl){
-    modouEl.style.width = (74*s) + 'px';
-    modouEl.style.height = (96*s) + 'px';
-  }
+  if (modouEl) tailler(modouEl, TAILLES.modou, modouEl._vy);
   tailleZones();
   dimensionnerEnfant();
   appliquerCamera();
