@@ -78,8 +78,9 @@ test('Restarting each checkpoint restores its available features',()=>{
   for(let n=1;n<=19;n++){
     state();g.appliquerLaProgression({schema:2,niveau:n,jours:(n-1)*10+1,ane:false,moto:false,toit:false});
     assert.equal(g.S.jour,(n-1)*10+1);
-    assert.equal(g.S.filsParti,n>=8);assert.equal(g.S.aneOffert,n>=7);
-    assert.equal(g.S.saisonPluies,n>=10);assert.equal(g.S.motoOfferte,n>=13);
+    const j=(n-1)*10+1; // 22 nov. 2026 : calendrier en mois, seuils lus dans CFG
+    assert.equal(g.S.filsParti,j>=g.CFG.FILS_DEPART_JOUR);assert.equal(g.S.aneOffert,j>=g.CFG.ANE_JOUR);
+    assert.equal(g.S.saisonPluies,j>=g.CFG.PLUIE_JOUR);assert.equal(g.S.motoOfferte,j>=g.CFG.MOTO_JOUR);
     assert.equal(g.S.vacances,n===12);
     assert.equal(g.peutFeter(),false);
   }
@@ -119,26 +120,28 @@ test('Objective, advice and completed days correspond to the current level',()=>
 console.log(`${checks} progression tests passed; all ${scripts.length} inline scripts parsed and initialized.`);
 test('The actual game loop introduces features at the announced levels',()=>{
   data.clear();g.iNiveau=0;g.demarrer();g.gamePaused=false;
-  for(let day=2;day<=181;day++){
+  /* 22 nov. 2026 : la partie s'ouvre au 77e jour (mois 1), à vélo, sans le fils. */
+  assert.equal(g.S.jour,77);assert.equal(g.S.ane,true);assert.equal(g.S.moto,false);assert.equal(g.S.enfant,null);
+  for(let day=78;day<=181;day++){
     if(g.S.chapitre)g.fermerLeChapitre(true);
     g.S.temps=(day-1)*g.CFG.SEC_PAR_JOUR;
     g.S.force=100;g.S.jauges=[90,90,90,90];g.S.argent=100000;g.S.attente=0;
     g.last=1000;g.tourDeBoucle(1000);
-    if(day===31)assert.ok(g.S.enfant);
-    if(day===61){assert.equal(g.S.aneOffert,true);assert.ok(g.S.enfant);}
-    if(day===71){assert.equal(g.S.filsParti,true);assert.equal(g.S.enfant,null);}
-    if(day===78)assert.equal(g.S.mandatsEnvoyes,1);
+    if(day===78)assert.equal(g.S.enfant,null);
+    if(day===79)assert.ok(g.S.enfant);                       // mois 3 : le fils arrive
+    if(day===80){assert.equal(g.S.filsParti,true);assert.equal(g.S.enfant,null);   // mois 4 : il part
+      assert.equal(g.S.moto,true);assert.equal(g.S.ane,false);assert.equal(g.S.dette,0);} // vélo échangé contre la moto
+    if(day===87)assert.equal(g.S.mandatsEnvoyes,1);
     if(day===91)assert.equal(g.S.saisonPluies,true);
     if(day===92)assert.equal(g.S.toitPropose,true);
     if(day===111){assert.equal(g.S.vacances,true);assert.ok(g.S.enfant);}
     if(day===118){assert.equal(g.S.vacances,false);assert.equal(g.S.enfant,null);}
-    if(day===121)assert.equal(g.S.motoOfferte,true);
     if(day===151)assert.equal(g.estConge(day),true);
     // A new day is processed before the transition is presented on the next frame.
     g.tourDeBoucle(1000);
   }
   assert.equal(g.S.etapesTerminees,18);
-  assert.ok(nodes.get('chapitre').innerHTML.includes('Continuer en survie libre'));
+  assert.equal(g.S.chapitre||null,null);   // plus de niveaux : aucun écran de chapitre
 });
 console.log(`TOTAL: ${checks} tests passed.`);
 test('Every Dame grants only her own benefit while she is at the foyer',()=>{
@@ -153,7 +156,8 @@ test('Every Dame grants only her own benefit while she is at the foyer',()=>{
   g.S.parties=[false,false,false,false];g.S.exode[0]={retour:true,rachat:true};assert.equal(g.soutienSante(),1);
 });
 test('Benefits affect actual recovery, walking fatigue and shopping prices',()=>{
-  g.demarrer();g.S.force=40;g.S.modou.x=g.CENTRE.x;g.S.modou.y=g.CENTRE.y;
+  // le mécanisme, mesuré aux prix et à pied du jour 1
+  g.demarrer();g.S.jour=1;g.S.temps=0;g.S.ane=false;g.S.force=40;g.S.modou.x=g.CENTRE.x;g.S.modou.y=g.CENTRE.y;
   g.vivreDansLaZone(.1);const withHealth=g.S.force-40;
   g.S.parties[0]=true;g.S.force=40;g.vivreDansLaZone(.1);const withoutHealth=g.S.force-40;
   assert.ok(Math.abs(withHealth/withoutHealth-1.2)<1e-9);
@@ -222,7 +226,7 @@ test('Resume is available from day one and restores the exact game and difficult
   data.clear();g.majBoutonReprendre();assert.equal(nodes.get('btnReprendre').disabled,true);
   g.iNiveau=2;g.demarrer();assert.ok(g.partieEnAttente());
   assert.equal(nodes.get('btnReprendre').disabled,false);
-  assert.ok(nodes.get('btnReprendre').innerHTML.includes('jour 1'));
+  assert.ok(nodes.get('btnReprendre').innerHTML.includes('Mois 1'));
   g.S.jour=24;g.S.temps=300;g.S.argent=321.5;g.S.force=63;g.S.modou.x=60;g.S.modou.y=51.9;
   g.sauvegarder();g.iNiveau=0;g.reprendreLaPartie();
   assert.equal(g.S.jour,24);assert.equal(g.S.temps,300);assert.equal(g.S.argent,321.5);
@@ -240,13 +244,13 @@ test('New game preserves the save until a difficulty starts it without a prompt'
   assert.equal(data.get(g.CLE_PARTIE),saved);
   g.traiterAppui({cancelable:false},{id:'btnStart'});
   g.traiterAppui({cancelable:false},{id:'niv1'});
-  assert.equal(g.S.jour,1);assert.equal(g.S.etapesTerminees,0);assert.equal(g.partieEnAttente().jour,1);
+  assert.equal(g.S.jour,77);assert.equal(g.S.etapesTerminees,18);assert.equal(g.partieEnAttente().jour,77);
   assert.equal(g.S.difficulte,'dur');assert.equal(nodes.get('scrDifficulte').classList.contains('hide'),true);
 });
 console.log(`TOTAL: ${checks} regression tests passed.`);
 
 test('Foyer charges once per recovering visit and enforces a full-day cooldown',()=>{
-  g.iNiveau=1;g.demarrer();g.S.force=70;g.S.argent=1000;
+  g.iNiveau=1;g.demarrer();g.S.jour=1;g.S.temps=0;g.S.force=70;g.S.argent=1000;
   g.S.zone='CHANTIER';g.S.modou.x=g.CENTRE.x;g.S.modou.y=g.CENTRE.y;
   g.vivreDansLaZone(.1);assert.equal(g.S.argent,898);assert.ok(g.S.force>70);
   g.S.temps+=g.CFG.SEC_PAR_JOUR;g.vivreDansLaZone(.1);assert.equal(g.S.argent,898);
@@ -302,7 +306,7 @@ test('The four-line crisis sketch plays once; later crises only state the need',
   lignes.length=0;g.lancerLeDialogue(0);assert.equal(lignes.length,1);assert.equal(lignes[0],g.DAMES[0].suite);g.parler=()=>{};
 });
 test('Share text names the days held and the difficulty',()=>{
-  g.iNiveau=0;state(37);assert.match(g.texteDePartage(),/Modou a tenu 37 jours \(Facile\)/);
+  g.iNiveau=0;state(g.CFG.DEBUT_JOUR+36);assert.match(g.texteDePartage(),/Modou a tenu 37 mois \(Facile\)/);
   const actions=html.match(/<div class="screen hide" id="scrFin">([\s\S]*?)<\/div>\s*<\/div>/)[1];assert.ok(actions.includes('id="btnPartager"'));
 });
 
@@ -429,7 +433,7 @@ test('Temperaments: each Dame has her own gain; the discreet one is fed by prese
   g.tenterEchange('BANQUE');g.majScene(g.CFG.SCENE_MS/2000+0.01);assert.equal(g.S.jauges[3],75);assert.equal(g.S.suivi.achats[3],1);
 });
 test('Level objectives: judged on the level, starred in progress, rewarded, then reset',()=>{
-  data.clear();g.iNiveau=1;g.demarrer();g.gamePaused=false;
+  data.clear();g.iNiveau=1;g.demarrer();g.gamePaused=false;g.S.etapesTerminees=0; // le mécanisme des niveaux, en sommeil depuis le 22 nov. 2026
   assert.ok(g.ETAPES.every(e=>e.o&&typeof e.ok==='function'));
   g.S.suivi.gagne=900;g.S.argent=100;g.S.jour=11;g.S.temps=10*13;
   assert.equal(g.peutFeter(),true);g.lancerLaFete();

@@ -643,6 +643,8 @@ html,body{height:100%;overflow:hidden;background:#1B2A1B;font-family:var(--ui);c
 @keyframes vibre{0%,100%{transform:translateX(-50%) translateY(0)}
   50%{transform:translateX(-50%) translateY(-1.4px)}}
 #modou.surLane #mBody{transform-origin:50% 100%}
+#modou.surLane.marche .monture .roue{animation:roue .55s linear infinite;transform-box:fill-box;transform-origin:center}
+@keyframes roue{to{transform:rotate(360deg)}}
 #modou.surLane.marche .monture .apatte.ag{animation:patte .32s ease-in-out infinite}
 #modou.surLane.marche .monture .apatte.ad{animation:patte .32s ease-in-out infinite reverse}
 .monture .apatte{transform-origin:center 34px}
@@ -950,7 +952,7 @@ body.playing #etapeJeu.visible{display:block}
   <div id="droite">
     <button id="menuBtn">⌂</button>
     <div id="sous"><span class="pic">&#128176;</span><span id="sousVal">0</span></div>
-    <div id="jourBox"><small>JOUR</small><div id="jour">1</div><b id="nomJour">Lundi</b></div>
+    <div id="jourBox"><small>MOIS</small><div id="jour">1</div><b id="nomJour">Janvier</b></div>
     <div id="recordBox"><small>RECORD</small><div id="record">0</div></div>
   </div>
 </div>
@@ -959,7 +961,7 @@ body.playing #etapeJeu.visible{display:block}
 <div id="mandat"></div>
 <div id="dette"></div>
 
-<details id="etapeJeu"><summary id="etapeTitre">Niveau 1 / 18</summary>
+<details id="etapeJeu" hidden><summary id="etapeTitre">Niveau 1 / 18</summary>
   <progress id="etapeAvance" max="10" value="0" aria-label="Jours terminés dans ce niveau"></progress>
   <div id="etapeObjectif"></div><div id="etapeConseil"></div>
   <div id="avantagesJeu" aria-label="Avantages des quatre Dames"></div>
@@ -1038,16 +1040,16 @@ body.playing #etapeJeu.visible{display:block}
       <button class="cta ghost petit" id="aideFermer">Retour au menu</button></div>
     <details class="aRubrique"><summary>Le principe du jeu</summary>
   <p class="lede">Modou est maçon. Il monte sur le <b>chantier</b> pour gagner, puis il court payer ce que ses quatre Dames réclament : des fleurs, des soins, des prières, de l'argent.<br><br>
-  <b>Tout coûte. Et chaque jour, tout coûte plus cher.</b><br><br>
+  <b>Tout coûte. Et de mois en mois, tout coûte plus cher.</b><br><br>
   Une Dame dont la jauge tombe à zéro <b>s'en va</b>. Rattrape-la avant la sortie, ou choisis de la rappeler sur sa case pour <b>50 % de ton argent, minimum 100 F</b>.<br><br>
   À la <b>troisième</b> qui est partie, tout s'arrête.<br><br>
   Chaque Dame présente aide Modou : <b>repos, énergie, sérénité ou économies.</b><br><br>
-  <b>Ton score, c'est le nombre de jours tenus.</b><br><br>
+  <b>Ton score, c'est le nombre de mois tenus.</b><br><br>
   <b>Touche un endroit</b> et Modou y va tout seul. Ou sers-toi du <b>joystick</b>.<br>
   Entre dans un cercle et l'affaire se fait toute seule.</p>
     </details>
     <div id="aideRegles"></div>
-  <details id="parcours"><summary>Le parcours · 18 niveaux courts</summary>
+  <details id="parcours" hidden><summary>Le parcours · 18 niveaux courts</summary>
     <p>Chaque niveau dure 10 jours de jeu (environ 2 min 10 hors pauses et attentes).
     Objectif : tenir sans perdre trois Dames. Ta progression est conservée à chaque niveau.</p>
     <ol id="parcoursListe"></ol><p>Après le niveau 18 : survie libre et record de jours.</p>
@@ -1257,7 +1259,7 @@ function dameSVG(i){
    ========================================================= */
 'use strict';
 
-var BUILD_TAG = 'LQD-v14.4';
+var BUILD_TAG = 'LQD-v15';
 document.getElementById('build').textContent = BUILD_TAG;
 var vIntro = document.getElementById('versionIntro');
 if (vIntro) vIntro.textContent = BUILD_TAG;
@@ -1518,7 +1520,7 @@ var CFG = {
   VACANCES_JOUR: 111,     // le fils revient une semaine
   VACANCES_DUREE: 7,
 
-  MOTO_JOUR: 121,        // cinquième partie
+  MOTO_JOUR: 99999,      // plus de moto à crédit : elle vient du troc au départ du fils
   MOTO_PRIX: 450,
   MOTO_RETENUE: 0.35,     // le patron retient ce tiers sur chaque paye
   MOTO_VITESSE: 4.0,
@@ -1546,12 +1548,19 @@ var CFG = {
   PRIME_REPOS: 2.0,      // samedi, dimanche et jours fériés : la paye double
   ATTENTE_MAX: 15,       // le jour chômé attend Modou au chantier, au plus quinze secondes      // samedi, dimanche et jours fériés : la paye double     // quatre fois plus rapide qu'à pied
 
-  FILS_DEPART_JOUR: 71,   // apprendre à utiliser l’âne avant le départ du fils
-  ANE_JOUR: 61,           // troisième mois : le gardien du temple le propose
+  /* 22 nov. 2026, Lamine : la partie commence dans la tension du 77e jour.
+     On ne compte plus en jours mais en MOIS : le 77e jour est le mois 1, le 78e
+     le mois 2… Modou n'a plus d'âne : il roule à vélo dès le départ. Son fils
+     arrive au mois 3 pour l'aider ; au mois 4 il part étudier, et Modou échange
+     son vélo contre une moto. Ensuite la même logique continue, de plus en plus
+     dure. Le score : le nombre de mois tenus. */
+  DEBUT_JOUR: 77,
+  FILS_DEPART_JOUR: 80,   // mois 4 : le fils part, le vélo est échangé contre la moto
+  ANE_JOUR: 99999,        // plus d'âne à acheter : Modou a son vélo dès le mois 1
   PRIX_ANE: 200,
-  ANE_VITESSE: 2.0,       // Modou monte dessus, les trajets sont deux fois plus courts
+  ANE_VITESSE: 2.0,       // le vélo (ancien âne) : les trajets sont deux fois plus courts
 
-  ENFANT_JOUR: 31,        // il arrive au deuxième mois
+  ENFANT_JOUR: 79,        // mois 3 : le fils arrive pour aider
   ENFANT_VITESSE: 0.52,   // il marche à la moitié du pas de Modou
   ENFANT_RENDEMENT: 0.75, // un enfant s'y prend moins bien que son père
 
@@ -1609,6 +1618,11 @@ var JOURS_SEMAINE = ['Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi','Dim
 var FETES = ['Korit\u00e9','Tabaski','Gamou','Magal','Tamkharit','F\u00eate du travail'];
 
 function nomDuJour(j){ return JOURS_SEMAINE[(j - 1) % 7]; }
+/* Le compteur du joueur : des mois, à partir du 77e jour du calendrier interne. */
+var MOIS_NOMS = ['Janvier','F\u00e9vrier','Mars','Avril','Mai','Juin','Juillet','Ao\u00fbt','Septembre','Octobre','Novembre','D\u00e9cembre'];
+function moisDe(j){ return Math.max(1, (j || 1) - CFG.DEBUT_JOUR + 1); }
+function nomDuMois(j){ return MOIS_NOMS[(moisDe(j) - 1) % 12]; }
+function motMois(n){ return n + ' mois'; }
 function estWeekend(j){ return ((j - 1) % 7) >= 5; }
 function ferieDuJour(j){
   if (j < 22) return null;
@@ -3021,8 +3035,23 @@ function musique(){
     if (p === 0 || p === 8) note(hauteur(GAMME[motif2[p] % GAMME.length]) / 2, 0.6, 'sine', 0.3, t, BUS_MUS);
     if (tendu > 0.5 && p === 14) note(hauteur(1 + 12), 0.5, 'sawtooth', 0.09 * tendu, t, BUS_MUS);
 
+    /* ---- la tension (22 nov. 2026) : chaque palier ajoute une couche ---- */
+    if (tendu > 0.3){                    // le cœur qui bat
+      if (p === 0 || p === 8) note(58, 0.16, 'sine', 0.75 * tendu, t, BUS_MUS, 40);
+      if (p === 2 || p === 10) note(52, 0.14, 'sine', 0.55 * tendu, t, BUS_MUS, 36);
+    }
+    if (tendu > 0.5){                    // le sabar qui presse
+      if (p % 2 === 0) note(150, 0.07, 'triangle', 0.32 * tendu, t, BUS_MUS, 95);
+      if (p === 3 || p === 7 || p === 11 || p === 15) souffleBruit(0.05, 0.16 * tendu, 2400, t, BUS_MUS);
+    }
+    if (tendu > 0.65 && p === 0){        // la nappe qui monte
+      note(hauteur(GAMME[motif2[0] % GAMME.length] + 12), MUS.temps * 15, 'sawtooth', 0.05 * tendu, t, BUS_MUS);
+      note(hauteur(GAMME[motif2[0] % GAMME.length] + 13), MUS.temps * 15, 'sawtooth', 0.035 * tendu, t, BUS_MUS);
+    }
+    if (tendu > 0.85 && (p === 6 || p === 14)) note(988, 0.06, 'square', 0.07, t, BUS_MUS);   // l'alerte
+
     MUS.pas++;
-    MUS.depart += MUS.temps * (tendu > 0.5 ? 0.93 : 1);
+    MUS.depart += MUS.temps * (1 - 0.2 * tendu);   // le tempo s'accélère avec la pression
   }
 }
 
@@ -3085,7 +3114,7 @@ function noter(jour, texte, fort){
   S.journal.push({ jour:jour, texte:texte, fort:!!fort });
 }
 var MEILLEUR = 0;
-function cleRecord(){ return 'lqd_record_v27_' + NIV().cle; }
+function cleRecord(){ return 'lqd_record_mois_v1_' + NIV().cle; }
 function chargerRecord(){
   try { MEILLEUR = parseInt(localStorage.getItem(cleRecord()) || '0', 10) || 0; }
   catch (e) { MEILLEUR = 0; }
@@ -3100,11 +3129,11 @@ function veillerLeRecord(jour){
     MEILLEUR = jour;
     try { localStorage.setItem(cleRecord(), String(MEILLEUR)); } catch (e) {}
     if (boite) boite.classList.add('neuf');
-    flash('NOUVEAU RECORD \u2014 ' + jour + ' jours !', 3200);
+    flash('NOUVEAU RECORD \u2014 ' + motMois(jour) + ' !', 3200);
     modouDit('C\u2019est mon meilleur !', 2600);
     fanfare(1);
     for (var k=0;k<3;k++) uneSalve(1, '#FFC53D');
-    noter(jour, 'Nouveau record : ' + jour + ' jours.');
+    noter(S.jour, 'Nouveau record : ' + motMois(jour) + '.');
   }
   else if (S.recordBattu){
     MEILLEUR = jour;
@@ -3114,7 +3143,7 @@ function veillerLeRecord(jour){
     var reste = MEILLEUR - jour + 1;
     if (reste > 0 && reste <= 3){
       S.recordVu = true;
-      flash('Plus que ' + reste + (reste > 1 ? ' jours' : ' jour') +
+      flash('Plus que ' + motMois(reste) +
             ' pour battre ton record de ' + MEILLEUR + '.', 3000);
       if (boite) boite.classList.add('proche');
     }
@@ -3123,8 +3152,8 @@ function veillerLeRecord(jour){
 }
 
 function majRecord(){
-  if (S && S.jour > MEILLEUR){
-    MEILLEUR = S.jour;
+  if (S && moisDe(S.jour) > MEILLEUR){
+    MEILLEUR = moisDe(S.jour);
     try { localStorage.setItem(cleRecord(), String(MEILLEUR)); } catch (e) {}
   }
   var el = document.getElementById('record');
@@ -4085,19 +4114,18 @@ function majBoutonEnfant(){
    Modou monte dessus : les trajets sont deux fois plus courts.
    ========================================================= */
 function aneSVG(){
+  /* 22 nov. 2026 : l'âne devient un vélo (le nom de la fonction reste, pour ne rien casser). */
   return '' +
   '<svg viewBox="0 0 70 56" width="100%" height="100%">' +
-    '<ellipse cx="35" cy="52" rx="22" ry="4.5" fill="rgba(0,0,0,.3)"/>' +
-    '<g stroke="#2B2118" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round">' +
-      '<line class="apatte ag" x1="20" y1="34" x2="20" y2="50" stroke="#7C7168" stroke-width="6"/>' +
-      '<line class="apatte ad" x1="48" y1="34" x2="48" y2="50" stroke="#6B6159" stroke-width="6"/>' +
-      '<rect x="14" y="18" width="42" height="20" rx="10" fill="#9A8F85"/>' +
-      '<rect x="20" y="14" width="26" height="9" rx="4" fill="#C2703A"/>' +
-      '<circle cx="57" cy="17" r="10" fill="#9A8F85"/>' +
-      '<path d="M52 9 q1 -8 4 -8 q3 0 3 8 z" fill="#8A8077"/>' +
-      '<path d="M60 8 q2 -8 5 -7 q2 1 -1 9 z" fill="#8A8077"/>' +
-      '<circle cx="61" cy="16" r="1.8" fill="#2B2118" stroke="none"/>' +
-      '<path d="M14 22 q-6 4 -3 10" fill="none" stroke="#7C7168" stroke-width="4"/>' +
+    '<ellipse cx="35" cy="52" rx="24" ry="4" fill="rgba(0,0,0,.3)"/>' +
+    '<g fill="none" stroke="#2B2118" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">' +
+      '<g class="roue"><circle cx="15" cy="38" r="12"/><path d="M15 26v24M3 38h24M6.5 29.5l17 17M6.5 46.5l17-17" stroke="#8E857A" stroke-width="1.2"/></g>' +
+      '<g class="roue"><circle cx="55" cy="38" r="12"/><path d="M55 26v24M43 38h24M46.5 29.5l17 17M46.5 46.5l17-17" stroke="#8E857A" stroke-width="1.2"/></g>' +
+      '<path d="M15 38 L29 39 L44 22 L26 22 Z" stroke="#1E7BB8" stroke-width="3.2"/>' +
+      '<path d="M26 22 L23 14 M44 22 L55 38 M44 22 L42 12" stroke="#1E7BB8" stroke-width="3.2"/>' +
+      '<path d="M18 13 h10" stroke="#2B2118" stroke-width="4"/>' +
+      '<path d="M38 12 h9" stroke="#2B2118" stroke-width="3"/>' +
+      '<circle cx="29" cy="39" r="3.2" fill="#2B2118"/>' +
     '</g>' +
   '</svg>';
 }
@@ -4154,9 +4182,20 @@ function leFilsPart(){
   S.enfant = null;
   majBoutonEnfant();
   flash('Ton fils part \u00e9tudier en ville. Tu lui enverras ' + CFG.MANDAT_BASE +
-        ' F chaque semaine, automatiquement.', 4600);
+        ' F r\u00e9guli\u00e8rement, automatiquement.', 4600);
   parler('Mon fils s\u2019en va \u00e9tudier. Qu\u2019Allah le garde.', VOIX_MODOU);
   noter(S.jour, 'Le fils part \u00e9tudier.');
+  if (!S.moto){
+    S.ane = false; S.moto = true; S.dette = 0; S.motoOfferte = true;
+    if (modouEl){ modouEl.classList.remove('surLane'); modouEl.classList.add('surLaMoto'); }
+    setTimeout(function(){
+      if (!S || !S.enCours) return;
+      flash('Seul maintenant, Modou \u00e9change son v\u00e9lo contre une moto. Ses trajets vont deux fois plus vite.', 4600);
+      parler('Une moto ! Il va falloir tenir la maison tout seul.', VOIX_MODOU);
+      sonCaisse();
+    }, 4800);
+    noter(S.jour, 'Modou \u00e9change son v\u00e9lo contre une moto.');
+  }
 }
 
 /* L'argent part tout seul. Modou l'appelle ensuite pour s'assurer qu'il est arrivé. */
@@ -4838,7 +4877,7 @@ function rendre(){
       nomJ.textContent = 'ON T\u2019ATTEND ' + Math.ceil(S.attente) + 's';
       nomJ.className = 'attente';
     } else {
-      nomJ.textContent = f ? f : nomDuJour(S.jour);
+      nomJ.textContent = f ? f : nomDuMois(S.jour);
       nomJ.className = (f || estWeekend(S.jour)) ? 'chome' : '';
     }
   }
@@ -4846,7 +4885,7 @@ function rendre(){
   badgesEl.CENTRE.classList.toggle('foyerdu', !S.foyer);
   var bp = badgesEl.CENTRE.querySelector('.txt');
   if (bp) bp.textContent = S.foyer ? 'FOYER' : 'REVIENS ICI D\u2019ABORD';
-  elJour.textContent = S.jour;
+  elJour.textContent = moisDe(S.jour);
   afficherEtape();
 
   // prix du jour sur les badges + zone trop chère
@@ -5229,12 +5268,12 @@ function tourDeBoucle(ts){
     if (palierActuel(jour) > palierAvant){
       var hausse = Math.round(NIV().inflation * 100);
       var total = Math.round((Math.pow(1 + NIV().inflation, palierActuel(jour)) - 1) * 100);
-      flash('Jour ' + jour + ' \u2014 la vie augmente de ' + hausse + ' %.', 3000);
+      flash('Mois ' + moisDe(jour) + ' \u2014 la vie augmente de ' + hausse + ' %.', 3000);
       noter(jour, 'Les prix montent de ' + hausse + ' % (' + total + ' % depuis le d\u00e9but).');
       sonDebout();
       marquerHausse();
     }
-    veillerLeRecord(jour);
+    veillerLeRecord(moisDe(jour));
 
     if (jour === CFG.ENFANT_JOUR && !S.enfant) faireVenirLEnfant();
     if (jour >= CFG.ANE_JOUR && !S.aneOffert && !S.ane) proposerLAne();
@@ -5256,13 +5295,13 @@ function tourDeBoucle(ts){
       noter(jour, fete + ' : paye doubl\u00e9e.');
       sonSerie();
     } else if (estWeekend(jour) && !estWeekend(jour - 1)){
-      flash('Samedi \u2014 le patron paie double tout le week-end.', 3000);
-      parler('Le week-end, on paie double. Je travaille.', VOIX_MODOU);
+      flash('Mois de prime \u2014 le patron paie double.', 3000);
+      parler('Ce mois-ci, on paie double. Je travaille.', VOIX_MODOU);
       sonSerie();
     }
     if (payeDoublee(jour) && S.zone !== 'CHANTIER'){
       S.attente = CFG.ATTENTE_MAX;
-      flash('Le jour t\u2019attend au chantier. Cours.', 3000);
+      flash('Le chantier t\u2019attend. Cours.', 3000);
     }
 
     if (jour >= CFG.PLUIE_JOUR && !S.saisonPluies) ouvrirLaSaison();
@@ -5337,7 +5376,13 @@ function tourDeBoucle(ts){
 
   var plusBasse = vivreDansLaZone(dt);
 
-  MUS.tension = Math.max(0, Math.min(1, (45 - plusBasse) / 45));
+  /* 22 nov. 2026 : la tension monte avec le mois qui avance, avec les mois tenus,
+     avec la Dame la plus basse, et d'un coup quand une Dame s'en va. */
+  var avanceMois = (S.temps % CFG.SEC_PAR_JOUR) / CFG.SEC_PAR_JOUR;
+  var fond = Math.min(0.3, (moisDe(S.jour) - 1) * 0.025) + avanceMois * 0.3;
+  var dames = (45 - plusBasse) / 45;
+  var fuite = S.exode.some(function(E){ return E && !E.retour; }) ? 1 : 0;
+  MUS.tension = Math.max(0, Math.min(1, Math.max(fond, dames, fuite)));
   musique();
 
   majExode(dt);
@@ -5359,7 +5404,7 @@ function tourDeBoucle(ts){
 /* ---------- PARTAGER LE VERDICT ---------- */
 function texteDePartage(){
   if (!S) return '';
-  return 'LES QUATRE DAMES \u2014 Modou a tenu ' + S.jour + (S.jour > 1 ? ' jours' : ' jour') +
+  return 'LES QUATRE DAMES \u2014 Modou a tenu ' + motMois(moisDe(S.jour)) +
          ' (' + NIV().nom + '). ' + (S.recordBattu ? 'Nouveau record ! ' : '') + 'Et toi ?';
 }
 function partagerLeVerdict(){
@@ -5375,10 +5420,10 @@ function partagerLeVerdict(){
 /* ---------- VERDICT ---------- */
 var TITRES = [
   { min:0,  t:'LE DOMAINE N\u2019A PAS TENU' },
-  { min:10, t:'UNE SAISON, PAS PLUS' },
-  { min:20, t:'MODOU A TENU L\u2019ANNÉE' },
-  { min:35, t:'LE DOMAINE RESPIRE' },
-  { min:60, t:'L\u2019ÉQUILIBRE' }
+  { min:3,  t:'UNE SAISON, PAS PLUS' },
+  { min:12, t:'MODOU A TENU L\u2019ANNÉE' },
+  { min:18, t:'LE DOMAINE RESPIRE' },
+  { min:30, t:'L\u2019ÉQUILIBRE' }
 ];
 function finir(cause){
   S.enCours = false;
@@ -5397,9 +5442,9 @@ function finir(cause){
   rentrerTousLesVendeurs();
   majRecord();
   monter(BUS_MUS, 0, 1.2);
-  if (cause !== 'abandon') sonFin(S.jour >= 20);
+  if (cause !== 'abandon') sonFin(moisDe(S.jour) >= 6);
 
-  var jours = S.jour;
+  var jours = moisDe(S.jour);   // des mois, depuis le 22 nov. 2026
   var titre = TITRES[0].t;
   for (var k=0;k<TITRES.length;k++){ if (jours >= TITRES[k].min) titre = TITRES[k].t; }
 
@@ -5413,7 +5458,7 @@ function finir(cause){
     boitePortrait.classList.add('hide');
   }
 
-  document.getElementById('eyebrowFin').textContent = 'Jours tenus';
+  document.getElementById('eyebrowFin').textContent = 'Mois tenus';
   document.getElementById('score').textContent = jours;
   document.getElementById('titre').textContent = titre;
 
@@ -5425,7 +5470,7 @@ function finir(cause){
   for (var m=0;m<S.journal.length;m++){
     var J = S.journal[m];
     html += '<div class="jrow' + (J.fort ? ' fort' : '') + '">' +
-            '<span class="jj">' + J.jour + '</span>' +
+            '<span class="jj">' + moisDe(J.jour) + '</span>' +
             '<span class="jt">' + J.texte + '</span></div>';
   }
   document.getElementById('journal').innerHTML = html;
@@ -5446,13 +5491,13 @@ function finir(cause){
 
   var verdictRecord;
   if (S.recordBattu){
-    verdictRecord = '<b>NOUVEAU RECORD.</b> Tu as tenu ' + jours + ' jours.';
+    verdictRecord = '<b>NOUVEAU RECORD.</b> Tu as tenu ' + motMois(jours) + '.';
   } else if (MEILLEUR > jours){
     var manque = MEILLEUR - jours;
-    verdictRecord = 'Il te manquait <b>' + manque + (manque > 1 ? ' jours' : ' jour') +
+    verdictRecord = 'Il te manquait <b>' + motMois(manque) +
                     '</b> pour battre ton record de <b>' + MEILLEUR + '</b>.';
   } else {
-    verdictRecord = 'Record \u00e0 battre : <b>' + MEILLEUR + ' jours</b>.';
+    verdictRecord = 'Record \u00e0 battre : <b>' + motMois(MEILLEUR) + '</b>.';
   }
   document.getElementById('finTexte').innerHTML =
     verdictRecord + '<br><br>Modou a gagn\u00e9 <b>' + Math.round(S.gagne) + ' F</b> sur le chantier.';
@@ -6384,7 +6429,7 @@ function reprendreLaPartie(){
   if (AC){ MUS.depart = AC.currentTime + 0.2; MUS.pas = 0; MUS.fete = 0;
            monter(BUS_MUS, SON_ON ? 0.15 : 0, 2.0); }
   majRecord();
-  flash('Jour ' + S.jour + ' \u2014 on reprend o\u00f9 tu t\u2019\u00e9tais arr\u00eat\u00e9.', 2600);
+  flash('Mois ' + moisDe(S.jour) + ' \u2014 on reprend o\u00f9 tu t\u2019\u00e9tais arr\u00eat\u00e9.', 2600);
   majPauseBtn();
 }
 
@@ -6407,7 +6452,7 @@ function afficherRecordAccueil(){
   if (!z) return;
   if (MEILLEUR > 0){
     z.innerHTML = '<span class="couronne">\uD83C\uDFC6</span> Ton record : <b>' +
-                  MEILLEUR + ' jours</b>';
+                  motMois(MEILLEUR) + '</b>';
     z.className = 'on';
   } else {
     z.innerHTML = 'Aucun record encore. Tiens le plus longtemps possible.';
@@ -6442,7 +6487,7 @@ function majBoutonReprendre(){
   var d = partieEnAttente();
   b.classList.remove('hide');
   b.disabled = !d;
-  b.innerHTML = d ? 'Reprendre la partie en cours<small>' + nomEtape(numeroEtape(d.jour)) + ' · jour ' + d.jour + '</small>'
+  b.innerHTML = d ? 'Reprendre la partie en cours<small>Mois ' + moisDe(d.jour) + '</small>'
     : 'Reprendre la partie en cours<small>Aucune partie en cours</small>';
 }
 
@@ -6591,47 +6636,33 @@ var AIDE = [
     'Partout ailleurs, le temps l\u2019use, m\u00eame immobile.',
     'Apr\u00e8s chaque achat, il doit y repasser avant la course suivante.'
   ]},
-  { t:'Ton fils \u2014 \u00e0 partir du jour 31', l:[
-    'Son visage appara\u00eet dans un rond vert, \u00e0 droite de l\u2019\u00e9cran.',
+  { t:'Le v\u00e9lo \u2014 d\u00e8s le premier mois', l:[
+    'Modou commence \u00e0 v\u00e9lo : tous ses trajets sont deux fois plus rapides qu\u2019\u00e0 pied.'
+  ]},
+  { t:'Ton fils \u2014 au mois 3', l:[
+    'Il arrive pour t\u2019aider. Son visage appara\u00eet dans un rond vert, \u00e0 droite de l\u2019\u00e9cran.',
     'Un appui dessus et il part faire la course la plus urgente, tout seul.',
-    'Tu peux \u00eatre n\u2019importe o\u00f9 : au chantier, chez une Dame, en chemin.',
     'Il est plus lent que son p\u00e8re et rend un peu moins. Une course \u00e0 la fois.',
     'L\u2019argent est pris au moment o\u00f9 tu l\u2019envoies.'
   ]},
-  { t:'L\u2019\u00e2ne \u2014 \u00e0 partir du jour 61', l:[
-    'Le Vieux Serigne le propose : le badge du temple se met \u00e0 clignoter.',
-    'Va au temple avec 200 F en poche. L\u2019achat se fait en entrant dans le cercle.',
-    'Ensuite Modou monte dessus : tous ses trajets sont deux fois plus rapides.',
-    'Cet achat ne demande pas de passer par le foyer.'
+  { t:'Le d\u00e9part du fils et la moto \u2014 au mois 4', l:[
+    'Ton fils part \u00e9tudier en ville. Modou \u00e9change alors son v\u00e9lo contre une moto : deux fois plus rapide.',
+    'R\u00e9guli\u00e8rement, ' + 100 + ' F partent tout seuls pour ton fils, et Modou l\u2019appelle ensuite.',
+    'Si la caisse est vide ce jour-l\u00e0, la somme est report\u00e9e \u00e0 la fois suivante.'
   ]},
-  { t:'Ton fils \u00e9tudie \u2014 \u00e0 partir du jour 71', l:[
-    'Il part en ville. Chaque semaine, ' + 100 + ' F partent tout seuls pour lui.',
-    'Tu n\u2019as rien \u00e0 faire : l\u2019argent est pr\u00e9lev\u00e9 et Modou l\u2019appelle ensuite.',
-    'Si la caisse est vide ce jour-l\u00e0, la somme est report\u00e9e \u00e0 la semaine suivante.',
-    'Au jour 111 il rentre une semaine en vacances : il refait les courses,',
-    'et tant qu\u2019il est \u00e0 la maison, rien n\u2019est pr\u00e9lev\u00e9.'
-  ]},
-  { t:'La saison des pluies \u2014 jour 91', l:[
+  { t:'La saison des pluies \u2014 mois 15', l:[
     'Le toit du foyer fuit : sous l\u2019averse, Modou r\u00e9cup\u00e8re deux fois moins bien.',
     'Prends des t\u00f4les au chantier pour 500 F et le toit est refait.'
   ]},
-  { t:'La moto \u2014 jour 121', l:[
-    'Le patron la propose \u00e0 cr\u00e9dit : rien \u00e0 payer d\u2019avance.',
-    'Passe au chantier et elle est \u00e0 toi. Quatre fois plus rapide qu\u2019\u00e0 pied.',
-    'Il retiendra 35 % de chaque paye jusqu\u2019au remboursement des 450 F.'
-  ]},
   { t:'Le grade de Modou', l:[
-    'Chaque mois tenu, le patron le monte en grade et sa paye augmente.',
+    'Au fil des mois, le patron le monte en grade et sa paye augmente.',
     'Man\u0153uvre, puis Ma\u00e7on, Chef d\u2019\u00e9quipe, Contrema\u00eetre, Chef de chantier.',
-    'Au cinqui\u00e8me mois il gagne plus de trois fois sa paye du premier jour.',
     'Le taux affich\u00e9 sur le badge du chantier tient compte de tout : grade, niveau, week-end.'
   ]},
-  { t:'Le week-end et les f\u00eates', l:[
-    'Samedi, dimanche et jours de f\u00eate, le chantier paie double.',
-    'Ces jours-l\u00e0, la journ\u00e9e attend que Modou arrive au chantier pour commencer.',
-    'Cours : tu touches alors la journ\u00e9e enti\u00e8re au tarif double.',
-    'Et un mois sur six est un cong\u00e9 pay\u00e9 : la paye est doubl\u00e9e',
-    'pendant trente jours. Le premier tombe au jour 151.'
+  { t:'Les mois de prime et les f\u00eates', l:[
+    'Certains mois, et les mois de f\u00eate, le chantier paie double.',
+    'Ces mois-l\u00e0, le temps attend que Modou arrive au chantier pour commencer.',
+    'Cours : tu touches alors le mois entier au tarif double.'
   ]},
   { t:'Quand une Dame s\u2019en va', l:[
     'Sous 30 %, elle r\u00e9clame. \u00c0 z\u00e9ro, elle se l\u00e8ve et marche vers la sortie.',
@@ -6747,6 +6778,19 @@ function demarrerA(pr){
 
 }
 
+/* La partie s'ouvre au 77e jour du calendrier : sa difficulté, ses prix, le grade
+   de Modou. Plus de niveaux : une seule partie, et l'on compte les mois tenus. */
+function commencerAuMoisUn(){
+  var jour = CFG.DEBUT_JOUR;
+  S.temps = (jour - 1) * CFG.SEC_PAR_JOUR;
+  S.jour = jour;
+  S.etapesTerminees = ETAPES.length;
+  S.moisSalue = true;
+  S.argent = Math.round(CFG.ARGENT_DEPART * Math.pow(1 + NIV().inflation, palierActuel()));
+  S.filsParti = false;
+  S.ane = true; S.aneOffert = true;      // le vélo, dès le départ
+  S.moto = false; S.motoOfferte = true;  // la moto viendra du troc, au départ du fils
+}
 function demarrer(){
   noterAction('démarrage d une partie');
   effacerPartie();
@@ -6755,6 +6799,7 @@ function demarrer(){
   if (AC && AC.state === 'suspended') AC.resume();
   S = nouvelEtat();
   S.suivi = nouveauSuivi();
+  commencerAuMoisUn();
   CAM.x = 50; CAM.y = 40; CAM.z = CFG.Z_LIBRE;
   CAM.tx = 50; CAM.ty = 40; CAM.tz = CFG.Z_LIBRE;
   construire();
