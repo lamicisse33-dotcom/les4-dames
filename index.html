@@ -1257,7 +1257,7 @@ function dameSVG(i){
    ========================================================= */
 'use strict';
 
-var BUILD_TAG = 'LQD-v14';
+var BUILD_TAG = 'LQD-v14.1';
 document.getElementById('build').textContent = BUILD_TAG;
 var vIntro = document.getElementById('versionIntro');
 if (vIntro) vIntro.textContent = BUILD_TAG;
@@ -2143,7 +2143,7 @@ function jalouses(){
 var DECOR = { W:1671, H:941, IMG:'decor/plateau.webp' };
 
 /* La place centrale : un rectangle logique (le sol marchable) posé sur la place peinte. */
-var PLACE_VUE = { lx0:510, ly0:235, lx1:890, ly1:565, vx0:680, vy0:330, sx:310/380, sy:180/330 };
+var PLACE_VUE = { lx0:510, ly0:235, lx1:890, ly1:565, vx0:695, vy0:340, sx:285/380, sy:165/330 };
 function dansLaPlaceLogique(X, Y){
   return X >= PLACE_VUE.lx0 && X <= PLACE_VUE.lx1 && Y >= PLACE_VUE.ly0 && Y <= PLACE_VUE.ly1;
 }
@@ -2157,30 +2157,34 @@ function imageVersPlace(x, y){
 /* Chaque allée logique et le chemin peint qu'elle suit (px de l'image).
    Un troisième nombre fixe l'avancement logique à ce point (bord de la place). */
 var VUE_ALLEES = {
-  'TL-HE':[[55,265],[70,200],[150,112],[300,95],[430,128],[540,178],[660,222],[760,245],[835,258]],
-  'HE-TR':[[835,258],[960,240],[1100,212],[1200,150],[1300,98],[1450,70],[1570,118],[1615,200],[1625,270]],
-  'TL-GO':[[55,265],[28,320],[22,375],[35,420]],
-  'GO-BL':[[35,420],[25,500],[30,600],[70,688]],
-  'TR-DR':[[1625,270],[1652,330],[1655,380],[1640,428]],
-  'DR-BR':[[1640,428],[1652,500],[1645,600],[1600,685]],
+  /* 22 nov. 2026, Lamine : « il doit impérativement suivre les tracés ».
+     Chaque allée logique passe UNIQUEMENT par des chemins peints. Celles qui
+     n'ont pas de chemin direct dans l'image (l'anneau du haut, les côtés)
+     font le tour par les chemins qui existent : diagonales, place, escaliers. */
+  'TL-HE':[[85,248],[45,268],[20,305],[18,345],[40,385],[110,410],[230,445],[360,470],[455,478],[560,488],[690,458],[760,420],[835,340],[835,258]],
+  'HE-TR':[[835,258],[835,340],[910,420],[980,458],[1110,490],[1235,480],[1350,462],[1480,430],[1560,395],[1620,362],[1653,345],[1640,290],[1615,250]],
+  'TL-GO':[[85,248],[45,268],[20,305],[18,345]],
+  'GO-BL':[[18,345],[40,385],[110,410],[230,445],[360,470],[455,478],[440,530],[430,590],[450,625],[490,650],[505,708],[420,712],[300,712],[160,702],[70,688]],
+  'TR-DR':[[1615,250],[1640,290],[1653,345]],
+  'DR-BR':[[1653,345],[1620,362],[1560,395],[1480,430],[1350,462],[1235,480],[1225,540],[1235,600],[1270,650],[1265,705],[1420,702],[1540,695],[1600,685]],
   'BL-BK':[[70,688],[160,702],[300,712],[420,712],[505,708]],
   'BK-BF':[[505,708],[650,714],[835,712]],
   'BF-SK':[[835,712],[1000,714],[1150,712],[1265,705]],
   'SK-BR':[[1265,705],[1420,702],[1540,695],[1600,685]],
-  'GO-AK':[[35,420],[110,412],[200,385],[320,352],[420,318],[480,290]],
-  'AK-CX':[[480,290],[525,315],[580,338],[640,345],[690,350],[688,382],[680,420,0.4865],[835,420]],
-  'CX-TK':[[835,420],[990,420,0.5135],[984,382],[985,355],[1050,368],[1150,362],[1230,342],[1290,330]],
-  'TK-DR':[[1290,330],[1320,400],[1360,455],[1480,450],[1580,440],[1640,428]],
-  'HE-CX':[[835,258],[835,330,0.431],[835,420]],
-  'CX-BF':[[835,420],[835,510,0.569],[835,712]],
+  'GO-AK':[[18,345],[40,385],[110,410],[230,445],[360,470],[455,478],[560,488],[690,458],[700,420],[700,390],[690,362],[630,358],[560,345],[500,322],[465,300]],
+  'AK-CX':[[465,300],[500,322],[560,345],[630,358],[690,362],[697,390],[695,420,0.4865],[835,420]],
+  'CX-TK':[[835,420],[980,420,0.5135],[978,385],[987,352],[1050,362],[1150,348],[1230,330],[1295,318]],
+  'TK-DR':[[1295,318],[1230,330],[1150,348],[1050,362],[987,352],[972,385],[972,420],[980,458],[1110,490],[1235,480],[1350,462],[1480,430],[1560,395],[1620,362],[1653,345]],
+  'HE-CX':[[835,258],[835,340,0.431],[835,420]],
+  'CX-BF':[[835,420],[835,505,0.569],[835,712]],
   'HE-CH':[[835,258],[835,228]],
-  'AK-AP':[[480,290],[440,262],[380,272],[300,282]],
-  'TK-TP':[[1290,330],[1345,345],[1372,320],[1385,292]],
-  'BK-BP':[[505,708],[500,672],[480,642],[430,624],[320,614]],
+  'AK-AP':[[465,300],[440,268],[380,272],[300,282]],
+  'TK-TP':[[1295,318],[1345,338],[1380,335],[1395,300]],
+  'BK-BP':[[505,708],[495,665],[470,630],[400,615],[330,612]],
   'SK-SP':[[1265,705],[1268,672],[1290,642],[1350,616],[1445,600]]
 };
 /* Les allées du fond (derrière les maisons) : un toucher ne les choisit qu'en dernier. */
-var ALLEES_DU_FOND = { 'TL-HE':1, 'HE-TR':1 };
+var ALLEES_DU_FOND = { 'TL-HE':1, 'HE-TR':1, 'GO-AK':1, 'TK-DR':1, 'GO-BL':1, 'DR-BR':1, 'TL-GO':1, 'TR-DR':1 };
 
 /* Ce qui ne marche pas : bâtiments, enseignes, lanternes (px de l'image). */
 var VUE_LIEUX = {
@@ -3684,9 +3688,9 @@ function majCamera(dt){
     cz = 2.7 + S.fete.niveau * 0.12;
   }
   else if (CAM.libre){
-    cx = 50; cy = 50;
+    cx = 50; cy = 54;   // un peu plus bas : la rivière et la pirogue restent dans l'écran
     // on garde 48 px en haut (jauges) et 48 px en bas (force) : le chantier et la banque restent entièrement visibles
-    cz = BW ? Math.min(VW / BW, (VH - 96) / (BH * CFG.APLAT)) : 1;
+    cz = couvrir();   // 22 nov. 2026 : le décor remplit tout l'écran, sans rebord
   }
   else if (S.sortieVue > 0){
     qui = -1;
@@ -3709,9 +3713,10 @@ function majCamera(dt){
   CAM.z += (CAM.tz - CAM.z) * k;
   appliquerCamera();
 }
+function couvrir(){ return BW ? Math.max(VW / BW, VH / (BH * CFG.APLAT)) : 1; }
 function appliquerCamera(){
   if (!BW) return;
-  var z = CAM.z, zy = z * CFG.APLAT;
+  var z = Math.max(CAM.z, couvrir()), zy = z * CFG.APLAT;
   var lw = BW*z, lh = BH*zy, Tx, Ty;
   if (lw <= VW) Tx = (VW - lw)/2;
   else { Tx = VW/2 - (CAM.x/100)*BW*z; Tx = Math.min(0, Math.max(VW - lw, Tx)); }
