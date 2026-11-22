@@ -98,6 +98,9 @@ html,body{height:100%;overflow:hidden;background:#1B2A1B;font-family:var(--ui);c
   font:800 clamp(11px,1.6vmin,15px)/1.1 system-ui,sans-serif;color:#3b2200;padding:.55em .9em;border-radius:14px;
   background:linear-gradient(#ffe7a3,#f5b335);border:2px solid #7a4a00;box-shadow:0 3px 0 #7a4a00,0 6px 14px rgba(0,0,0,.35);
   white-space:nowrap;text-align:center;cursor:pointer}
+.pret .fermerOffre{position:absolute;right:-12px;top:-12px;width:26px;height:26px;border-radius:50%;
+  background:#fff;border:2px solid #7a4a00;color:#7a4a00;font:900 13px/22px system-ui,sans-serif;font-style:normal;text-align:center;
+  box-shadow:0 2px 0 #7a4a00;cursor:pointer}
 .pret small{display:block;font-weight:600;font-size:.78em;margin-top:2px}
 .pret[hidden]{display:none}
 .pret.dette{background:linear-gradient(#f3e6d0,#d9c3a0);color:#5a4630;box-shadow:0 2px 0 #7a5a30;cursor:default}
@@ -218,7 +221,7 @@ html,body{height:100%;overflow:hidden;background:#1B2A1B;font-family:var(--ui);c
 .enfant .edit{position:absolute;left:50%;top:-16px;transform:translateX(-50%);
   font-size:17px;pointer-events:none}
 
-#enfantBtn{position:fixed;right:44px;bottom:calc(270px + env(safe-area-inset-bottom));
+#enfantBtn{position:fixed;right:100px;bottom:min(calc(222px + env(safe-area-inset-bottom)), calc(100vh - 112px));
   z-index:42;display:none;align-items:center;justify-content:center;
   width:48px;height:48px;border-radius:50%;background:#5FD98A;overflow:visible;
   border:3px solid var(--trait);box-shadow:var(--ombre);cursor:pointer;padding:3px}
@@ -1285,7 +1288,7 @@ function dameSVG(i){
    ========================================================= */
 'use strict';
 
-var BUILD_TAG = 'LQD-v17.2';
+var BUILD_TAG = 'LQD-v17.3';
 document.getElementById('build').textContent = BUILD_TAG;
 var vIntro = document.getElementById('versionIntro');
 if (vIntro) vIntro.textContent = BUILD_TAG;
@@ -1367,6 +1370,15 @@ function traiterAppui(e, n){
     }
     if (n.id === 'chMenu'){ fermerLeChapitre(true); retourAuMenu(); return; }
     if (n.id === 'btnPret'){ if (e.cancelable) e.preventDefault(); return; }
+    if (n.id === 'btnVehiculeFermer'){
+      if (e.cancelable) e.preventDefault();
+      if (S && S.enCours){
+        var vf = vehiculeIci();
+        if (vf === 'velo') S.veloRefuse = true; else if (vf === 'moto') S.motoRefusee = true;
+        signatureVehicule = null; majBoutonVehicule(); sauvegarder();
+      }
+      return;
+    }
     if (n.id === 'btnVehicule'){
       if (e.cancelable) e.preventDefault();
       if (S && S.enCours){
@@ -1626,6 +1638,7 @@ var CFG = {
   FILS_DEPART_JOUR: 79,   // mois 3 : le fils part étudier, le vélo est échangé contre la moto (Lamine, 22 nov.)
   ANE_JOUR: 99999,        // plus d'âne à acheter : Modou a son vélo dès le mois 1
   PRIX_ANE: 200,
+  PIED_VITESSE: 0.65,     // à pied : le vélo va trois fois plus vite, on sent le besoin
   ANE_VITESSE: 2.0,       // le vélo (ancien âne) : les trajets sont deux fois plus courts
 
   ENFANT_JOUR: 78,        // mois 2 : le fils arrive pour aider (Lamine, 22 nov.)
@@ -4310,8 +4323,10 @@ function acheterLAne(){
 var signatureVehicule = null;
 function vehiculeIci(){
   if (!S || !S.enCours) return '';
-  if (S.aneOffert && !S.ane && !S.moto) return 'velo';
-  if (S.motoOfferte && !S.moto && !(S.dette > 0)) return 'moto';     // le vélo d'abord remboursé
+  /* 22 nov., 20 h 29 : dès que la moto est proposée, elle prend la place du vélo
+     non pris ; et chaque offre peut être fermée (✕) pour libérer l'écran. */
+  if (S.motoOfferte && !S.moto) return (S.motoRefusee || S.dette > 0) ? '' : 'moto';   // le vélo d'abord remboursé
+  if (S.aneOffert && !S.ane && !S.moto && !S.veloRefuse) return 'velo';
   return '';
 }
 function majBoutonVehicule(){
@@ -4323,7 +4338,8 @@ function majBoutonVehicule(){
   if (!v){ b.hidden = true; return; }
   poserImage(b, [1105, 176]);                       // à la hauteur du chantier : c'est le chef qui prête
   b.innerHTML = (v === 'velo' ? 'Pr\u00eat pour un v\u00e9lo' : 'Pr\u00eat pour une moto') +
-    '<small>' + fmtF(v === 'velo' ? prixDuVelo() : prixDeLaMoto()) + ' \u00b7 retenus sur ta paye</small>';
+    '<small>' + fmtF(v === 'velo' ? prixDuVelo() : prixDeLaMoto()) + ' \u00b7 retenus sur ta paye</small>' +
+    '<i id="btnVehiculeFermer" class="fermerOffre" aria-label="Fermer">\u2715</i>';
   b.hidden = false;
 }
 
@@ -4460,7 +4476,7 @@ function nouvelleSemaine(){
     }, 8100);
     noter(S.jour, 'Modou devient ' + nomG + '.');
   }
-  if (!S.ane && !S.moto) proposerLAne(10800);       // dès la 2e semaine : le vélo est à vendre (rappel chaque semaine)
+  if (!S.ane && !S.moto && !S.veloRefuse && !S.motoOfferte) proposerLAne(10800);       // dès la 2e semaine : le vélo est à vendre (rappel chaque semaine)
 }
 function envoyerLeMandatSeul(){
   var m = montantDuMandat() + (S.arriere || 0);
@@ -5251,6 +5267,7 @@ function deplacerModou(dt){
     var mult = vitesseDeModou();
     if (S.moto) mult *= CFG.MOTO_VITESSE;
     else if (S.ane) mult *= CFG.ANE_VITESSE;
+    else mult *= CFG.PIED_VITESSE;          // 22 nov., 20 h 29 : à pied, Modou est nettement plus lent
     var px = vx * CFG.VITESSE * mult * dt;
     var py = vy * CFG.VITESSE * RATIO * mult * dt;
     var nx = Math.max(3, Math.min(97, S.modou.x + px));

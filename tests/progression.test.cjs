@@ -581,4 +581,13 @@ test('v17: Modou climbs one grade at a time by week, and each promotion catches 
   }
   assert.equal(noms.length,8);assert.equal(noms[0],'Apprenti');assert.equal(noms[7],'Ma\u00eetre b\u00e2tisseur');
 });
-console.log(`TOTAL: ${checks} tests passed, v17 inclus.`);
+test('v17.3: walking is clearly slower; the moto offer replaces an untaken bike; offers can be closed',()=>{
+  data.clear();g.iNiveau=1;g.demarrer();g.gamePaused=false;const S=g.S;
+  assert.ok(g.CFG.PIED_VITESSE<=0.7&&g.CFG.ANE_VITESSE/g.CFG.PIED_VITESSE>=2.8);
+  g.proposerLAne();assert.equal(g.vehiculeIci(),'velo');
+  S.veloRefuse=true;assert.equal(g.vehiculeIci(),'');S.veloRefuse=false;
+  g.leFilsPart();assert.equal(g.vehiculeIci(),'moto','la moto remplace le vélo non pris');
+  S.motoRefusee=true;assert.equal(g.vehiculeIci(),'');S.motoRefusee=false;
+  assert.equal(g.prendreLaMoto(),true);assert.equal(S.moto,true);assert.equal(g.vehiculeIci(),'');
+});
+console.log(`TOTAL: ${checks} tests passed, v17.3 inclus.`);
