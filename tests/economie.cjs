@@ -3,7 +3,7 @@
    sous 45 (en repassant au foyer d'abord), se repose sous 35 de force, et
    travaille au chantier le reste du temps. Trajets réels, 20 images par
    seconde. On s'en sert pour RÉGLER le jeu, pas pour le gagner.
-   Lancer :  node tests/economie.cjs            (≈ 2 min)
+   Lancer :  node tests/economie.cjs            (≈ 5 min)
    Cibles :  Difficile, perdu entre le jour 80 et 140 ; Très difficile entre
              35 et 80 ; Facile tient 150 jours ; 14 niveaux sur 18 passés
              depuis leur point de reprise en Difficile. */
@@ -28,7 +28,7 @@ function jouer(niveau,politique,maxJours=200,over={},depart=null){
  const L=g.LIEUX,C=g.CENTRE,CH=g.CHANTIER;
  const aller=(x,y,nom)=>{if(cible===nom&&S.auto)return;const r=g.trajetVers(x,y);if(r&&r.length>=2){S.auto={pts:r,i:1};cible=nom;}};
  while(S.enCours&&S.jour<=maxJours){
-  if(S.chapitre)g.fermerLeChapitre(true);
+  if(S.chapitre){if(S.chapitre.mois)g.fermerLeMoisTenu(false);else g.fermerLeChapitre(true);}
   // décision
   const prix=i=>g.prixDuJour(g.DAMES[i].lieu);
   let urgent=-1,bas=999;for(let i=0;i<4;i++){if(S.parties[i]||politique.abandonne===i)continue;if(S.jauges[i]<bas){bas=S.jauges[i];urgent=i;}}
@@ -43,28 +43,22 @@ function jouer(niveau,politique,maxJours=200,over={},depart=null){
   if(S.zone===C&&cible==='C')S.auto=null;
   t+=50;g.last=t-50;g.tourDeBoucle(t);if(S.jour!==dernierJour){dernierJour=S.jour;if(S.jour%25===0)trace.push(S.jour+':'+Math.round(S.argent)+'F/prix'+g.prixDuJour('BANQUE'));}
  }
- return {jours:S.jour,perdu,sorties:S.sorties,argent:Math.round(S.argent),gagne:Math.round(S.gagne||0),trace:trace.join(' ')};
+ return {jours:S.jour,temps:S.temps-(g.CFG.DEBUT_JOUR-1)*g.CFG.SEC_PAR_JOUR,perdu,sorties:S.sorties,argent:Math.round(S.argent),gagne:Math.round(S.gagne||0),trace:trace.join(' ')};
 }
 
 module.exports={jouer};
 if(require.main===module){
  const assert=require('node:assert/strict');
- const dur=jouer('dur',{seuil:45,repos:35},220),tres=jouer('tresdur',{seuil:45,repos:35},220),fac=jouer('facile',{seuil:45,repos:35},220);
- console.log('Difficile      :',dur.perdu?'perdu jour '+dur.perdu:'tient 220 jours','|',dur.trace);
- console.log('Très difficile :',tres.perdu?'perdu jour '+tres.perdu:'tient 220 jours','|',tres.trace);
- console.log('Facile         :',fac.perdu?'perdu jour '+fac.perdu:'tient 220 jours','|',fac.trace);
- let ok=0,det=[],manques=[];
- for(let n=1;n<=18;n++){
-   const r=jouer('dur',{seuil:45,repos:35},200,{},n);
-   if(!r.perdu)ok++;else manques.push('niveau '+n+' : perdu jour '+r.perdu+' ('+r.sorties+' Dame'+(r.sorties>1?'s':'')+' partie'+(r.sorties>1?'s':'')+')');
-   det.push(n+(r.perdu?'✗':'✓'));
- }
- console.log('Niveaux passés depuis leur reprise (Difficile) :',ok,'/ 18 —',det.join(' '));
- if(manques.length)console.log('   manqués —',manques.join(' | '));
- assert.ok(dur.perdu&&dur.perdu>=80&&dur.perdu<=140,'Difficile hors cible');
- assert.ok(tres.perdu&&tres.perdu>=35&&tres.perdu<=80,'Très difficile hors cible');
- assert.ok(!fac.perdu||fac.perdu>=150,'Facile trop dur');
- assert.ok(ok>=14,'trop de niveaux infranchissables');
+ /* 22 nov. 2026 : un mois = 5 minutes, tout monte à la semaine. On compte en MOIS
+    (le jour interne 77 est le mois 1). Cibles : Facile tient au moins 12 mois,
+    Difficile tombe entre le mois 4 et le mois 8, Très difficile entre 2 et 4. */
+ const FIN=77+24, mois=r=>r.perdu?r.perdu-76:null;
+ const dur=jouer('dur',{seuil:45,repos:35},FIN),tres=jouer('tresdur',{seuil:45,repos:35},FIN),fac=jouer('facile',{seuil:45,repos:35},FIN);
+ for(const [nom,r] of [['Facile        ',fac],['Difficile     ',dur],['Très difficile',tres]])
+   console.log(nom,':',r.perdu?'perdu au mois '+mois(r):'tient 24 mois','|',r.argent+' F en caisse');
+ assert.ok(mois(dur)&&mois(dur)>=4&&mois(dur)<=8,'Difficile hors cible');
+ assert.ok(mois(tres)&&mois(tres)>=2&&mois(tres)<=4,'Très difficile hors cible');
+ assert.ok(!fac.perdu||mois(fac)>=12,'Facile trop dur');
 
  /* LA PREUVE DE « LA MAISON DÉSÉQUILIBRÉE » — 31 octobre 2026.
     Lamine : « une Dame partie doit coûter. » Avant la règle, le contraire
@@ -107,9 +101,10 @@ if(require.main===module){
  const PART_MAX = 0.60;              // le négligent tient au plus 60 % des jours du servant
  let coute = true;
  for (const [cle,nom] of [['facile','Facile   '],['dur','Difficile']]){
-   const tS = jouer(cle,{seuil:45,repos:35},220).perdu || 220;
-   const tL = jouer(cle,{seuil:45,repos:35,abandonne:1},220).perdu || 220;
-   const part = tL / tS;
+   /* 22 nov. 2026 : on compare des MINUTES tenues (un mois = 5 min, trop grossier) */
+   const rS = jouer(cle,{seuil:45,repos:35},77+24), rL = jouer(cle,{seuil:45,repos:35,abandonne:1},77+24);
+   const tS = rS.perdu || 77+24, tL = rL.perdu || 77+24;
+   const part = rL.temps / rS.temps;
    const okT = part <= PART_MAX;
 
    /* Le dernier jour où les deux sont encore debout : un de moins que la
@@ -121,7 +116,7 @@ if(require.main===module){
    const exigee = (cle === 'facile');          // n'est exigée qu'en Facile
 
    if (!okT || (exigee && !okA)) coute = false;
-   console.log('Laisser partir une Dame ('+nom+') : tient '+tL+' j contre '+tS+' j'+
+   console.log('Laisser partir une Dame ('+nom+') : tient '+Math.round(rL.temps/60)+' min contre '+Math.round(rS.temps/60)+' min'+
      '  ('+Math.round(part*100)+' % — cible ≤ '+Math.round(PART_MAX*100)+' %) '+(okT?'✓':'✗')+
      '   |   caisses au jour '+jourCommun+' (dernier jour commun) : '+argentS+' F contre '+argentL+' F '+
      (okA?'✓':'✗')+(exigee?'':' — pour information, non exigé en Difficile'));

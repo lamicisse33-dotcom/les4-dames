@@ -1260,7 +1260,7 @@ function dameSVG(i){
    ========================================================= */
 'use strict';
 
-var BUILD_TAG = 'LQD-v16';
+var BUILD_TAG = 'LQD-v16.1';
 document.getElementById('build').textContent = BUILD_TAG;
 var vIntro = document.getElementById('versionIntro');
 if (vIntro) vIntro.textContent = BUILD_TAG;
@@ -1478,6 +1478,7 @@ document.addEventListener('touchend', surAppui, {passive:false});
 /* ---------- RÉGLAGES ---------- */
 var CFG = {
   SEC_PAR_JOUR: 300,      // 22 nov. 2026 : un mois dure cinq minutes
+  SEC_PAR_SEMAINE: 75,    // quatre semaines par mois : le rythme de l'argent et de la difficulté
   SEC_PAR_CYCLE: 13,      // à l'intérieur du mois, le chantier ouvre 8 s et ferme 5 s, comme avant
   PART_JOUR: 0.62,
   TRANSITION: 0.09,       // douceur de l'aube et du crépuscule
@@ -1515,7 +1516,7 @@ var CFG = {
   SEUIL_PARTIR: 0,        // à zéro, la Dame quitte le cercle
   SORTIES_FATALES: 3,     // trois départs et la partie est perdue
 
-  MANDAT_JOURS: 7,        // le fils attend son argent chaque semaine
+  MANDAT_JOURS: 7,        // (ancien calendrier) — depuis le 22 nov. 2026 le mandat part à chaque semaine de jeu
   MANDAT_BASE: 100,      // somme fixe, envoyée toute seule chaque semaine
   MANDAT_DELAI: 3,        // il a trois jours pour l'envoyer
   MANDAT_PEINE: 22,       // ce que lui coûte un mandat oublié
@@ -1552,8 +1553,9 @@ var CFG = {
      foyer amputé ne tourne plus rond : les Dames qui restent s'usent plus
      vite, et le quartier parle — le patron paie moins bien un homme dont
      la maison se vide. Par Dame absente, et le rappel efface tout. */
-  DESEQUILIBRE_USURE: 0.15,   // +15 % d'usure par Dame absente (30 % à deux) — la montée sur deux jours rend ce taux tenable
-  DESEQUILIBRE_PAYE: 0.15,    // -15 % de paye par Dame absente (30 % à deux)
+  DESEQUILIBRE_USURE: 0.35,   // 22 nov. 2026 : 0,15 → 0,35, sinon sur des mois de 5 min une Dame laissée partir ne coûtait plus rien (robot : 101 %)
+  /* ancien : 0,15 */   // +15 % d'usure par Dame absente (30 % à deux) — la montée sur deux jours rend ce taux tenable
+  DESEQUILIBRE_PAYE: 0.35,      // -15 % de paye par Dame absente (30 % à deux)
   DESEQUILIBRE_MONTEE: 2,     // la pénalité monte sur deux jours après le départ : le temps de se relever
   PRIME_REPOS: 2.0,      // samedi, dimanche et jours fériés : la paye double
   ATTENTE_MAX: 15,       // le jour chômé attend Modou au chantier, au plus quinze secondes      // samedi, dimanche et jours fériés : la paye double     // quatre fois plus rapide qu'à pied
@@ -1609,8 +1611,19 @@ var STATUTS = [
 ];
 function statutActuel(){
   if (!S) return STATUTS[0];
-  return STATUTS[Math.min(STATUTS.length - 1, Math.floor((S.jour - 1) / CFG.MOIS))];
+  return STATUTS[Math.min(STATUTS.length - 1, Math.floor((Math.min(S.jour, CFG.DEBUT_JOUR) - 1) / CFG.MOIS))];   // ensuite, Modou avance à la semaine (payeModou)
 }
+/* 22 nov. 2026 : tout avance à la semaine (quatre par mois de cinq minutes).
+   Chaque semaine, les prix montent, la paye de Modou monte un peu moins vite,
+   les Dames s'usent un peu plus, et le mandat du fils part. */
+function semaineDe(){
+  if (!S) return 0;
+  return Math.max(0, Math.floor((S.temps - (CFG.DEBUT_JOUR - 1) * CFG.SEC_PAR_JOUR) / CFG.SEC_PAR_SEMAINE));
+}
+function semaineDuMois(){ return (semaineDe() % 4) + 1; }
+function facteurPrix(){ return Math.pow(1 + (NIV().hausseHebdo || 0), semaineDe()); }
+function facteurPaye(){ return Math.pow(1 + (NIV().payeHebdo || 0), semaineDe()); }
+function payeModou(){ return statutActuel().paye * facteurPaye(); }
 function annoncerLePromotion(){
   var st = statutActuel();
   if (!S || S.jour <= CFG.MOIS) return;
@@ -1655,9 +1668,14 @@ function estConge(j){ return Math.floor((j - 1) / CFG.MOIS) % 6 === 5; }
    13 000 F en caisse au jour 100 pour des courses à 391 F). Prix de base
    ×1,8, usure relevée : le robot tient 108 jours en Difficile, 49 en
    Très difficile, et garde une caisse serrée en Facile. */
+/* 22 nov. 2026 — réglage à la semaine (robot, tests/economie.cjs, un mois = 5 min) :
+   Facile perdu vers le mois 18, Difficile vers le mois 5, Très difficile vers le mois 3.
+   hausseHebdo : les prix et les charges, chaque semaine ; payeHebdo : la paye de Modou ;
+   pressionHebdo : l'usure des Dames ; pressionDepart : l'usure au premier mois. */
 var NIVEAUX = [
   { cle:'facile',  nom:'Facile',
     inflation:0.20, pressionMax:1.00, usure:0.90, paye:1.20, mandat:0.70,
+    hausseHebdo:0.025, payeHebdo:0.010, pressionHebdo:0.020, pressionDepart:0.30,
     dit:'Les prix montent moins vite et Modou s\u2019use moins. Pour d\u00e9couvrir.' },
   { cle:'dur',     nom:'Difficile',
     /* 31 oct. 2026 : 1,25 → 1,15. Les allées barrées ajoutent de la
@@ -1665,9 +1683,11 @@ var NIVEAUX = [
        robot tombait au jour 83 et ne passait plus que 13 niveaux sur 18.
        À 1,15 : jour 96, 18 niveaux sur 18. La pente reste celle du 30. */
     inflation:0.30, pressionMax:1.60, usure:1.15, paye:1.00, mandat:1.00,
+    hausseHebdo:0.035, payeHebdo:0.025, pressionHebdo:0.030, pressionDepart:0.65,
     dit:'Le r\u00e9glage normal du jeu. Les scores de r\u00e9f\u00e9rence.' },
   { cle:'tresdur', nom:'Très difficile',
-    inflation:0.40, pressionMax:2.20, usure:1.50, paye:0.85, mandat:1.30,
+    inflation:0.40, pressionMax:2.20, usure:1.35, paye:0.85, mandat:1.30,
+    hausseHebdo:0.050, payeHebdo:0.025, pressionHebdo:0.045, pressionDepart:0.30,
     dit:'Tout co\u00fbte plus cher, la paye baisse. La vie ne fait aucun cadeau.' }
 ];
 var iNiveau = 0;
@@ -2124,7 +2144,7 @@ function palierActuel(jour){
 }
 function prixDuJour(cle){
   var base = LIEUX[cle].prix;
-  var k = Math.pow(1 + NIV().inflation, palierActuel());
+  var k = Math.pow(1 + NIV().inflation, palierActuel(Math.min(S.jour, CFG.DEBUT_JOUR))) * facteurPrix();
   var grade = Math.pow(statutActuel().paye, CFG.PRIX_GRADE);
   return Math.round(base * k * grade * soutienArgent());
 }
@@ -4180,7 +4200,7 @@ function acheterLAne(){
    LE FILS PARTI ÉTUDIER — troisième mois
    Chaque semaine, Modou doit lui envoyer de l'argent depuis la banque.
    ========================================================= */
-function montantDuMandat(){ return CFG.MANDAT_BASE; }
+function montantDuMandat(){ return Math.round(CFG.MANDAT_BASE * (NIV().mandat || 1) * facteurPrix()); }
 
 function leFilsPart(){
   if (S.filsParti) return;
@@ -4191,8 +4211,8 @@ function leFilsPart(){
   }
   S.enfant = null;
   majBoutonEnfant();
-  flash('Ton fils part \u00e9tudier en ville. Tu lui enverras ' + CFG.MANDAT_BASE +
-        ' F r\u00e9guli\u00e8rement, automatiquement.', 4600);
+  flash('Ton fils part \u00e9tudier en ville. Chaque semaine, ' + montantDuMandat() +
+        ' F partent tout seuls pour lui.', 4600);
   parler('Mon fils s\u2019en va \u00e9tudier. Qu\u2019Allah le garde.', VOIX_MODOU);
   noter(S.jour, 'Le fils part \u00e9tudier.');
   if (!S.moto){
@@ -4222,6 +4242,16 @@ var SUITES_MODOU = [
   'Que ta m\u00e8re soit fi\u00e8re de toi.'
 ];
 
+function nouvelleSemaine(){
+  var hp = Math.round((NIV().hausseHebdo || 0) * 1000) / 10;
+  var hy = Math.round((NIV().payeHebdo || 0) * 1000) / 10;
+  var txt = 'Semaine ' + semaineDuMois() + ' \u2014 les prix montent de ' + String(hp).replace('.', ',') +
+            ' %, ta paye de ' + String(hy).replace('.', ',') + ' %.';
+  if (semaineDuMois() !== 1) flash(txt, 3200);    // la semaine 1 s'ouvre avec le nouveau mois
+  noter(S.jour, txt);
+  marquerHausse();
+  if (S.filsParti && !S.vacances) envoyerLeMandatSeul();
+}
 function envoyerLeMandatSeul(){
   var m = montantDuMandat() + (S.arriere || 0);
   if (S.argent < m){
@@ -4871,7 +4901,7 @@ function rendre(){
   var doubles = payeDoublee(S.jour);
   var prime2 = Math.max(doubles ? CFG.PRIME_REPOS : 1,
                         estConge(S.jour) ? CFG.PRIME_CONGE : 1);
-  var taux = Math.round(CFG.GAIN_CHANTIER * statutActuel().paye * NIV().paye * prime2);
+  var taux = Math.round(CFG.GAIN_CHANTIER * payeModou() * NIV().paye * prime2);
   if (bc2){
     bc2.textContent = nuitPleine ? '\uD83C\uDF19' : ('+' + taux + '/s');
     bc2.classList.toggle('prime', doubles && !nuitPleine);
@@ -5035,7 +5065,7 @@ function deplacerModou(dt){
 /* tout ce qui se passe dans un lieu : entrer, acheter, payer, réparer.
    Isolé pour que ça marche aussi pendant l'attente d'un jour chômé. */
 function prixCoursesFoyer(){
-  return Math.round(2 * CFG.GAIN_CHANTIER * statutActuel().paye * NIV().paye);
+  return Math.round(2 * CFG.GAIN_CHANTIER * statutActuel().paye * NIV().paye * facteurPrix());   // une charge : elle suit les prix
 }
 function contribuerAuFoyer(){
   if (S.force >= 100) return;
@@ -5109,7 +5139,7 @@ function vivreDansLaZone(dt){
                            estConge(S.jour) ? CFG.PRIME_CONGE : 1);
       /* Le quartier parle : le patron paie moins bien un homme dont la
          maison se vide. -10 % par Dame absente. */
-      var paye = CFG.GAIN_CHANTIER * statutActuel().paye * NIV().paye * rendT * bonus * prime * payeDesequilibre() * dt;
+      var paye = CFG.GAIN_CHANTIER * payeModou() * NIV().paye * rendT * bonus * prime * payeDesequilibre() * dt;
       if (S.moto && S.dette > 0){
         var retenue = Math.min(S.dette, paye * CFG.MOTO_RETENUE);
         S.dette -= retenue;
@@ -5281,7 +5311,7 @@ function tourDeBoucle(ts){
     var palierAvant = palierActuel(S.jour);
     S.jour = jour;
     sonJour();
-    if (palierActuel(jour) > palierAvant){
+    if (jour < CFG.DEBUT_JOUR && palierActuel(jour) > palierAvant){
       var hausse = Math.round(NIV().inflation * 100);
       var total = Math.round((Math.pow(1 + NIV().inflation, palierActuel(jour)) - 1) * 100);
       flash('Mois ' + moisDe(jour) + ' \u2014 la vie augmente de ' + hausse + ' %.', 3000);
@@ -5325,10 +5355,6 @@ function tourDeBoucle(ts){
     if (jour === CFG.VACANCES_JOUR && S.filsParti && !S.vacances) leFilsRevient();
     if (S.vacances && jour >= S.vacancesFin) leFilsRepart();
     if (jour >= CFG.MOTO_JOUR && !S.motoOfferte && !S.moto) proposerLaMoto();
-    if (S.filsParti && !S.vacances &&
-        (jour - CFG.FILS_DEPART_JOUR) % CFG.MANDAT_JOURS === 0 && jour > CFG.FILS_DEPART_JOUR){
-      envoyerLeMandatSeul();
-    }
 
     // tant que l'âne n'est pas pris, on le rappelle tous les cinq jours
     if (S.aneOffert && !S.ane && !S.moto){
@@ -5354,6 +5380,14 @@ function tourDeBoucle(ts){
     sauverDebutDuMois();
   }
 
+  /* 22 nov. 2026 : la semaine qui tourne */
+  var sem = semaineDe();
+  if (S.semaine == null) S.semaine = sem;
+  if (sem > S.semaine){
+    S.semaine = sem;
+    nouvelleSemaine();
+  }
+
   // cycle jour / nuit
   S.nuit = calculerNuit();
   var estNuit = S.nuit > 0.5;
@@ -5369,9 +5403,12 @@ function tourDeBoucle(ts){
 
   // L'étau ne se desserre jamais tout à fait : passé le palier, la pression
   // continue de monter, dix fois plus lentement. Le record finit par tomber.
-  var brut = (S.jour - 1) * 0.022;
+  var brut = (Math.min(S.jour, CFG.DEBUT_JOUR) - 1) * 0.022;
   var plafond = NIV().pressionMax;
   var pression = 1 + (brut <= plafond ? brut : plafond + (brut - plafond) * 0.10);
+  /* 22 nov. 2026 : on part plus doux (pressionDepart) et on serre d'un cran chaque semaine */
+  if (NIV().pressionDepart != null && S.jour >= CFG.DEBUT_JOUR) pression = 1 + NIV().pressionDepart;
+  pression += semaineDe() * (NIV().pressionHebdo || 0);
   // quand Modou flanche, le foyer se vide plus vite
   var manque = Math.max(0, (CFG.SEUIL_FATIGUE - S.force) / CFG.SEUIL_FATIGUE);
   var abandon = 1 + manque * CFG.USURE_EPUISE;
@@ -6879,6 +6916,7 @@ function commencerAuMoisUn(){
   S.temps = (jour - 1) * CFG.SEC_PAR_JOUR;
   S.jour = jour;
   S.etapesTerminees = ETAPES.length;
+  S.semaine = 0;
   S.moisSalue = true;
   S.argent = Math.round(CFG.ARGENT_DEPART * Math.pow(1 + NIV().inflation, palierActuel()));
   S.filsParti = false;

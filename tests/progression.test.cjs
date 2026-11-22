@@ -136,7 +136,7 @@ test('The actual game loop introduces features at the announced levels',()=>{
     if(day===79)assert.ok(g.S.enfant);                       // mois 3 : le fils arrive
     if(day===80){assert.equal(g.S.filsParti,true);assert.equal(g.S.enfant,null);   // mois 4 : il part
       assert.equal(g.S.moto,true);assert.equal(g.S.ane,false);assert.equal(g.S.dette,0);} // vélo échangé contre la moto
-    if(day===87)assert.equal(g.S.mandatsEnvoyes,1);
+    if(day===80)assert.equal(g.S.mandatsEnvoyes,1);   // dès la semaine qui suit son départ
     if(day===91)assert.equal(g.S.saisonPluies,true);
     if(day===92)assert.equal(g.S.toitPropose,true);
     if(day===111){assert.equal(g.S.vacances,true);assert.ok(g.S.enfant);}
@@ -301,8 +301,8 @@ test('Jealousy is applied in the loop at the configured rate and announced once'
 });
 test('Paid leave doubles instead of quadrupling; prices follow the grade',()=>{
   assert.equal(g.CFG.PRIME_CONGE,2);
-  state(1);const j1=g.prixDuJour('TEMPLE');state(121);
-  assert.equal(g.prixDuJour('TEMPLE'),Math.round(45*Math.pow(1+g.NIV().inflation,g.palierActuel())*Math.pow(g.statutActuel().paye,g.CFG.PRIX_GRADE)*g.soutienArgent()));
+  state(1);const j1=g.prixDuJour('TEMPLE');state(80);   // 22 nov. 2026 : au-delà du mois 1, les prix montent à la semaine
+  assert.equal(g.prixDuJour('TEMPLE'),Math.round(45*Math.pow(1+g.NIV().inflation,g.palierActuel(77))*g.facteurPrix()*Math.pow(g.statutActuel().paye,g.CFG.PRIX_GRADE)*g.soutienArgent()));
   assert.ok(g.prixDuJour('TEMPLE')>j1);
 });
 test('The four-line crisis sketch plays once; later crises only state the need',()=>{
@@ -483,5 +483,22 @@ test('A lost month is replayed from its start with the same difficulty',()=>{
   g.iNiveau=0;g.reprendreLeMois();
   assert.equal(g.S.jour,78);assert.equal(g.S.argent,argent);assert.equal(g.S.difficulte,diff);
   assert.ok(g.S.temps<78*g.CFG.SEC_PAR_JOUR);assert.equal(g.S.enCours,true);
+});
+test('Every week: prices, pay and wear rise, and the son gets his money',()=>{
+  data.clear();g.iNiveau=1;g.demarrer();g.gamePaused=false;
+  const S=g.S,W=g.CFG.SEC_PAR_SEMAINE;
+  assert.equal(g.SEC_PAR_SEMAINE,undefined);assert.equal(W*4,g.CFG.SEC_PAR_JOUR);
+  const prix0=g.prixDuJour('BANQUE'),paye0=g.payeModou(),foyer0=g.prixCoursesFoyer();
+  g.leFilsPart();S.argent=100000;const m0=g.montantDuMandat();
+  for(let w=1;w<=3;w++){
+    S.temps=(g.CFG.DEBUT_JOUR-1)*g.CFG.SEC_PAR_JOUR+w*W+0.5;S.jauges=[90,90,90,90];S.force=100;
+    g.last=1000;g.tourDeBoucle(1000);
+    assert.equal(g.semaineDe(),w);assert.equal(S.mandatsEnvoyes,w,'mandat de la semaine '+w);
+  }
+  assert.equal(S.jour,77);                                 // toujours le mois 1
+  assert.ok(g.prixDuJour('BANQUE')>prix0);assert.ok(g.payeModou()>paye0);
+  assert.ok(g.prixCoursesFoyer()>foyer0);assert.ok(g.montantDuMandat()>m0);
+  // la paye monte moins vite que les prix en Difficile : l'étau se resserre
+  assert.ok(g.payeModou()/paye0 < g.prixDuJour('BANQUE')/prix0 + 1e-9);
 });
 console.log(`TOTAL: ${checks} tests passed, v16 inclus.`);
