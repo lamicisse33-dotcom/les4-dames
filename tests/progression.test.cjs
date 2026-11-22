@@ -525,4 +525,16 @@ test('Countdown runs only during the last ten seconds of the month',()=>{
   S.temps=76*M+292.5;g.last=1000;g.tourDeBoucle(1000);
   assert.ok(nodes.get('rebours').innerHTML.startsWith('8'));
 });
-console.log(`TOTAL: ${checks} tests passed, v16.2 inclus.`);
+test('Loan: only with two Dames left, once a month, 2000 F repaid 4000 F from pay',()=>{
+  data.clear();g.iNiveau=1;g.demarrer();g.gamePaused=false;const S=g.S;
+  assert.equal(g.peutEmprunter(),false);
+  g.faitPartir(0);assert.equal(g.peutEmprunter(),false);     // trois Dames au foyer : non
+  g.faitPartir(1);assert.equal(g.peutEmprunter(),true);      // deux Dames : oui
+  const a0=S.argent;g.demanderUnPret();
+  assert.equal(S.argent,a0+2000);assert.equal(S.pret,4000);assert.equal(g.peutEmprunter(),false);
+  S.force=100;S.scene=null;S.nuit=0;S.modou.x=g.CHANTIER.x;S.modou.y=g.CHANTIER.y;const p0=S.pret;
+  for(let k=0;k<200;k++){S.temps=76*g.CFG.SEC_PAR_JOUR+1;S.nuit=0;g.vivreDansLaZone(.1);}
+  assert.ok(S.pret<p0,'la paye rembourse');
+  S.pret=0;assert.equal(g.peutEmprunter(),false,'un seul prêt dans le mois');
+});
+console.log(`TOTAL: ${checks} tests passed, v16.3 inclus.`);

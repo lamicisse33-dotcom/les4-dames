@@ -94,6 +94,13 @@ html,body{height:100%;overflow:hidden;background:#1B2A1B;font-family:var(--ui);c
 .zone.cher{border-color:#FF5C7A;background:rgba(255,92,122,.18)}
 
 /* ---- BADGES ---- */
+.pret{position:absolute;transform:translate(-50%,-50%);z-index:30;pointer-events:auto;
+  font:800 clamp(11px,1.6vmin,15px)/1.1 system-ui,sans-serif;color:#3b2200;padding:.55em .9em;border-radius:14px;
+  background:linear-gradient(#ffe7a3,#f5b335);border:2px solid #7a4a00;box-shadow:0 3px 0 #7a4a00,0 6px 14px rgba(0,0,0,.35);
+  white-space:nowrap;text-align:center;cursor:pointer}
+.pret small{display:block;font-weight:600;font-size:.78em;margin-top:2px}
+.pret[hidden]{display:none}
+.pret.dette{background:linear-gradient(#f3e6d0,#d9c3a0);color:#5a4630;box-shadow:0 2px 0 #7a5a30;cursor:default}
 .badge{pointer-events:none;display:flex;align-items:center;gap:4px;
   background:var(--blanc);border:3px solid var(--trait);border-radius:16px;
   padding:3px 4px 3px 3px;box-shadow:var(--ombre);white-space:nowrap;z-index:4;
@@ -1268,7 +1275,7 @@ function dameSVG(i){
    ========================================================= */
 'use strict';
 
-var BUILD_TAG = 'LQD-v16.2';
+var BUILD_TAG = 'LQD-v16.3';
 document.getElementById('build').textContent = BUILD_TAG;
 var vIntro = document.getElementById('versionIntro');
 if (vIntro) vIntro.textContent = BUILD_TAG;
@@ -1349,6 +1356,11 @@ function traiterAppui(e, n){
       demanderRappel(Number(n.id.slice(-1))); return;
     }
     if (n.id === 'chMenu'){ fermerLeChapitre(true); retourAuMenu(); return; }
+    if (n.id === 'btnPret'){
+      if (e.cancelable) e.preventDefault();
+      if (S && S.enCours) demanderUnPret();
+      return;
+    }
     if (n.id === 'moisSuivant'){ try { sonBouton(); fermerLeMoisTenu(false); } catch (err) {} return; }
     if (n.id === 'moisMenu'){ try { sonBouton(); fermerLeMoisTenu(true); } catch (err) {} return; }
     if (n.id === 'btnReprendreMois'){
@@ -1542,7 +1554,10 @@ var CFG = {
 
   MOTO_JOUR: 99999,      // plus de moto à crédit : elle vient du troc au départ du fils
   MOTO_PRIX: 450,
-  MOTO_RETENUE: 0.35,     // le patron retient ce tiers sur chaque paye
+  MOTO_RETENUE: 0.35,
+  PRET_MONTANT: 2000,     // 22 nov. 2026, décidé par Lamine : un prêt par mois, 2 000 F,
+  PRET_A_RENDRE: 4000,    //   rendu au double,
+  PRET_RETENUE: 0.35,     //   retenu sur la paye du chantier comme la dette de la moto     // le patron retient ce tiers sur chaque paye
   MOTO_VITESSE: 4.0,
   PRIME_CONGE: 2.0,      // un mois sur six, la paye est doublée (×4 faisait exploser la caisse : mesuré ×10 au jour 175)
   PRIX_GRADE: 0.6,       // les prix suivent le grade de Modou (paye^0,6) : la vie monte avec lui
@@ -2109,6 +2124,7 @@ function nouvelEtat(){
     ane:false, aneOffert:false, rappelAne:0,
     filsParti:false, arriere:0, mandatsEnvoyes:0, mandatsRates:0,
     moto:false, motoOfferte:false, dette:0,
+    pret:0, pretMois:0,
     saisonPluies:false, pluie:0, prochaineAverse:0, toitRepare:false, toitPropose:false,
     vacances:false, vacancesFin:0,
     auto:null,
@@ -2696,6 +2712,14 @@ function construire(){
 
   Object.keys(LIEUX).forEach(function(k){ poserLieu(k, LIEUX[k], true); });
   poserLieu('CHANTIER', CHANTIER, false);
+
+  // 22 nov. 2026 : le bouton du prêt, à la hauteur du chantier
+  var bp = document.createElement('button');
+  bp.id = 'btnPret';
+  bp.className = 'pret pos';
+  poserImage(bp, VUE_PRET);
+  layer.appendChild(bp);
+  signaturePret = '';
 
   // place centrale : souffler
   var zc = document.createElement('div');
@@ -5216,6 +5240,17 @@ function vivreDansLaZone(dt){
           noter(S.jour, 'Moto rembours\u00e9e.');
         }
       }
+      if ((S.pret || 0) > 0){
+        var rPret = Math.min(S.pret, paye * CFG.PRET_RETENUE);
+        S.pret -= rPret;
+        paye -= rPret;
+        if (S.pret <= 0.5){
+          S.pret = 0;
+          flash('Le pr\u00eat est rembours\u00e9.', 3200);
+          parler('Le pr\u00eat est rembours\u00e9 !', VOIX_MODOU);
+          noter(S.jour, 'Pr\u00eat rembours\u00e9.');
+        }
+      }
       S.argent += paye;
       S.gagne += paye;
       if (S.suivi) S.suivi.gagne += paye;
@@ -5454,6 +5489,7 @@ function tourDeBoucle(ts){
   }
 
   majRebours();
+  majBoutonPret();
 
   // cycle jour / nuit
   S.nuit = calculerNuit();
@@ -6588,6 +6624,52 @@ function restaurerLeDecor(){
 }
 
 /* Remet le plateau exactement dans l'état de S (reprise, nouveau mois). */
+/* ---------- LE PRÊT ----------
+   22 nov. 2026, Lamine : « Modou peut faire un prêt une seule fois » — une fois
+   par mois, 2 000 F, rendus 4 000 F par une retenue sur la paye du chantier. */
+var VUE_PRET = [1105, 176];
+var signaturePret = '';
+/* Lamine, 22 nov. 2026, 17 h : « le prêt ne s'active que s'il ne reste que deux
+   femmes » — jamais tant que trois Dames ou plus sont au foyer. */
+function damesAuFoyer(){ var n = 0; for (var i=0;i<DAMES.length;i++) if (dameAuFoyer(i)) n++; return n; }
+function peutEmprunter(){
+  return !!S && S.enCours && S.jour >= CFG.DEBUT_JOUR && (S.pret || 0) <= 0 && S.pretMois !== S.jour &&
+         damesAuFoyer() <= 2;
+}
+function majBoutonPret(){
+  var b = document.getElementById('btnPret');
+  if (!b || !S) return;
+  var etat = peutEmprunter() ? 'libre' : ((S.pret || 0) > 0 ? 'dette' : 'cache');
+  var sig = etat + '|' + Math.ceil((S.pret || 0) / 50);
+  if (sig === signaturePret) return;
+  signaturePret = sig;
+  b.disabled = etat !== 'libre';
+  b.className = 'pret pos ' + etat;
+  b.hidden = etat === 'cache';      // invisible tant que le prêt n'est pas possible
+  if (etat === 'libre')
+    b.innerHTML = 'Demander un pr\u00eat<small>' + fmtF(CFG.PRET_MONTANT) + ' \u00b7 \u00e0 rendre ' + fmtF(CFG.PRET_A_RENDRE) + '</small>';
+  else if (etat === 'dette')
+    b.innerHTML = 'Pr\u00eat \u00e0 rendre<small>reste ' + fmtF(Math.ceil(S.pret)) + '</small>';
+}
+function fmtF(n){ return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, '\u202f') + ' F'; }
+function demanderUnPret(){
+  if (!peutEmprunter()){
+    flash((S && (S.pret || 0) > 0) ? 'Rembourse d\u2019abord ton pr\u00eat.' :
+          (S && damesAuFoyer() > 2) ? 'Le pr\u00eat n\u2019est possible que s\u2019il ne reste que deux Dames au foyer.' :
+          'Un seul pr\u00eat par mois.', 2600);
+    return;
+  }
+  S.argent += CFG.PRET_MONTANT;
+  S.pret = CFG.PRET_A_RENDRE;
+  S.pretMois = S.jour;
+  sonCaisse();
+  flash('Pr\u00eat accord\u00e9 : +' + fmtF(CFG.PRET_MONTANT) + '. Tu rendras ' + fmtF(CFG.PRET_A_RENDRE) +
+        ', retenus sur ta paye au chantier.', 3800);
+  parler('Merci patron. Je rendrai le double.', VOIX_MODOU);
+  noter(S.jour, 'Pr\u00eat de ' + fmtF(CFG.PRET_MONTANT) + ', ' + fmtF(CFG.PRET_A_RENDRE) + ' \u00e0 rendre.');
+  majBoutonPret();
+  sauvegarder();
+}
 function reconstruireLaScene(){
   construire();
   finirLaFete();
