@@ -527,17 +527,20 @@ test('Countdown runs only during the last ten seconds of the month',()=>{
   S.temps=76*M+292.5;g.last=1000;g.tourDeBoucle(1000);
   assert.ok(nodes.get('rebours').innerHTML.startsWith('8'));
 });
-test('Loan: only with two Dames left, once a month, 2000 F repaid 4000 F from pay',()=>{
+test('Credit at the shop: only with two Dames left, half gauge, repaid double from pay',()=>{
   data.clear();g.iNiveau=1;g.demarrer();g.gamePaused=false;const S=g.S;
-  assert.equal(g.peutEmprunter(),false);
-  g.faitPartir(0);assert.equal(g.peutEmprunter(),false);     // trois Dames au foyer : non
-  g.faitPartir(1);assert.equal(g.peutEmprunter(),true);      // deux Dames : oui
+  const i=2,lieu=g.DAMES[i].lieu;S.zone=lieu;S.jauges[i]=10;
+  assert.equal(g.creditIci(),-1);                         // quatre Dames : non
+  g.faitPartir(0);assert.equal(g.creditIci(),-1);         // trois : non
+  g.faitPartir(1);assert.equal(g.creditIci(),i);          // deux : oui, dans SA boutique
+  S.zone='CHANTIER';assert.equal(g.creditIci(),-1);S.zone=lieu;
+  const du=g.prixDuCredit(i);assert.equal(du,2*g.prixDuJour(lieu));
   const a0=S.argent;g.demanderUnPret();
-  assert.equal(S.argent,a0+2000);assert.equal(S.pret,4000);assert.equal(g.peutEmprunter(),false);
-  S.force=100;S.scene=null;S.nuit=0;S.modou.x=g.CHANTIER.x;S.modou.y=g.CHANTIER.y;const p0=S.pret;
+  assert.equal(S.jauges[i],50);assert.equal(S.argent,a0);assert.equal(S.pret,du);
+  S.jauges[3]=10;S.zone=g.DAMES[3].lieu;assert.equal(g.creditIci(),-1,'un seul crédit par mois');
+  S.force=100;S.scene=null;S.nuit=0;S.modou.x=g.CHANTIER.x;S.modou.y=g.CHANTIER.y;
   for(let k=0;k<200;k++){S.temps=76*g.CFG.SEC_PAR_JOUR+1;S.nuit=0;g.vivreDansLaZone(.1);}
-  assert.ok(S.pret<p0,'la paye rembourse');
-  S.pret=0;assert.equal(g.peutEmprunter(),false,'un seul prêt dans le mois');
+  assert.ok(S.pret<du,'la paye rembourse');
 });
 test('A departed Dame costs a weekly pension, stopped when she is back',()=>{
   data.clear();g.iNiveau=1;g.demarrer();g.gamePaused=false;const S=g.S,W=g.CFG.SEC_PAR_SEMAINE,T0=76*g.CFG.SEC_PAR_JOUR;
