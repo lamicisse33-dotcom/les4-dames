@@ -9,6 +9,7 @@
 <title>LES QUATRE DAMES — L'Équilibre de Modou</title>
 <meta name="description" content="Modou est maçon. Quatre Dames, quatre besoins, et jamais assez de temps. Un jeu KHALAM.">
 <link rel="manifest" href="manifest.webmanifest">
+<link rel="preload" as="image" href="decor/plateau.webp">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
@@ -46,9 +47,17 @@ html,body{height:100%;overflow:hidden;background:#1B2A1B;font-family:var(--ui);c
 
 #scene{position:fixed;inset:0;overflow:hidden;background:#1B2A1B;touch-action:none}
 /* 30 oct. 2026 : le domaine entier tient sur l'écran ; autour, de l'herbe plutôt qu'un bandeau noir. */
-#scene{background:#6FB862}
+#scene{background:#4E4A24}
 #board{position:absolute;left:0;top:0;transform-origin:0 0;will-change:transform}
 #board svg.carte{position:absolute;inset:0;width:100%;height:100%;display:block}
+#board img.decor,#board canvas.decor{position:absolute;inset:0;width:100%;height:100%;display:block;
+  pointer-events:none;-webkit-user-drag:none;user-select:none}
+#deco{position:absolute;inset:0;pointer-events:none}
+#deco img{position:absolute;pointer-events:none;-webkit-user-drag:none}
+#deco .chevre{width:3.6%;height:auto;filter:drop-shadow(0 2px 2px rgba(0,0,0,.3))}
+#deco .pirogue{width:10.5%;height:auto;transform:translate(-50%,-50%);transition:opacity .3s;
+  filter:drop-shadow(0 3px 3px rgba(0,30,60,.35))}
+.dame.assise .buste,.dame.assise .brasG,.dame.assise .brasD{animation:none!important}
 #nuit{position:absolute;inset:0;z-index:1;pointer-events:none;opacity:0;
   background:linear-gradient(180deg,#0B1038 0%,#151B44 55%,#1B2350 100%);
   mix-blend-mode:multiply}
@@ -61,9 +70,9 @@ html,body{height:100%;overflow:hidden;background:#1B2A1B;font-family:var(--ui);c
 #layer{position:absolute;inset:0;z-index:2}
 .pos{position:absolute;transform:translate(-50%,-50%);will-change:left,top}
 /* le sol est écrasé par la caméra : ce qui est debout se redresse */
-.debout{transform:translate(-50%,-50%) scaleY(1.4286)}
-.dame .pastille{transform:scaleY(1.4286)}
-.vole{transform:translate(-50%,-50%) scaleY(1.4286)!important}
+.debout{transform:translate(-50%,-50%) scaleY(1)}
+.dame .pastille{transform:scaleY(1)}
+.vole{transform:translate(-50%,-50%) scaleY(1)!important}
 
 /* ---- ZONES ---- */
 .zone{border-radius:50%;pointer-events:none;border:3px solid transparent;background:transparent;
@@ -113,7 +122,7 @@ html,body{height:100%;overflow:hidden;background:#1B2A1B;font-family:var(--ui);c
   justify-content:center;transition:opacity .5s ease}
 .dame.partie{opacity:0}
 .pastille{position:relative;width:100%;height:100%;
-  transform:scaleY(1.4286);transform-origin:50% 100%}
+  transform:scaleY(1);transform-origin:50% 100%}
 .corps{position:absolute;inset:0;overflow:visible;
   filter:drop-shadow(0 2px 3px rgba(0,0,0,.35))}
 .num{position:absolute;left:50%;bottom:-2px;transform:translateX(-50%);
@@ -187,7 +196,7 @@ html,body{height:100%;overflow:hidden;background:#1B2A1B;font-family:var(--ui);c
 
 /* ---- L'ENFANT ---- */
 .enfant{width:44px;height:60px;pointer-events:none;
-  transform:translate(-50%,-80%) scaleY(1.4286);
+  transform:translate(-50%,-80%) scaleY(1);
   filter:drop-shadow(0 3px 4px rgba(0,0,0,.4))}
 .enfant.marche .ebuste{animation:enfMarche .4s ease-in-out infinite}
 @keyframes enfMarche{0%,100%{transform:translateY(0) rotate(-4deg)}
@@ -217,7 +226,7 @@ html,body{height:100%;overflow:hidden;background:#1B2A1B;font-family:var(--ui);c
 #enfantBtn:active{transform:translateY(2px);box-shadow:0 1px 0 var(--trait)}
 
 /* ---- MODOU ---- */
-#modou{width:94px;height:122px;transform:translate(-50%,-80%) scaleY(1.4286);
+#modou{width:94px;height:122px;transform:translate(-50%,-80%) scaleY(1);
   filter:drop-shadow(0 5px 6px rgba(0,0,0,.4));transition:opacity .3s}
 #modou .jambe{transform-origin:32px 56px}
 #modou .bras{transform-origin:32px 40px}
@@ -237,7 +246,7 @@ html,body{height:100%;overflow:hidden;background:#1B2A1B;font-family:var(--ui);c
 
 /* ---- INTERLOCUTEURS ---- */
 .vendeur{width:62px;height:82px;z-index:28;opacity:0;
-  transform:translate(-50%,-82%) scaleY(1.4286);
+  transform:translate(-50%,-82%) scaleY(1);
   transition:left .5s ease,top .5s ease,opacity .3s ease;
   filter:drop-shadow(0 4px 5px rgba(0,0,0,.35))}
 .vendeur.sorti{opacity:1}
@@ -255,7 +264,7 @@ html,body{height:100%;overflow:hidden;background:#1B2A1B;font-family:var(--ui);c
 .vignette{width:186px;height:120px;z-index:26;pointer-events:none;
   transform:translate(-50%,-50%) scale(.4,0.571);opacity:0;
   transition:transform .28s cubic-bezier(.3,1.5,.5,1),opacity .22s}
-.vignette.ouvert{transform:translate(-50%,-50%) scale(1,1.4286);opacity:1}
+.vignette.ouvert{transform:translate(-50%,-50%) scale(1,1);opacity:1}
 .piece{position:relative;width:100%;height:100%;border:4px solid var(--trait);
   border-radius:16px;box-shadow:0 5px 0 var(--trait);overflow:hidden}
 .piece .sol{position:absolute;left:0;right:0;bottom:0;height:34%;
@@ -386,7 +395,7 @@ html,body{height:100%;overflow:hidden;background:#1B2A1B;font-family:var(--ui);c
 .vignette{width:186px;height:120px;z-index:26;pointer-events:none;
   transform:translate(-50%,-50%) scale(.4,0.571);opacity:0;
   transition:transform .28s cubic-bezier(.3,1.5,.5,1),opacity .22s}
-.vignette.ouvert{transform:translate(-50%,-50%) scale(1,1.4286);opacity:1}
+.vignette.ouvert{transform:translate(-50%,-50%) scale(1,1);opacity:1}
 .piece{position:relative;width:100%;height:100%;border:4px solid var(--trait);
   border-radius:16px;box-shadow:0 5px 0 var(--trait);overflow:hidden}
 .piece .sol{position:absolute;left:0;right:0;bottom:0;height:34%;
@@ -584,14 +593,14 @@ html,body{height:100%;overflow:hidden;background:#1B2A1B;font-family:var(--ui);c
 /* Modou danse, et les Dames avec lui à partir du troisième niveau */
 #modou.danse{animation:danse .5s ease-in-out infinite}
 @keyframes danse{
-  0%,100%{transform:translate(-50%,-80%) scaleY(1.4286) rotate(-9deg)}
-  25%{transform:translate(-50%,-92%) scaleY(1.4286) rotate(0deg)}
-  50%{transform:translate(-50%,-80%) scaleY(1.4286) rotate(9deg)}
-  75%{transform:translate(-50%,-92%) scaleY(1.4286) rotate(0deg)}}
+  0%,100%{transform:translate(-50%,-80%) scaleY(1) rotate(-9deg)}
+  25%{transform:translate(-50%,-92%) scaleY(1) rotate(0deg)}
+  50%{transform:translate(-50%,-80%) scaleY(1) rotate(9deg)}
+  75%{transform:translate(-50%,-92%) scaleY(1) rotate(0deg)}}
 .dame.danse .pastille{animation:dansePastille .45s ease-in-out infinite}
 @keyframes dansePastille{
-  0%,100%{transform:scaleY(1.4286) rotate(-14deg)}
-  50%{transform:scaleY(1.4286) translateY(-7px) rotate(14deg)}}
+  0%,100%{transform:scaleY(1) rotate(-14deg)}
+  50%{transform:scaleY(1) translateY(-7px) rotate(14deg)}}
 
 /* ---- LA PLUIE ---- */
 #pluie{position:fixed;inset:0;z-index:38;pointer-events:none;opacity:0;
@@ -1147,146 +1156,13 @@ var PLAN = (function(){
 })();
 
 function carteSVG(){
-  var s = '<svg class="carte" viewBox="0 0 1400 800" xmlns="http://www.w3.org/2000/svg">';
-
-  s += '<rect width="1400" height="800" fill="#79C46B"/>';
-  var taches = [[60,400],[1340,400],[700,760],[200,40],[1200,40],[560,220],[840,220],[560,590],[840,590]];
-  for (var t=0;t<taches.length;t++){
-    s += '<ellipse cx="'+taches[t][0]+'" cy="'+taches[t][1]+'" rx="66" ry="30" fill="#8AD177" opacity=".65"/>';
-  }
-
-  // ---------- ALLÉES ----------
-  var A = PLAN.ANNEAU, Cc = PLAN.C;
-  var seg = function(a, b){ return '<path d="M' + a.x + ' ' + a.y + ' L' + b.x + ' ' + b.y + '"/>'; };
-  var trace =
-    '<rect x="' + A.x0 + '" y="' + A.y0 + '" width="' + (A.x1-A.x0) + '" height="' + (A.y1-A.y0) + '" rx="' + A.rx + '"/>' +   // anneau
-    seg({x:Cc.x, y:A.y0}, {x:Cc.x, y:A.y1}) +                        // allée verticale, par le foyer
-    seg({x:A.x0, y:Cc.y}, {x:A.x1, y:Cc.y}) +                        // allée horizontale, par le foyer
-    seg({x:Cc.x, y:A.y0}, PLAN.CHANTIER.arret) +                      // montée vers le chantier
-    seg({x:PLAN.AMOUR.x,  y:Cc.y}, PLAN.AMOUR.porte) +                // allée du jardin AMOUR (porte vers le centre)
-    seg({x:PLAN.TEMPLE.x, y:Cc.y}, PLAN.TEMPLE.porte) +               // allée du TEMPLE
-    seg({x:PLAN.BANQUE.x, y:A.y1}, PLAN.BANQUE.porte) +               // allée de la BANQUE (porte vers l'anneau du bas)
-    seg({x:PLAN.SANTE.x,  y:A.y1}, PLAN.SANTE.porte);                 // allée de la SANTÉ
-  s += '<g stroke="#CBB88C" stroke-width="66" fill="none" stroke-linecap="round">' + trace + '</g>';
-  s += '<g stroke="#EADCB8" stroke-width="52" fill="none" stroke-linecap="round">' + trace + '</g>';
-
-  // ---------- PLACE CENTRALE ----------
-  var Pw = PLAN.PLACE.w, Ph = PLAN.PLACE.h;
-  s += '<rect x="' + (Cc.x-Pw/2) + '" y="' + (Cc.y-Ph/2) + '" width="' + Pw + '" height="' + Ph + '" rx="26" fill="#CBB88C"/>';
-  s += '<rect x="' + (Cc.x-Pw/2+10) + '" y="' + (Cc.y-Ph/2+10) + '" width="' + (Pw-20) + '" height="' + (Ph-20) + '" rx="20" fill="#DCD3C4"/>';
-  var lits = PLAN.LITS;
-  for (var L=0;L<lits.length;L++){
-    s += '<g transform="translate('+lits[L][0]+','+lits[L][1]+')">';
-    s += '<rect x="-38" y="-30" width="76" height="60" rx="10" fill="#8C6A4A" stroke="#5B4430" stroke-width="4"/>';
-    s += '<rect x="-32" y="-24" width="64" height="48" rx="8" fill="#FFF6E4"/>';
-    s += '<rect x="-32" y="-24" width="64" height="16" rx="8" fill="#E8DCC6"/></g>';
-  }
-
-  // ---------- AMOUR : maison rose et jardin fleuri (400,270) ----------
-  s += '<g transform="translate(' + PLAN.AMOUR.x + ',' + PLAN.AMOUR.y + ')">';
-  s += '<rect x="-140" y="-95" width="280" height="190" rx="24" fill="#A9E27C" stroke="#4E8F45" stroke-width="6"/>';
-  var fl = [[-112,-64],[-78,-76],[-46,-62],[104,-66],[112,-32],[-116,50],[-84,68],[104,52],[72,72],[-50,76],[6,80],[46,-80]];
-  var cf = ['#FF7FB0','#FFD166','#FF5C7A','#FFFFFF','#FF9EC4'];
-  for (var f=0;f<fl.length;f++){
-    s += '<g transform="translate('+fl[f][0]+','+fl[f][1]+')"><circle r="9" fill="'+cf[f%cf.length]+'" stroke="#2B2118" stroke-width="2.4"/><circle r="3.4" fill="#FFD166"/></g>';
-  }
-  s += '<rect x="-72" y="-46" width="144" height="102" rx="14" fill="#FF9EC4" stroke="#2B2118" stroke-width="5"/>';
-  s += '<path d="M-86 -46 L0 -94 L86 -46 Z" fill="#E4568C" stroke="#2B2118" stroke-width="5" stroke-linejoin="round"/>';
-  s += '<rect x="-19" y="10" width="38" height="46" rx="6" fill="#8C4A2F" stroke="#2B2118" stroke-width="4"/>';
-  s += '<circle cx="9" cy="34" r="3.5" fill="#FFD166"/>';
-  s += '<rect x="-58" y="-24" width="28" height="24" rx="5" fill="#FFF6E4" stroke="#2B2118" stroke-width="4"/>';
-  s += '<rect x="30" y="-24" width="28" height="24" rx="5" fill="#FFF6E4" stroke="#2B2118" stroke-width="4"/>';
-  s += '</g>';
-
-  // ---------- TEMPLE : blanc à coupoles (1000,270) ----------
-  s += '<g transform="translate(' + PLAN.TEMPLE.x + ',' + PLAN.TEMPLE.y + ')">';
-  s += '<rect x="-140" y="-95" width="280" height="190" rx="24" fill="#DCE9CE" stroke="#4E8F45" stroke-width="6"/>';
-  s += '<rect x="-90" y="-38" width="180" height="94" rx="12" fill="#FFFFFF" stroke="#2B2118" stroke-width="5"/>';
-  s += '<rect x="-90" y="-38" width="180" height="20" rx="10" fill="#EFEFE6" stroke="#2B2118" stroke-width="5"/>';
-  var domes = [[-52,-48,24],[0,-60,31],[52,-48,24]];
-  for (var d=0;d<domes.length;d++){
-    var D = domes[d];
-    s += '<path d="M'+(D[0]-D[2])+' '+D[1]+' a'+D[2]+' '+D[2]+' 0 0 1 '+(D[2]*2)+' 0 z" fill="#FFFFFF" stroke="#2B2118" stroke-width="5" stroke-linejoin="round"/>';
-    s += '<line x1="'+D[0]+'" y1="'+(D[1]-D[2])+'" x2="'+D[0]+'" y2="'+(D[1]-D[2]-14)+'" stroke="#F2B705" stroke-width="6" stroke-linecap="round"/>';
-    s += '<circle cx="'+D[0]+'" cy="'+(D[1]-D[2]-18)+'" r="6" fill="#F2B705" stroke="#2B2118" stroke-width="3"/>';
-  }
-  s += '<path d="M-18 56 v-40 a18 18 0 0 1 36 0 v40 z" fill="#8B9BFF" stroke="#2B2118" stroke-width="4"/>';
-  s += '<circle cx="-112" cy="62" r="15" fill="#5FA84E" stroke="#2B2118" stroke-width="4"/>';
-  s += '<circle cx="112" cy="62" r="15" fill="#5FA84E" stroke="#2B2118" stroke-width="4"/>';
-  s += '</g>';
-
-  // ---------- BANQUE : colonnes dorées (400,540) ----------
-  s += '<g transform="translate(' + PLAN.BANQUE.x + ',' + PLAN.BANQUE.y + ')">';
-  s += '<rect x="-140" y="-95" width="280" height="190" rx="24" fill="#D9E7C4" stroke="#4E8F45" stroke-width="6"/>';
-  s += '<rect x="-96" y="-34" width="192" height="98" rx="10" fill="#FFF0C2" stroke="#2B2118" stroke-width="5"/>';
-  s += '<path d="M-106 -34 L0 -82 L106 -34 Z" fill="#F2B705" stroke="#2B2118" stroke-width="5" stroke-linejoin="round"/>';
-  for (var c=-3;c<=3;c++){
-    s += '<rect x="'+(c*27-7)+'" y="-24" width="14" height="76" rx="4" fill="#FFFFFF" stroke="#2B2118" stroke-width="4"/>';
-  }
-  s += '<rect x="-21" y="12" width="42" height="52" rx="6" fill="#5B4430" stroke="#2B2118" stroke-width="4"/>';
-  s += '<text x="0" y="-44" text-anchor="middle" font-family="Arial" font-size="32" font-weight="900" fill="#2B2118">$</text>';
-  s += '<rect x="70" y="66" width="42" height="24" rx="6" fill="#3FBF6F" stroke="#2B2118" stroke-width="4"/>';
-  s += '<rect x="64" y="58" width="42" height="24" rx="6" fill="#5FD98A" stroke="#2B2118" stroke-width="4"/>';
-  s += '</g>';
-
-  // ---------- SANTÉ : clinique à toit végétal (1000,540) ----------
-  s += '<g transform="translate(' + PLAN.SANTE.x + ',' + PLAN.SANTE.y + ')">';
-  s += '<rect x="-140" y="-95" width="280" height="190" rx="24" fill="#CFE8C0" stroke="#4E8F45" stroke-width="6"/>';
-  s += '<rect x="-98" y="-44" width="196" height="108" rx="14" fill="#FFFFFF" stroke="#2B2118" stroke-width="5"/>';
-  s += '<rect x="-98" y="-44" width="196" height="42" rx="14" fill="#5FD98A" stroke="#2B2118" stroke-width="5"/>';
-  s += '<rect x="-13" y="-27" width="26" height="8" rx="3" fill="#FFFFFF"/>';
-  s += '<rect x="-4" y="-36" width="8" height="26" rx="3" fill="#FFFFFF"/>';
-  s += '<rect x="-21" y="20" width="42" height="44" rx="6" fill="#7BD3F7" stroke="#2B2118" stroke-width="4"/>';
-  s += '<rect x="-78" y="10" width="32" height="26" rx="5" fill="#DFF3FF" stroke="#2B2118" stroke-width="4"/>';
-  s += '<rect x="46" y="10" width="32" height="26" rx="5" fill="#DFF3FF" stroke="#2B2118" stroke-width="4"/>';
-  s += '<circle cx="-112" cy="-62" r="15" fill="#5FA84E" stroke="#2B2118" stroke-width="4"/>';
-  s += '<circle cx="112" cy="-62" r="15" fill="#5FA84E" stroke="#2B2118" stroke-width="4"/>';
-  s += '</g>';
-
-  // ---------- CHANTIER (700,70) ----------
-  s += '<g transform="translate(' + PLAN.CHANTIER.x + ',' + PLAN.CHANTIER.y + ')">';
-  s += '<rect x="-180" y="-62" width="360" height="130" rx="20" fill="#E8C98A" stroke="#B08A4A" stroke-width="6"/>';
-  s += '<rect x="-150" y="-40" width="104" height="96" rx="6" fill="#C9C2B4" stroke="#2B2118" stroke-width="5"/>';
-  for (var b=0;b<3;b++){
-    s += '<line x1="-150" y1="'+(-40+b*30)+'" x2="-46" y2="'+(-40+b*30)+'" stroke="#8E877A" stroke-width="4"/>';
-  }
-  s += '<g stroke="#F2B705" stroke-width="6" stroke-linecap="round">';
-  s += '<line x1="-158" y1="-46" x2="-158" y2="58"/><line x1="-38" y1="-46" x2="-38" y2="58"/>';
-  s += '<line x1="-158" y1="-8" x2="-38" y2="-8"/><line x1="-158" y1="28" x2="-38" y2="28"/></g>';
-  s += '<g stroke-linecap="round">';
-  s += '<line x1="132" y1="58" x2="132" y2="-52" stroke="#FF8A3D" stroke-width="10"/>';
-  s += '<line x1="92" y1="-52" x2="176" y2="-52" stroke="#FF8A3D" stroke-width="9"/>';
-  s += '<line x1="160" y1="-48" x2="160" y2="-16" stroke="#7A6A55" stroke-width="4"/></g>';
-  s += '<rect x="148" y="-16" width="26" height="20" rx="4" fill="#8C6A4A" stroke="#2B2118" stroke-width="4"/>';
-  s += '<rect x="10" y="26" width="32" height="24" rx="6" fill="#DCD3C4" stroke="#2B2118" stroke-width="4"/>';
-  s += '<rect x="48" y="32" width="32" height="22" rx="6" fill="#C9BFAE" stroke="#2B2118" stroke-width="4"/>';
-  s += '<path d="M-14 58 l11 -30 l11 30 z" fill="#FF8A3D" stroke="#2B2118" stroke-width="4" stroke-linejoin="round"/>';
-  s += '</g>';
-
-  // ---------- seuils devant chaque porte ----------
-  var portes = ['AMOUR','TEMPLE','BANQUE','SANTE'].map(function(k){ return [PLAN[k].porte.x, PLAN[k].porte.y]; });
-  for (var pp=0;pp<portes.length;pp++){
-    s += '<rect x="'+(portes[pp][0]-30)+'" y="'+(portes[pp][1]-9)+'" width="60" height="18" rx="7" ' +
-         'fill="#B08A4A" stroke="#2B2118" stroke-width="3"/>';
-  }
-
-  // ---------- marques au sol des points d'arrêt ----------
-  var arrets = portes.concat([[PLAN.CHANTIER.arret.x, PLAN.CHANTIER.arret.y]]);
-  for (var a=0;a<arrets.length;a++){
-    s += '<circle cx="'+arrets[a][0]+'" cy="'+arrets[a][1]+'" r="46" fill="none" stroke="#FFFFFF" stroke-width="4" opacity=".5" stroke-dasharray="10 9"/>';
-  }
-
-  // ---------- arbres, loin des allées ----------
-  var arbres = [[560,230],[840,230],[560,585],[840,585],[60,250],[1340,250],[60,560],[1340,560],[330,760],[1070,760]];
-  for (var r=0;r<arbres.length;r++){
-    s += '<circle cx="'+arbres[r][0]+'" cy="'+(arbres[r][1]+7)+'" r="24" fill="rgba(0,0,0,.15)"/>';
-    s += '<circle cx="'+arbres[r][0]+'" cy="'+arbres[r][1]+'" r="24" fill="#5FA84E" stroke="#3E7635" stroke-width="5"/>';
-    s += '<circle cx="'+(arbres[r][0]-7)+'" cy="'+(arbres[r][1]-7)+'" r="8" fill="#79C46B"/>';
-  }
-
-  s += '<g id="barrieres"></g>';   // rempli par dessinerBarrieres()
-  s += '</svg>';
-  return s;
+  /* 21 nov. 2026 : le dessin vectoriel laisse la place au village peint.
+     Seules les barrières restent dessinées : elles changent en cours de partie. */
+  return '<img class="decor" src="' + DECOR.IMG + '" alt="" draggable="false">' +
+         '<canvas class="decor" id="decorAnime" width="' + DECOR.W + '" height="' + DECOR.H + '"></canvas>' +
+         '<div id="deco"></div>' +
+         '<svg class="carte" viewBox="0 0 ' + DECOR.W + ' ' + DECOR.H + '" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">' +
+         '<g id="barrieres"></g></svg>';
 }
 
 
@@ -1381,7 +1257,7 @@ function dameSVG(i){
    ========================================================= */
 'use strict';
 
-var BUILD_TAG = 'LQD-v13.3';
+var BUILD_TAG = 'LQD-v14';
 document.getElementById('build').textContent = BUILD_TAG;
 var vIntro = document.getElementById('versionIntro');
 if (vIntro) vIntro.textContent = BUILD_TAG;
@@ -1693,7 +1569,7 @@ var CFG = {
   RENDEMENT_FATIGUE: 0.62,
   RENDEMENT_EPUISE: 0.28,
 
-  APLAT: 0.70,            // le sol est écrasé : vue de trois quarts au lieu de plein ciel
+  APLAT: 1,               // 21 nov. 2026 : le plateau peint est déjà vu de trois quarts, on ne l'écrase plus
   Z_LIBRE: 1.10,
   Z_TRAVAIL: 1.55,
   Z_SORTIE: 1.35,
@@ -2256,6 +2132,465 @@ function jalouses(){
 }
 
 /* ---------- CONSTRUCTION ---------- */
+/* =========================================================
+   LE DÉCOR PEINT — 21 novembre 2026, demandé par Lamine.
+   Le plateau est désormais l'image du village au coucher du soleil.
+   La LOGIQUE garde son repère 1400 x 800 : allées, distances, durées,
+   barrières et règles ne bougent pas d'un pixel. Seul l'AFFICHAGE change :
+   chaque allée logique est posée sur le chemin peint qui lui correspond
+   dans l'image (1671 x 941 px). VUE traduit, rien d'autre.
+   ========================================================= */
+var DECOR = { W:1671, H:941, IMG:'decor/plateau.webp' };
+
+/* La place centrale : un rectangle logique (le sol marchable) posé sur la place peinte. */
+var PLACE_VUE = { lx0:510, ly0:235, lx1:890, ly1:565, vx0:680, vy0:330, sx:310/380, sy:180/330 };
+function dansLaPlaceLogique(X, Y){
+  return X >= PLACE_VUE.lx0 && X <= PLACE_VUE.lx1 && Y >= PLACE_VUE.ly0 && Y <= PLACE_VUE.ly1;
+}
+function placeVersImage(X, Y){
+  return [PLACE_VUE.vx0 + (X - PLACE_VUE.lx0) * PLACE_VUE.sx, PLACE_VUE.vy0 + (Y - PLACE_VUE.ly0) * PLACE_VUE.sy];
+}
+function imageVersPlace(x, y){
+  return [PLACE_VUE.lx0 + (x - PLACE_VUE.vx0) / PLACE_VUE.sx, PLACE_VUE.ly0 + (y - PLACE_VUE.vy0) / PLACE_VUE.sy];
+}
+
+/* Chaque allée logique et le chemin peint qu'elle suit (px de l'image).
+   Un troisième nombre fixe l'avancement logique à ce point (bord de la place). */
+var VUE_ALLEES = {
+  'TL-HE':[[55,265],[70,200],[150,112],[300,95],[430,128],[540,178],[660,222],[760,245],[835,258]],
+  'HE-TR':[[835,258],[960,240],[1100,212],[1200,150],[1300,98],[1450,70],[1570,118],[1615,200],[1625,270]],
+  'TL-GO':[[55,265],[28,320],[22,375],[35,420]],
+  'GO-BL':[[35,420],[25,500],[30,600],[70,688]],
+  'TR-DR':[[1625,270],[1652,330],[1655,380],[1640,428]],
+  'DR-BR':[[1640,428],[1652,500],[1645,600],[1600,685]],
+  'BL-BK':[[70,688],[160,702],[300,712],[420,712],[505,708]],
+  'BK-BF':[[505,708],[650,714],[835,712]],
+  'BF-SK':[[835,712],[1000,714],[1150,712],[1265,705]],
+  'SK-BR':[[1265,705],[1420,702],[1540,695],[1600,685]],
+  'GO-AK':[[35,420],[110,412],[200,385],[320,352],[420,318],[480,290]],
+  'AK-CX':[[480,290],[525,315],[580,338],[640,345],[690,350],[688,382],[680,420,0.4865],[835,420]],
+  'CX-TK':[[835,420],[990,420,0.5135],[984,382],[985,355],[1050,368],[1150,362],[1230,342],[1290,330]],
+  'TK-DR':[[1290,330],[1320,400],[1360,455],[1480,450],[1580,440],[1640,428]],
+  'HE-CX':[[835,258],[835,330,0.431],[835,420]],
+  'CX-BF':[[835,420],[835,510,0.569],[835,712]],
+  'HE-CH':[[835,258],[835,228]],
+  'AK-AP':[[480,290],[440,262],[380,272],[300,282]],
+  'TK-TP':[[1290,330],[1345,345],[1372,320],[1385,292]],
+  'BK-BP':[[505,708],[500,672],[480,642],[430,624],[320,614]],
+  'SK-SP':[[1265,705],[1268,672],[1290,642],[1350,616],[1445,600]]
+};
+/* Les allées du fond (derrière les maisons) : un toucher ne les choisit qu'en dernier. */
+var ALLEES_DU_FOND = { 'TL-HE':1, 'HE-TR':1 };
+
+/* Ce qui ne marche pas : bâtiments, enseignes, lanternes (px de l'image). */
+var VUE_LIEUX = {
+  AMOUR:   { badge:[280,368],  maison:[250,205],  boite:[150,110,350,290] },
+  TEMPLE:  { badge:[1410,368], maison:[1455,195], boite:[1310,85,1600,290] },
+  BANQUE:  { badge:[318,712],  maison:[238,525],  boite:[80,450,395,612] },
+  SANTE:   { badge:[1400,708], maison:[1462,518], boite:[1325,462,1595,598] },
+  CHANTIER:{ badge:[835,300],  patron:[768,222],  patronSorti:[798,234], boite:[665,128,1010,222] },
+  CENTRE:  { badge:[835,530] }
+};
+var VUE_LANTERNES = [[765,290],[905,290],[655,400],[1015,400],[760,625],[915,625]];
+/* Les coussins des Dames, dans l'ordre de PLAN.LITS. */
+var VUE_COUSSINS = [[745,375],[925,375],[745,468],[925,468]];
+/* Le départ d'une Dame : elle descend l'allée centrale, passe le pont,
+   rejoint la berge et monte dans la pirogue, qui file sous le pont. */
+var VUE_MARCHE_DAME = [[835,505],[835,600],[835,700],[846,742],[900,750],[942,754],[975,786],[1000,822],[1008,848]];
+var VUE_PIROGUE = [[1012,872],[950,870],[886,852],[853,818],[840,790]];
+var PIEDS_DAME = 4.4;   // la Dame est posée par le centre : on remonte de ses demi-pieds
+
+function vuePolyPrep(pts){
+  var n = pts.length, L = [0];
+  for (var i=1;i<n;i++) L.push(L[i-1] + Math.hypot(pts[i][0]-pts[i-1][0], pts[i][1]-pts[i-1][1]));
+  var t = new Array(n);
+  t[0] = (pts[0].length > 2) ? pts[0][2] : 0;
+  t[n-1] = (pts[n-1].length > 2) ? pts[n-1][2] : 1;
+  for (var k=1;k<n-1;k++) if (pts[k].length > 2) t[k] = pts[k][2];
+  var a = 0;
+  for (var b=1;b<n;b++){
+    if (t[b] === undefined) continue;
+    for (var m=a+1;m<b;m++){
+      var f = (L[b] - L[a]) ? (L[m] - L[a]) / (L[b] - L[a]) : 0;
+      t[m] = t[a] + (t[b] - t[a]) * f;
+    }
+    a = b;
+  }
+  return { p:pts.map(function(q){ return [q[0], q[1]]; }), t:t, L:L };
+}
+function vuePolyA(P, u){
+  var p = P.p, t = P.t, n = p.length;
+  if (u <= t[0]) u = t[0];
+  if (u >= t[n-1]) u = t[n-1];
+  for (var i=0;i<n-1;i++){
+    if (u <= t[i+1] || i === n-2){
+      var dt = t[i+1] - t[i], f = dt ? (u - t[i]) / dt : 0;
+      var dx = p[i+1][0] - p[i][0], dy = p[i+1][1] - p[i][1], l = Math.hypot(dx, dy) || 1;
+      return { x:p[i][0] + dx*f, y:p[i][1] + dy*f, tx:dx/l, ty:dy/l };
+    }
+  }
+  return { x:p[n-1][0], y:p[n-1][1], tx:1, ty:0 };
+}
+var VUE_PREP = null;
+function vuePreparer(){
+  if (VUE_PREP) return VUE_PREP;
+  VUE_PREP = [];
+  for (var i=0;i<ARETES.length;i++){
+    var a = ARETES[i][0], b = ARETES[i][1], pts = VUE_ALLEES[a + '-' + b], fond = !!ALLEES_DU_FOND[a + '-' + b];
+    if (!pts){
+      var r = VUE_ALLEES[b + '-' + a];
+      fond = !!ALLEES_DU_FOND[b + '-' + a];
+      pts = r.slice().reverse().map(function(q){ return q.length > 2 ? [q[0], q[1], 1 - q[2]] : q; });
+    }
+    VUE_PREP.push({ a:a, b:b, P:vuePolyPrep(pts), fond:fond });
+  }
+  VUE_PREP.marche = vuePolyPrep(VUE_MARCHE_DAME);
+  VUE_PREP.pirogue = vuePolyPrep(VUE_PIROGUE);
+  return VUE_PREP;
+}
+
+/* repère logique (px 1400 x 800) -> image (px 1671 x 941) */
+function vueXY(X, Y){
+  if (dansLaPlaceLogique(X, Y)) return placeVersImage(X, Y);
+  var V = vuePreparer(), sw = 0, sx = 0, sy = 0;
+  for (var i=0;i<V.length;i++){
+    var A = NOEUDS[V[i].a], B = NOEUDS[V[i].b];
+    var r = distSeg(X, Y, A[0], A[1], B[0], B[1]);
+    var lx = B[0] - A[0], ly = B[1] - A[1], ll = Math.hypot(lx, ly) || 1;
+    var s = ((X - A[0]) * -ly + (Y - A[1]) * lx) / ll;       // écart signé au milieu de l'allée
+    var q = vuePolyA(V[i].P, r.t);
+    var w = 1 / Math.pow(r.d * r.d + 4, 2);
+    sx += w * (q.x - q.ty * s * 0.6);
+    sy += w * (q.y + q.tx * s * 0.6);
+    sw += w;
+  }
+  return [sx / sw, sy / sw];
+}
+/* pourcentages logiques -> pourcentages du plateau peint */
+function vue(xPct, yPct){
+  var p = vueXY(xPct * 14, yPct * 8);
+  return { x: p[0] / DECOR.W * 100, y: p[1] / DECOR.H * 100 };
+}
+function poser(el, xPct, yPct, decalY){
+  if (!el) return null;
+  var v = vue(xPct, yPct);
+  el.style.left = v.x.toFixed(3) + '%';
+  el.style.top  = (v.y + (decalY || 0)).toFixed(3) + '%';
+  return v;
+}
+function poserImage(el, p){
+  if (!el || !p) return;
+  el.style.left = (p[0] / DECOR.W * 100).toFixed(3) + '%';
+  el.style.top  = (p[1] / DECOR.H * 100).toFixed(3) + '%';
+}
+
+/* image (px) -> repère logique (px) : là où le doigt a touché */
+function imageVersLogique(x, y){
+  var lieux = { AMOUR:'AP', TEMPLE:'TP', BANQUE:'BP', SANTE:'SP', CHANTIER:'CH' };
+  for (var k in lieux){
+    var b = VUE_LIEUX[k].boite;
+    if (b && x >= b[0] && x <= b[2] && y >= b[1] && y <= b[3]){
+      var N = NOEUDS[lieux[k]];
+      return [N[0], N[1]];
+    }
+  }
+  var V = vuePreparer(), best = null;
+  for (var i=0;i<V.length;i++){
+    var P = V[i].P;
+    for (var j=0;j<P.p.length-1;j++){
+      var r = distSeg(x, y, P.p[j][0], P.p[j][1], P.p[j+1][0], P.p[j+1][1]);
+      var d = r.d + (V[i].fond ? 40 : 0);
+      if (!best || d < best.d) best = { d:d, i:i, t:P.t[j] + (P.t[j+1] - P.t[j]) * r.t };
+    }
+  }
+  var dansPlace = x >= PLACE_VUE.vx0 && x <= PLACE_VUE.vx0 + (PLACE_VUE.lx1 - PLACE_VUE.lx0) * PLACE_VUE.sx &&
+                  y >= PLACE_VUE.vy0 && y <= PLACE_VUE.vy0 + (PLACE_VUE.ly1 - PLACE_VUE.ly0) * PLACE_VUE.sy;
+  if (dansPlace && (!best || best.d > 14)) return imageVersPlace(x, y);
+  var A = NOEUDS[V[best.i].a], B = NOEUDS[V[best.i].b];
+  return [A[0] + (B[0] - A[0]) * best.t, A[1] + (B[1] - A[1]) * best.t];
+}
+
+/* ---------- LES DAMES : du coussin à la pirogue ---------- */
+function vueDame(i, xPct, yPct){
+  var D = DAMES[i], V = vuePreparer();
+  var bx = D.bed.x * 14, by = D.bed.y * 8;
+  var K = [[bx, by], [700, by], [700, 400], [1270, 400], [CFG.SORTIE_X * 14, 400]];
+  var X = xPct * 14, Y = yPct * 8, best = null;
+  for (var j=0;j<K.length-1;j++){
+    var r = distSeg(X, Y, K[j][0], K[j][1], K[j+1][0], K[j+1][1]);
+    if (!best || r.d < best.d - 0.01) best = { d:r.d, j:j, u:r.t };
+  }
+  var c = VUE_COUSSINS[i], u = best.u, out = { x:c[0], y:c[1], bateau:null, o:1 };
+  if (best.j === 0){ out.x = c[0] + (835 - c[0]) * u; out.y = c[1]; }
+  else if (best.j === 1){ out.x = 835; out.y = c[1] + (505 - c[1]) * u; }
+  else if (best.j === 2){
+    var q = vuePolyA(V.marche, u);
+    out.x = q.x; out.y = q.y;
+    if (u > 0.6){
+      var o = Math.min(1, (u - 0.6) / 0.25);
+      var pq = vuePolyA(V.pirogue, 0);
+      out.bateau = { x:pq.x, y:pq.y, o:o };
+    }
+  } else {
+    var b = vuePolyA(V.pirogue, u), ob = 1 - Math.max(0, Math.min(1, (u - 0.72) / 0.28));
+    out.bateau = { x:b.x, y:b.y, o:ob };
+    out.x = b.x; out.y = b.y - 10; out.o = ob; out.assise = true;
+  }
+  return out;
+}
+var pirogues = [];
+function poserDame(i, xPct, yPct, partie){
+  var el = damesEl[i];
+  if (!el) return;
+  var v = vueDame(i, partie ? CFG.SORTIE_X : xPct, partie ? ALLEE_Y : yPct);
+  var X = v.x / DECOR.W * 100, Y = v.y / DECOR.H * 100;
+  el.style.left = X.toFixed(3) + '%';
+  el.style.top  = (Y - PIEDS_DAME).toFixed(3) + '%';
+  el.style.opacity = partie ? '' : (v.o < 1 ? v.o.toFixed(2) : '');
+  el.classList.toggle('assise', !!v.assise && !partie);
+  el._vx = X; el._vy = Y;
+  var p = pirogues[i];
+  if (p){
+    if (v.bateau && !partie){
+      poserImage(p, [v.bateau.x, v.bateau.y]);
+      p.style.opacity = v.bateau.o.toFixed(2);
+      p.style.display = '';
+    } else {
+      p.style.display = 'none';
+    }
+  }
+}
+
+/* ---------- LE DÉCOR VIVANT : l'eau, le vent, les chèvres ---------- */
+var EAUX = [
+  { r:[700,752,1268,938], sorte:'riviere' },
+  { r:[1228,772,1350,905], sorte:'chute' },
+  { r:[1500,48,1592,148],  sorte:'chute' },
+  { r:[1072,248,1178,328], sorte:'riviere' },
+  { r:[850,92,1138,168],   sorte:'lointain' }
+];
+/* x0, y0, x1, y1, pied de l'arbre (x, y) */
+var ARBRES = [
+  [0,0,222,168,10,120],[40,322,158,428,95,436],[322,332,458,428,390,436],[512,186,638,276,565,284],
+  [522,522,668,614,590,624],[1012,522,1148,614,1080,624],[1192,362,1328,455,1255,462],
+  [1412,386,1628,484,1520,496],[1172,122,1268,225,1215,236],[1262,112,1348,208,1300,216],
+  [1492,142,1598,236,1540,252],[0,682,138,835,60,905],[222,88,328,168,275,176],[1540,800,1671,941,1612,965]
+];
+var DECOR_VIVANT = null;
+function decorPret(){ return !!(DECOR_VIVANT && DECOR_VIVANT.ctx); }
+function regionDecor(src, r, sorte, pied){
+  var w = r[2] - r[0], h = r[3] - r[1], d = src.data, poids = new Float32Array(w*h);
+  for (var y=0;y<h;y++) for (var x=0;x<w;x++){
+    var k = (y*w + x)*4, R = d[k], G = d[k+1], B = d[k+2], m = 0;
+    if (sorte === 'arbre'){
+      m = (G > 60 && G > R * 0.92 && G > B * 1.2) ? 1 : 0;
+    } else {
+      var bleu = B > 110 && B > R + 22 && B >= G - 12;
+      var blanc = sorte === 'chute' && R > 185 && G > 185 && B > 185;
+      m = (bleu || blanc) ? 1 : 0;
+    }
+    poids[y*w + x] = m;
+  }
+  // flou en boîte, deux passes : les bords de la zone qui bouge ne se voient pas
+  var tmp = new Float32Array(w*h), R2 = 3;
+  for (var pass=0;pass<2;pass++){
+    for (var y2=0;y2<h;y2++){ var acc = 0;
+      for (var x2=-R2;x2<w+R2;x2++){
+        var add = x2 + R2 < w && x2 + R2 >= 0 ? poids[y2*w + x2 + R2] : 0;
+        var sub = x2 - R2 - 1 >= 0 && x2 - R2 - 1 < w ? poids[y2*w + x2 - R2 - 1] : 0;
+        acc += add - sub; if (x2 >= 0 && x2 < w) tmp[y2*w + x2] = acc / (2*R2 + 1);
+      } }
+    for (var x3=0;x3<w;x3++){ var acc2 = 0;
+      for (var y3=-R2;y3<h+R2;y3++){
+        var add2 = y3 + R2 < h && y3 + R2 >= 0 ? tmp[(y3 + R2)*w + x3] : 0;
+        var sub2 = y3 - R2 - 1 >= 0 && y3 - R2 - 1 < h ? tmp[(y3 - R2 - 1)*w + x3] : 0;
+        acc2 += add2 - sub2; if (y3 >= 0 && y3 < h) poids[y3*w + x3] = acc2 / (2*R2 + 1);
+      } }
+  }
+  var idx = [], val = [], bord = 6;
+  for (var y4=0;y4<h;y4++) for (var x4=0;x4<w;x4++){
+    var p = poids[y4*w + x4];
+    var e = Math.min(1, Math.min(x4, y4, w - 1 - x4, h - 1 - y4) / bord);
+    p *= e * e;
+    if (sorte === 'arbre'){
+      // plus haut sur l'arbre, plus ça bouge ; le pied reste planté
+      var hy = (pied[1] - (r[1] + y4)) / Math.max(1, pied[1] - r[1]);
+      p *= Math.pow(Math.max(0, Math.min(1, hy)), 1.3);
+    }
+    if (p > 0.03){ idx.push(y4*w + x4); val.push(p); }
+  }
+  var out = new ImageData(new Uint8ClampedArray(d), w, h);
+  return { r:r, w:w, h:h, sorte:sorte, src:d, out:out, idx:new Int32Array(idx), val:new Float32Array(val), actif:false,
+           phase:Math.random() * 6.28 };
+}
+function deformer(R, t){
+  var w = R.w, h = R.h, s = R.src, o = R.out.data, idx = R.idx, val = R.val;
+  // les ondes ne dépendent que de la ligne ou de la colonne : on les calcule une fois par image
+  if (!R.RX){ R.RX = new Float32Array(h); R.RY = new Float32Array(h); R.CX = new Float32Array(w); R.CY = new Float32Array(w); }
+  var RX = R.RX, RY = R.RY, CX = R.CX, CY = R.CY, y, x;
+  if (R.sorte === 'chute'){
+    for (y=0;y<h;y++){ RX[y] = 0.6 * Math.sin(0.2*y + 3*t); RY[y] = 2.6 * Math.sin(0.33*y - 7.5*t); }
+    for (x=0;x<w;x++){ CX[x] = 0; CY[x] = 0; }
+  } else if (R.sorte === 'lointain'){
+    for (y=0;y<h;y++){ RX[y] = 0.8 * Math.sin(0.25*y + 1.4*t); RY[y] = 0; }
+    for (x=0;x<w;x++){ CX[x] = 0; CY[x] = 0; }
+  } else {
+    for (y=0;y<h;y++){ RX[y] = 1.3 * Math.sin(0.11*y + 2.1*t); RY[y] = 0; }
+    for (x=0;x<w;x++){ CX[x] = 0.6 * Math.sin(0.07*x - 1.3*t); CY[x] = 0.7 * Math.sin(0.09*x + 1.7*t); }
+  }
+  for (var n=0;n<idx.length;n++){
+    var i = idx[n], k = val[n];
+    x = i % w; y = (i - x) / w;
+    var sx = x - k * (RX[y] + CX[x]), sy = y - k * (RY[y] + CY[x]);
+    if (sx < 0) sx = 0; else if (sx > w - 1.001) sx = w - 1.001;
+    if (sy < 0) sy = 0; else if (sy > h - 1.001) sy = h - 1.001;
+    var x0 = sx | 0, y0 = sy | 0, ax = sx - x0, ay = sy - y0;
+    var a = (y0*w + x0)*4, b = a + 4, c = a + w*4, d = c + 4, q = i*4, h1, h2;
+    h1 = s[a] + (s[b] - s[a]) * ax;     h2 = s[c] + (s[d] - s[c]) * ax;     o[q]   = h1 + (h2 - h1) * ay;
+    h1 = s[a+1] + (s[b+1] - s[a+1]) * ax; h2 = s[c+1] + (s[d+1] - s[c+1]) * ax; o[q+1] = h1 + (h2 - h1) * ay;
+    h1 = s[a+2] + (s[b+2] - s[a+2]) * ax; h2 = s[c+2] + (s[d+2] - s[c+2]) * ax; o[q+2] = h1 + (h2 - h1) * ay;
+  }
+}
+/* le vent ne pousse que de côté : une seule interpolation, deux fois moins de calcul */
+function balancer(R, dx){
+  var w = R.w, s = R.src, o = R.out.data, idx = R.idx, val = R.val;
+  for (var n=0;n<idx.length;n++){
+    var i = idx[n], x = i % w, sx = x - dx * val[n];
+    if (sx < 0) sx = 0; else if (sx > w - 1.001) sx = w - 1.001;
+    var x0 = sx | 0, ax = sx - x0, a = (i - x + x0)*4, b = a + 4, q = i*4;
+    o[q] = s[a] + (s[b] - s[a]) * ax; o[q+1] = s[a+1] + (s[b+1] - s[a+1]) * ax; o[q+2] = s[a+2] + (s[b+2] - s[a+2]) * ax;
+  }
+}
+var CHEVRES = [
+  { coul:'blanche', x:1095, y:792, x0:1045, x1:1165, dir:-1 },
+  { coul:'brune',   x:635,  y:790, x0:585,  x1:700,  dir:1 }
+];
+var POSES_CHEVRE = ['broute', 'tete_levee', 'marche_pattes_avant', 'marche_pattes_arriere'];
+function srcChevre(c, pose){ return 'decor/chevre_' + c + '_' + pose + '_jeu_2x.png'; }
+
+function construireDecor(){
+  var deco = document.getElementById('deco');
+  if (deco){
+    deco.innerHTML = '';
+    CHEVRES.forEach(function(C){
+      var im = document.createElement('img');
+      im.className = 'chevre'; im.alt = ''; im.draggable = false;
+      im.src = srcChevre(C.coul, 'broute');
+      deco.appendChild(im);
+      C.el = im; C.etat = 'broute'; C.reste = 2 + Math.random() * 3; C.pas = 0; C.pose = 'broute';
+      poserChevre(C);
+    });
+    pirogues = [];
+    for (var i=0;i<4;i++){
+      var p = document.createElement('img');
+      p.className = 'pirogue'; p.alt = ''; p.draggable = false;
+      p.src = 'decor/pirogue_senegalaise_vide_jeu_2x.png';
+      p.style.display = 'none';
+      deco.appendChild(p);
+      pirogues.push(p);
+    }
+  }
+  var cv = document.getElementById('decorAnime');
+  if (!cv || typeof cv.getContext !== 'function') return;
+  var ctx = null;
+  try { ctx = cv.getContext('2d'); } catch (e) { ctx = null; }
+  if (!ctx) return;
+  var img = new Image();
+  img.onload = function(){
+    try {
+      var off = document.createElement('canvas');
+      off.width = DECOR.W; off.height = DECOR.H;
+      var o = off.getContext('2d');
+      o.drawImage(img, 0, 0, DECOR.W, DECOR.H);
+      var regs = [];
+      EAUX.forEach(function(E){
+        var r = E.r, src = o.getImageData(r[0], r[1], r[2] - r[0], r[3] - r[1]);
+        regs.push(regionDecor(src, r, E.sorte));
+      });
+      var arbres = [];
+      ARBRES.forEach(function(A){
+        var r = [A[0], A[1], A[2], A[3]], src = o.getImageData(r[0], r[1], r[2] - r[0], r[3] - r[1]);
+        arbres.push(regionDecor(src, r, 'arbre', [A[4], A[5]]));
+      });
+      DECOR_VIVANT = { ctx:ctx, eaux:regs, arbres:arbres, dernier:0, rafale:null, prochaine:4 + Math.random() * 5 };
+    } catch (err) { DECOR_VIVANT = null; }
+  };
+  img.src = DECOR.IMG;
+  // les poses des chèvres sont chargées d'avance : pas de clignement au changement
+  CHEVRES.forEach(function(C){ POSES_CHEVRE.forEach(function(p){ var x = new Image(); x.src = srcChevre(C.coul, p); }); });
+}
+function poserChevre(C){
+  if (!C.el) return;
+  C.el.style.left = (C.x / DECOR.W * 100).toFixed(3) + '%';
+  C.el.style.top  = (C.y / DECOR.H * 100).toFixed(3) + '%';
+  C.el.style.transform = 'translate(-50%,-100%)' + (C.dir > 0 ? ' scaleX(-1)' : '');
+}
+function majChevres(dt){
+  CHEVRES.forEach(function(C){
+    if (!C.el) return;
+    C.reste -= dt;
+    var pose = C.pose;
+    if (C.etat === 'marche'){
+      C.x += C.dir * 13 * dt;
+      if (C.x < C.x0){ C.x = C.x0; C.dir = 1; }
+      if (C.x > C.x1){ C.x = C.x1; C.dir = -1; }
+      C.pas += dt;
+      pose = (Math.floor(C.pas / 0.22) % 2) ? 'marche_pattes_arriere' : 'marche_pattes_avant';
+    }
+    if (C.reste <= 0){
+      var r = Math.random();
+      if (C.etat === 'broute'){
+        if (r < 0.55){ C.etat = 'tete'; C.reste = 1 + Math.random() * 1.8; }
+        else { C.etat = 'marche'; C.reste = 1 + Math.random() * 1.4; if (Math.random() < 0.4) C.dir = -C.dir; }
+      } else if (C.etat === 'tete'){
+        if (r < 0.6){ C.etat = 'broute'; C.reste = 2.5 + Math.random() * 4; }
+        else { C.etat = 'marche'; C.reste = 0.8 + Math.random() * 1.4; }
+      } else { C.etat = 'broute'; C.reste = 2.5 + Math.random() * 4; }
+      if (C.etat === 'broute') pose = 'broute';
+      if (C.etat === 'tete') pose = 'tete_levee';
+    }
+    if (pose !== C.pose){ C.pose = pose; C.el.src = srcChevre(C.coul, pose); }
+    poserChevre(C);
+  });
+}
+function majDecorVivant(ts){
+  if (!document.hidden) {
+    var dtc = DECOR_VIVANT && DECOR_VIVANT.dernierC ? Math.min(0.1, (ts - DECOR_VIVANT.dernierC) / 1000) : 0.016;
+    if (DECOR_VIVANT) DECOR_VIVANT.dernierC = ts;
+    majChevres(dtc);
+  }
+  if (!decorPret() || document.hidden) return;
+  var V = DECOR_VIVANT;
+  if (ts - V.dernier < 75) return;              // environ 13 images par seconde : l'eau n'a pas besoin de plus
+  var dt = V.dernier ? Math.min(0.2, (ts - V.dernier) / 1000) : 0.06;
+  V.dernier = ts;
+  var t = ts / 1000, ctx = V.ctx;
+  for (var i=0;i<V.eaux.length;i++){
+    var R = V.eaux[i];
+    deformer(R, t + R.phase);
+    ctx.putImageData(R.out, R.r[0], R.r[1]);
+  }
+  // le vent passe de temps en temps
+  if (!V.rafale){
+    V.prochaine -= dt;
+    if (V.prochaine <= 0) V.rafale = { age:0, duree:2.6 + Math.random() * 1.6, force:1.6 + Math.random() * 1.4 };
+  }
+  if (V.rafale){
+    var Rf = V.rafale;
+    Rf.age += dt;
+    var env = Math.sin(Math.PI * Math.min(1, Rf.age / Rf.duree));
+    V.tour = (V.tour || 0) + 1;
+    for (var a=0;a<V.arbres.length;a++){
+      var A = V.arbres[a];
+      if (Rf.age >= Rf.duree){ ctx.clearRect(A.r[0], A.r[1], A.w, A.h); continue; }
+      if ((a + V.tour) % 2) continue;             // un arbre sur deux à chaque image : le vent est lent
+      balancer(A, Rf.force * env * Math.sin(2.3 * t + A.phase));
+      ctx.putImageData(A.out, A.r[0], A.r[1]);
+    }
+    if (Rf.age >= Rf.duree){ V.rafale = null; V.prochaine = 6 + Math.random() * 8; }
+  }
+}
+
 function construire(){
   noterAction('construction du plateau');
   board.innerHTML = carteSVG() +
@@ -2263,19 +2598,18 @@ function construire(){
     '<div id="layer"></div><div id="cible"></div>';
   layer = document.getElementById('layer');
   cibleEl = document.getElementById('cible');
+  construireDecor();
   var fx = document.getElementById('feux');
   if (fx) fx.innerHTML = '';
   enfantEl = null;
   voileNuit = document.getElementById('nuit');
   voileCrep = document.getElementById('crepuscule');
   var lp = document.getElementById('lampes');
-  var A2 = PLAN.ANNEAU;
-  var pts = [[PLAN.pct(A2.x0),PLAN.pct(A2.y0,'y')],[PLAN.pct(A2.x1),PLAN.pct(A2.y0,'y')],[PLAN.pct(A2.x0),PLAN.pct(A2.y1,'y')],[PLAN.pct(A2.x1),PLAN.pct(A2.y1,'y')],[50,PLAN.pct(PLAN.CHANTIER.y,'y')],[50,CENTRE.y]];
-  for (var i=0;i<pts.length;i++){
+  // la nuit, les lanternes peintes autour de la place s'allument
+  for (var i=0;i<VUE_LANTERNES.length;i++){
     var l = document.createElement('div');
     l.className = 'lampe pos';
-    l.style.left = pts[i][0] + '%';
-    l.style.top = pts[i][1] + '%';
+    poserImage(l, VUE_LANTERNES[i]);
     lp.appendChild(l);
   }
   zonesEl = {}; badgesEl = {}; vendeursEl = {}; vignettes = {}; voletsEl = {}; damesEl = [];
@@ -2286,13 +2620,13 @@ function construire(){
   // place centrale : souffler
   var zc = document.createElement('div');
   zc.className = 'zone pos';
-  zc.style.left = CENTRE.x + '%'; zc.style.top = CENTRE.y + '%';
+  poser(zc, CENTRE.x, CENTRE.y);
   layer.appendChild(zc);
   zonesEl.CENTRE = zc;
 
   var bc = document.createElement('div');
   bc.className = 'badge pos debout';
-  bc.style.left = CENTRE.x + '%'; bc.style.top = CENTRE.ly + '%';
+  poserImage(bc, VUE_LIEUX.CENTRE.badge);
   bc.innerHTML = '<span class="pic" style="background:var(--creme)">\uD83D\uDCA4</span>' +
                  '<span class="txt">FOYER</span>';
   layer.appendChild(bc);
@@ -2302,7 +2636,6 @@ function construire(){
   DAMES.forEach(function(D){
     var d = document.createElement('div');
     d.className = 'dame pos';
-    d.style.left = D.bed.x + '%'; d.style.top = D.bed.y + '%';
     d.innerHTML =
       '<div class="pastille">' +
         dameSVG(D.id - 1) +
@@ -2316,6 +2649,7 @@ function construire(){
       '</div>';
     layer.appendChild(d);
     damesEl.push(d);
+    poserDame(D.id - 1, D.bed.x, D.bed.y);
   });
 
   // Modou
@@ -2343,13 +2677,13 @@ function construire(){
 function poserLieu(cle, L, avecPrix){
   var z = document.createElement('div');
   z.className = 'zone pos';
-  z.style.left = L.x + '%'; z.style.top = L.y + '%';
+  poser(z, L.x, L.y);
   layer.appendChild(z);
   zonesEl[cle] = z;
 
   var b = document.createElement('div');
   b.className = 'badge pos debout';
-  b.style.left = L.x + '%'; b.style.top = L.ly + '%';
+  poserImage(b, VUE_LIEUX[cle].badge);
   if (avecPrix){
     b.innerHTML = '<span class="pic" style="background:var(' + L.col + ')">' + L.icone + '</span>' +
                   '<span class="txt">' + L.nom + '</span>' +
@@ -2366,7 +2700,7 @@ function poserLieu(cle, L, avecPrix){
     // l'intérieur du bâtiment : il s'ouvre quand Modou passe la porte
     var g = document.createElement('div');
     g.className = 'vignette pos debout';
-    g.style.left = L.bx + '%'; g.style.top = L.by + '%';
+    poserImage(g, VUE_LIEUX[cle].maison);
     g.innerHTML =
       '<div class="piece" style="background:' + L.mur + '">' +
         '<div class="sol" style="background:' + L.sol + '"></div>' +
@@ -2380,7 +2714,7 @@ function poserLieu(cle, L, avecPrix){
   } else {
     var v = document.createElement('div');
     v.className = 'vendeur pos debout';
-    v.style.left = L.px + '%'; v.style.top = L.py + '%';
+    poserImage(v, VUE_LIEUX[cle].patron);
     v.innerHTML = vendeurSVG(L.vend) + '<div class="mot">' + L.mot + '</div>';
     layer.appendChild(v);
     vendeursEl[cle] = v;
@@ -3152,8 +3486,7 @@ function volant(txt, coul){
   d.className = 'vole';
   d.textContent = txt;
   d.style.color = coul || '#fff';
-  d.style.left = S.modou.x + '%';
-  d.style.top = (S.modou.y - 8) + '%';
+  poser(d, S.modou.x, S.modou.y, -8);
   layer.appendChild(d);
   setTimeout(function(){ if (d.parentNode) d.parentNode.removeChild(d); }, 1200);
 }
@@ -3276,7 +3609,8 @@ function ecranVersPlateau(sx, sy){
   if (!BW || !CAM.zx) return null;
   var bx = (sx - CAM.Tx) / CAM.zx;
   var by = (sy - CAM.Ty) / CAM.zy;
-  return { x: bx / BW * 100, y: by / BH * 100 };
+  var L = imageVersLogique(bx / BW * DECOR.W, by / BH * DECOR.H);
+  return { x: L[0] / 14, y: L[1] / 8 };
 }
 function allerLaBas(sx, sy){
   try { return allerLaBasInterne(sx, sy); }
@@ -3291,8 +3625,7 @@ function allerLaBasInterne(sx, sy){
   S.auto = { pts: route, i: 1 };
   var fin = route[route.length - 1];
   if (cibleEl){
-    cibleEl.style.left = fin.x + '%';
-    cibleEl.style.top  = fin.y + '%';
+    poser(cibleEl, fin.x, fin.y);
     cibleEl.classList.add('on');
   }
   sonCible();
@@ -3312,8 +3645,7 @@ function marquerHausse(){
 
 function montrerLaRoute(){
   if (!cibleEl) return;
-  cibleEl.style.left = CENTRE.x + '%';
-  cibleEl.style.top  = CENTRE.y + '%';
+  poser(cibleEl, CENTRE.x, CENTRE.y);
   cibleEl.classList.add('on', 'guide');
   clearTimeout(montrerLaRoute.t);
   montrerLaRoute.t = setTimeout(function(){
@@ -3346,7 +3678,7 @@ var BW = 0, BH = 0, VW = 0, VH = 0, RATIO = 1400/800, TOP_PAD = 0;
 /* 30 oct. 2026 : le domaine entier tient sur l'écran, c'est la vue par défaut. ⊕ zoome sur Modou. */
 var CAM = { x:50, y:50, z:1.45, tx:50, ty:50, tz:1.45, libre:true };
 function majCamera(dt){
-  var cx = S.modou.x, cy = S.modou.y, cz = CFG.Z_LIBRE;
+  var cx = S.modou.x, cy = S.modou.y, cz = CFG.Z_LIBRE, qui = -1;
   if (S.fete){                       // plan très rapproché sur le foyer
     cx = CENTRE.x; cy = CENTRE.y - 2;
     cz = 2.7 + S.fete.niveau * 0.12;
@@ -3357,12 +3689,19 @@ function majCamera(dt){
     cz = BW ? Math.min(VW / BW, (VH - 96) / (BH * CFG.APLAT)) : 1;
   }
   else if (S.sortieVue > 0){
-    var qui = -1;
+    qui = -1;
     for (var e=0;e<DAMES.length;e++){ if (S.exode[e] && !S.exode[e].retour) qui = e; }
     if (qui >= 0){ cx = S.exode[qui].x; cy = S.exode[qui].y; cz = CFG.Z_SORTIE; }
     else { cx = 50; cy = 60; cz = CFG.Z_SORTIE; }
   }
   else if (S.zone){ cz = CFG.Z_TRAVAIL; }
+  if (!CAM.libre || S.fete){
+    var vC = null;
+    if (!S.fete && S.sortieVue > 0 && qui >= 0 && damesEl[qui] && damesEl[qui]._vx !== undefined)
+      vC = { x:damesEl[qui]._vx, y:damesEl[qui]._vy };
+    else if (!(S.sortieVue > 0 && !S.fete && qui < 0)) vC = vue(cx, cy);
+    if (vC){ cx = vC.x; cy = vC.y; }
+  }
   CAM.tx = cx; CAM.ty = cy; CAM.tz = cz;
   var k = 1 - Math.exp(-dt * CFG.CAM_SOUPLESSE);
   CAM.x += (CAM.tx - CAM.x) * k;
@@ -3514,8 +3853,8 @@ function rentrerTousLesVendeurs(){
     var L = (k === 'CHANTIER') ? CHANTIER : LIEUX[k];
     var v = vendeursEl[k];
     v.classList.remove('sorti','donne','refus','parle');
-    v.style.left = L.px + '%';
-    v.style.top  = L.py + '%';
+    if (VUE_LIEUX[k] && VUE_LIEUX[k].patron) poserImage(v, VUE_LIEUX[k].patron);
+    else poser(v, L.px, L.py);
   });
 }
 
@@ -3549,8 +3888,7 @@ function faireVenirLEnfant(){
   e.className = 'enfant pos';
   e.id = 'enfant';
   e.innerHTML = enfantSVG() + '<div class="edit"></div>';
-  e.style.left = CENTRE.x + '%';
-  e.style.top  = CENTRE.y + '%';
+  poser(e, CENTRE.x, CENTRE.y);
   layer.appendChild(e);
   enfantEl = e;
   dimensionnerEnfant();
@@ -3670,8 +4008,8 @@ function majEnfant(dt){
     enfantEl.classList.remove('marche');
   }
 
-  enfantEl.style.left = E.x + '%';
-  enfantEl.style.top  = E.y + '%';
+  var vE = poser(enfantEl, E.x, E.y);
+  enfantEl._vy = vE ? vE.y : E.y;
   var bulle = enfantEl.querySelector('.edit');
   if (bulle) bulle.textContent = (E.phase === 'achat') ? E.objet : '';
 }
@@ -4027,8 +4365,10 @@ function dessinerBarrieres(){
   for (var cle in FERMEES){
     var bouts = cle.split('-'), pt = pointBarriere(bouts[0], bouts[1]);
     if (!pt) continue;
-    var mx = pt.x, my = pt.y, angle = pt.angle;
-    out += '<g transform="translate(' + mx.toFixed(1) + ',' + my.toFixed(1) + ') rotate(' + angle.toFixed(1) + ')">' +
+    var A0 = NOEUDS[bouts[0]], B0 = NOEUDS[bouts[1]], lA = Math.hypot(B0[0]-A0[0], B0[1]-A0[1]) || 1;
+    var p1 = vueXY(pt.x, pt.y), p2 = vueXY(pt.x + (B0[0]-A0[0]) / lA * 6, pt.y + (B0[1]-A0[1]) / lA * 6);
+    var mx = p1[0], my = p1[1], angle = Math.atan2(p2[1] - p1[1], p2[0] - p1[0]) * 180 / Math.PI + 90;
+    out += '<g transform="translate(' + mx.toFixed(1) + ',' + my.toFixed(1) + ') rotate(' + angle.toFixed(1) + ') scale(.78)">' +
            '<circle cx="-36" cy="0" r="10" fill="#5B4430" stroke="#2B2118" stroke-width="4"/>' +
            '<circle cx="36" cy="0" r="10" fill="#5B4430" stroke="#2B2118" stroke-width="4"/>' +
            '<rect x="-40" y="-12" width="80" height="24" rx="8" fill="#F2F0E6" stroke="#2B2118" stroke-width="5"/>' +
@@ -4163,8 +4503,7 @@ function fermerLeFoyer(i){
   // volets tirés sur le bâtiment
   var vo = document.createElement('div');
   vo.className = 'volets pos';
-  vo.style.left = L.bx + '%';
-  vo.style.top  = L.by + '%';
+  poserImage(vo, VUE_LIEUX[cle].maison);
   vo.innerHTML = '<span>\uD83D\uDD12</span>';
   layer.appendChild(vo);
   voletsEl[cle] = vo;
@@ -4227,8 +4566,7 @@ function majExode(dt){
         var revenait = E.rachat;
         S.exode[i] = null;
         damesEl[i].classList.remove('marche');
-        damesEl[i].style.left = DAMES[i].bed.x + '%';
-        damesEl[i].style.top  = DAMES[i].bed.y + '%';
+        poserDame(i, DAMES[i].bed.x, DAMES[i].bed.y);
         var b3 = damesEl[i].querySelector('.cri');
         if (b3) b3.textContent = DAMES[i].cri;
         if (revenait){
@@ -4269,8 +4607,7 @@ function majExode(dt){
     damesEl[i].classList.add('marche');
     tickPasDame += dt;
     if (tickPasDame > 0.5){ tickPasDame = 0; sonPasDame(); }
-    damesEl[i].style.left = E.x + '%';
-    damesEl[i].style.top  = E.y + '%';
+    poserDame(i, E.x, E.y);
   }
 }
 
@@ -4315,8 +4652,7 @@ function faireRevenir(i, prixConfirme){
   // elle rentre par où elle est sortie, mais d'un pas décidé
   var el = damesEl[i];
   el.className = 'dame pos d' + (i+1) + ' ' + (D.bed.x > 50 ? 'droite' : 'gauche');
-  el.style.left = CFG.SORTIE_X + '%';
-  el.style.top  = ALLEE_Y + '%';
+  poserDame(i, CFG.SORTIE_X, ALLEE_Y);
   var bulle = el.querySelector('.cri');
   if (bulle) bulle.textContent = 'Je reviens.';
 
@@ -4346,8 +4682,7 @@ function faitPartir(i){
   sonDepart();
   var el = damesEl[i];
   el.className = 'dame pos partie ' + (DAMES[i].bed.x > 50 ? 'droite' : 'gauche');
-  el.style.left = '50%';
-  el.style.top = '104%';           // elle sort par l'allée du bas
+  poserDame(i, 0, 0, true);        // partie sous le pont, en pirogue
   fermerLeFoyer(i);
   S.ordreDepart.push(i);
   noter(S.jour, DAMES[i].nom + ' a quitt\u00e9 le cercle.', true);
@@ -4512,15 +4847,14 @@ function rendre(){
   });
   boxSous.classList.toggle('vide', pasAssez && S.argent < 40);
 
-  modouEl.style.left = S.modou.x + '%';
-  modouEl.style.top  = S.modou.y + '%';
-  modouEl.style.zIndex = 20 + Math.round(S.modou.y * 2);
+  var vM = poser(modouEl, S.modou.x, S.modou.y);
+  modouEl.style.zIndex = 20 + Math.round(vM.y * 2);
   for (var p2=0;p2<DAMES.length;p2++){
     if (!damesEl[p2]) continue;
-    var yD = S.exode[p2] ? S.exode[p2].y : DAMES[p2].bed.y;
+    var yD = damesEl[p2]._vy !== undefined ? damesEl[p2]._vy : DAMES[p2].bed.y;
     damesEl[p2].style.zIndex = 20 + Math.round(yD * 2);
   }
-  if (enfantEl && S.enfant) enfantEl.style.zIndex = 20 + Math.round(S.enfant.y * 2);
+  if (enfantEl && S.enfant) enfantEl.style.zIndex = 20 + Math.round((enfantEl._vy !== undefined ? enfantEl._vy : S.enfant.y) * 2);
 
   var cibleTuto = cibleDuTuto();
   var cles = Object.keys(zonesEl);
@@ -4549,6 +4883,7 @@ var last = 0, tickPiece = 0, tickSouffle = 0, tickSerie = 0, tickSauve = 0;
 var tickPasEnfant = 0, tickPasDame = 0;
 function boucle(ts){
   requestAnimationFrame(boucle);
+  try { majDecorVivant(ts || 0); } catch (errD) {}
   try { tourDeBoucle(ts); }
   catch (err){
     montrerErreur('boucle : ' + (err && err.message ? err.message : err) +
@@ -4720,8 +5055,7 @@ function vivreDansLaZone(dt){
       var v2 = vendeursEl.CHANTIER;
       if (!v2.classList.contains('sorti')){
         v2.classList.add('sorti');
-        v2.style.left = CHANTIER.cx + '%';
-        v2.style.top  = CHANTIER.cy + '%';
+        poserImage(v2, VUE_LIEUX.CHANTIER.patronSorti);
       }
     }
     }
@@ -4782,8 +5116,7 @@ function vivreDansLaZone(dt){
   // le patron rentre quand Modou quitte le chantier
   if ((S.zone !== 'CHANTIER' || estNuit) && vendeursEl.CHANTIER && vendeursEl.CHANTIER.classList.contains('sorti')){
     vendeursEl.CHANTIER.classList.remove('sorti');
-    vendeursEl.CHANTIER.style.left = CHANTIER.px + '%';
-    vendeursEl.CHANTIER.style.top  = CHANTIER.py + '%';
+    poserImage(vendeursEl.CHANTIER, VUE_LIEUX.CHANTIER.patron);
   }
 
   // la musique se tend quand le foyer va mal
@@ -5968,12 +6301,10 @@ function restaurerLeDecor(){
     if (S.parties[i]){
       fermerLeFoyer(i);                       // maison grisée, barre retirée
       damesEl[i].className = 'dame pos partie';
-      damesEl[i].style.left = CFG.SORTIE_X + '%';
-      damesEl[i].style.top  = ALLEE_Y + '%';
+      poserDame(i, 0, 0, true);
     } else if (S.exode[i]){
       var E = S.exode[i];
-      damesEl[i].style.left = E.x + '%';
-      damesEl[i].style.top  = E.y + '%';
+      poserDame(i, E.x, E.y);
       if (!E.retour) damesEl[i].classList.add('sen-va');
     }
   }

@@ -2,7 +2,7 @@
    Règle d'or : le HTML passe TOUJOURS par le réseau d'abord.
    Sinon une mise à jour du jeu ne remonte jamais sur l'appareil. */
 
-var CACHE = 'lqd-v13.3';
+var CACHE = 'lqd-v14';
 var FICHIERS = [
   './',
   './index.html',
@@ -10,7 +10,17 @@ var FICHIERS = [
   './icon-192.png',
   './icon-512.png',
   './icon-maskable-512.png',
-  './apple-touch-icon.png'
+  './apple-touch-icon.png',
+  './decor/plateau.webp',
+  './decor/pirogue_senegalaise_vide_jeu_2x.png',
+  './decor/chevre_blanche_broute_jeu_2x.png',
+  './decor/chevre_blanche_tete_levee_jeu_2x.png',
+  './decor/chevre_blanche_marche_pattes_avant_jeu_2x.png',
+  './decor/chevre_blanche_marche_pattes_arriere_jeu_2x.png',
+  './decor/chevre_brune_broute_jeu_2x.png',
+  './decor/chevre_brune_tete_levee_jeu_2x.png',
+  './decor/chevre_brune_marche_pattes_avant_jeu_2x.png',
+  './decor/chevre_brune_marche_pattes_arriere_jeu_2x.png'
 ];
 
 self.addEventListener('install', function (e) {
