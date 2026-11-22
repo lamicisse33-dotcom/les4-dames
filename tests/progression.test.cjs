@@ -137,9 +137,10 @@ test('The actual game loop introduces features at the announced levels',()=>{
     if(day===79){assert.equal(g.S.filsParti,true);assert.equal(g.S.enfant,null);   // mois 4 : il part
       assert.equal(g.S.moto,true);assert.equal(g.S.ane,false);assert.equal(g.S.dette,0);} // vélo échangé contre la moto
     if(day===79)assert.equal(g.S.mandatsEnvoyes,1);   // dès la semaine qui suit son départ
-    if(day===83)assert.equal(g.S.saisonPluies,true);        // mois 7 : les pluies
-    if(day===84){assert.equal(g.S.toitPropose,true);assert.equal(g.S.vacances,true);assert.ok(g.S.enfant);}
-    if(day===85){assert.equal(g.S.vacances,false);assert.equal(g.S.enfant,null);}
+    if(day===82){assert.equal(g.S.vacances,true);assert.ok(g.S.enfant);}       // mois 6 : le fils revient
+    if(day===83){assert.equal(g.S.vacances,false);assert.equal(g.S.enfant,null);   // mois 7 : il repart
+      assert.equal(g.S.saisonPluies,true);}                                       // et les pluies arrivent
+    if(day===84)assert.equal(g.S.toitPropose,true);
     // A new day is processed before the transition is presented on the next frame.
     g.tourDeBoucle(1000);
   }
