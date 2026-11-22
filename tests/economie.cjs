@@ -29,6 +29,7 @@ function jouer(niveau,politique,maxJours=200,over={},depart=null){
  const aller=(x,y,nom)=>{if(cible===nom&&S.auto)return;const r=g.trajetVers(x,y);if(r&&r.length>=2){S.auto={pts:r,i:1};cible=nom;}};
  while(S.enCours&&S.jour<=maxJours){
   if(S.chapitre){if(S.chapitre.mois)g.fermerLeMoisTenu(false);else g.fermerLeChapitre(true);}
+  if(S.aneOffert&&!S.ane&&!S.moto)g.acheterLAne();if(S.motoOfferte&&!S.moto)g.prendreLaMoto();   // v17.1 : le robot choisit de les prendre
   // décision
   const prix=i=>g.prixDuJour(g.DAMES[i].lieu);
   let urgent=-1,bas=999;for(let i=0;i<4;i++){if(S.parties[i]||politique.abandonne===i)continue;if(S.jauges[i]<bas){bas=S.jauges[i];urgent=i;}}

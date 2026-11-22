@@ -1285,7 +1285,7 @@ function dameSVG(i){
    ========================================================= */
 'use strict';
 
-var BUILD_TAG = 'LQD-v17';
+var BUILD_TAG = 'LQD-v17.1';
 document.getElementById('build').textContent = BUILD_TAG;
 var vIntro = document.getElementById('versionIntro');
 if (vIntro) vIntro.textContent = BUILD_TAG;
@@ -1367,6 +1367,15 @@ function traiterAppui(e, n){
     }
     if (n.id === 'chMenu'){ fermerLeChapitre(true); retourAuMenu(); return; }
     if (n.id === 'btnPret'){ if (e.cancelable) e.preventDefault(); return; }
+    if (n.id === 'btnVehicule'){
+      if (e.cancelable) e.preventDefault();
+      if (S && S.enCours){
+        var vq = vehiculeIci();
+        if (vq === 'velo') acheterLAne(); else if (vq === 'moto') prendreLaMoto();
+        majBoutonVehicule();
+      }
+      return;
+    }
     if (n.id === 'btnCredit'){
       if (e.cancelable) e.preventDefault();
       if (S && S.enCours) demanderUnPret();
@@ -1567,14 +1576,14 @@ var CFG = {
 
   MOTO_JOUR: 99999,      // plus de moto à crédit : elle vient du troc au départ du fils
   MOTO_PRIX: 450,
-  MOTO_RETENUE: 0.35,
+  MOTO_RETENUE: 0.20,     // 22 nov. : le patron ne retient qu'un cinquième de la paye — « suivant les possibilités »
   /* 22 nov. 2026, 17 h 25, Lamine : le prêt se prend À CRÉDIT, dans la boutique
      d'une des deux dernières Dames ; il remonte sa jauge à moitié seulement, et
      se rend au double du prix de la boutique, retenu sur la paye du chantier.
      Un crédit par mois, et le précédent doit être rendu. */
   CREDIT_JAUGE: 50,
   CREDIT_FOIS: 2,
-  PRET_RETENUE: 0.35,     // le patron retient ce tiers sur chaque paye
+  PRET_RETENUE: 0.20,
   MOTO_VITESSE: 4.0,
   PRIME_CONGE: 2.0,      // un mois sur six, la paye est doublée (×4 faisait exploser la caisse : mesuré ×10 au jour 175)
   PRIX_GRADE: 0.6,       // les prix suivent le grade de Modou (paye^0,6) : la vie monte avec lui
@@ -2771,6 +2780,12 @@ function construire(){
   bp.hidden = true;
   poserImage(bp, [1105, 176]);          // ce qui reste à rendre, à la hauteur du chantier
   layer.appendChild(bp);
+  var bv = document.createElement('button');
+  bv.id = 'btnVehicule';
+  bv.className = 'pret pos';
+  bv.hidden = true;
+  layer.appendChild(bv);
+  signatureVehicule = null;
   var bc = document.createElement('button');
   bc.id = 'btnCredit';
   bc.className = 'pret pos';
@@ -4257,8 +4272,8 @@ function proposerLAne(delai){
   S.rappelAne = 0;
   setTimeout(function(){
     if (!S || !S.enCours || S.ane || S.moto) return;
-    flash('Un v\u00e9lo est \u00e0 vendre au temple : ' + fmtF(prixDuVelo()) +
-          '. Vas-y avec la somme, il est \u00e0 toi.', 4600);
+    flash('Un v\u00e9lo au temple : ' + fmtF(prixDuVelo()) +
+          ', pay\u00e9s petit \u00e0 petit. \u00c0 toi de choisir.', 2600);
     if (premier) parler('Un v\u00e9lo\u2026 je n\u2019aurais plus mal aux jambes.', VOIX_MODOU);
   }, delai || 0);
   if (premier) noter(S.jour, 'Un v\u00e9lo est \u00e0 vendre au temple.');
@@ -4268,29 +4283,46 @@ function proposerLAne(delai){
 
 function prixDuVelo(){ return Math.round(CFG.VELO_FOIS * prixDuJour('TEMPLE')); }
 function prixDeLaMoto(){ return Math.round(CFG.MOTO_FOIS * prixDuJour('TEMPLE')); }
+/* 22 nov. 2026, 18 h 13, Lamine : « tout se paye progressivement, suivant les
+   possibilités » et « il faut un peu de stratégie sur les choix ». Le vélo et la
+   moto se prennent donc par un BOUTON (jamais tout seuls), sans rien payer
+   d'avance : le patron retient une petite part de chaque paye. */
 function acheterLAne(){
-  if (S.ane || !S.aneOffert) return false;
+  if (S.ane || S.moto || !S.aneOffert) return false;
   var pv = prixDuVelo();
-  if (S.argent < pv){
-    if (S.cool <= 0){
-      flash('Le v\u00e9lo co\u00fbte ' + fmtF(pv) + '. Il te manque ' +
-            fmtF(pv - Math.floor(S.argent)) + '.', 2600);
-      S.cool = 3;
-    }
-    return false;
-  }
-  S.argent -= pv;
   S.ane = true;
-  volant('-' + pv + ' F', '#9A8F85');
+  S.dette = (S.dette || 0) + pv;
+  S.dettePrix = S.dette;
   sonCaisse();
   var b = badgesEl.TEMPLE;
   if (b) b.classList.remove('dernier');
   if (modouEl) modouEl.classList.add('surLane');
-  flash('Modou a son v\u00e9lo. Il va deux fois plus vite.', 3600);
-  parleDame(2, 'Que la route te soit douce.');
+  flash('Modou a son v\u00e9lo : ' + fmtF(pv) + ', pay\u00e9s petit \u00e0 petit sur sa paye.', 2600);
   parler('Merci Serigne ! Je vais voler maintenant !', VOIX_MODOU);
-  noter(S.jour, 'Modou ach\u00e8te le v\u00e9lo pour ' + fmtF(pv) + '.');
+  noter(S.jour, 'Modou prend le v\u00e9lo : ' + fmtF(pv) + ', pay\u00e9s petit \u00e0 petit.');
+  signatureVehicule = null;
   return true;
+}
+/* le bouton du vélo (au temple) ou de la moto (au chantier) */
+var signatureVehicule = null;
+function vehiculeIci(){
+  if (!S || !S.enCours) return '';
+  if (S.zone === 'TEMPLE' && S.aneOffert && !S.ane && !S.moto) return 'velo';
+  if (S.zone === 'CHANTIER' && S.motoOfferte && !S.moto) return 'moto';
+  return '';
+}
+function majBoutonVehicule(){
+  var b = document.getElementById('btnVehicule');
+  if (!b || !S) return;
+  var v = vehiculeIci();
+  if (v === signatureVehicule) return;
+  signatureVehicule = v;
+  if (!v){ b.hidden = true; return; }
+  var pos = VUE_LIEUX[v === 'velo' ? 'TEMPLE' : 'CHANTIER'].badge;
+  poserImage(b, [pos[0], pos[1] - 150]);
+  b.innerHTML = (v === 'velo' ? 'Prendre le v\u00e9lo' : 'Prendre la moto') +
+    '<small>' + fmtF(v === 'velo' ? prixDuVelo() : prixDeLaMoto()) + ' \u00b7 pay\u00e9s petit \u00e0 petit</small>';
+  b.hidden = false;
 }
 
 /* =========================================================
@@ -4499,8 +4531,8 @@ function proposerLaMoto(delai){
   S.motoOfferte = true;
   setTimeout(function(){
     if (!S || !S.enCours || S.moto) return;
-    flash('Seul maintenant : une moto \u00e0 cr\u00e9dit, ' + fmtF(prixDeLaMoto()) +
-          ', rien \u00e0 payer d\u2019avance. Passe au chantier pour la prendre.', 5000);
+    flash('Une moto au chantier : ' + fmtF(prixDeLaMoto()) +
+          ', pay\u00e9s petit \u00e0 petit. \u00c0 toi de choisir.', 2600);
     parler('Une moto\u2026 \u00e0 cr\u00e9dit. Est-ce que j\u2019ose ?', VOIX_MODOU);
   }, delai || 0);
   noter(S.jour, 'Le patron propose une moto \u00e0 cr\u00e9dit.');
@@ -4512,8 +4544,10 @@ function prendreLaMoto(){
   if (S.moto || !S.motoOfferte) return false;
   S.moto = true;
   S.motoPrix = prixDeLaMoto();
-  S.dette = S.motoPrix;
+  S.dette = (S.dette || 0) + S.motoPrix;      // ce qui restait du vélo s'ajoute
+  S.dettePrix = S.dette;
   S.ane = false;
+  signatureVehicule = null;
   var b = badgesEl.CHANTIER;
   if (b) b.classList.remove('dernier');
   if (modouEl){ modouEl.classList.remove('surLane'); modouEl.classList.add('surLaMoto'); }
@@ -4528,10 +4562,10 @@ function prendreLaMoto(){
 function majBandeauDette(){
   var z = document.getElementById('dette');
   if (!z) return;
-  if (!S || !S.moto || S.dette <= 0){ z.className = ''; return; }
-  var part = Math.max(0, Math.min(1, 1 - S.dette / (S.motoPrix || CFG.MOTO_PRIX)));
+  if (!S || !(S.dette > 0)){ z.className = ''; return; }
+  var part = Math.max(0, Math.min(1, 1 - S.dette / (S.dettePrix || S.motoPrix || CFG.MOTO_PRIX)));
   z.className = 'on';
-  z.innerHTML = '<span class="mpic">\uD83C\uDFCD\uFE0F</span>' +
+  z.innerHTML = '<span class="mpic">' + (S.moto ? '\uD83C\uDFCD\uFE0F' : '\uD83D\uDEB2') + '</span>' +
                 '<span class="mbar"><i style="width:' + (part*100).toFixed(0) + '%"></i></span>' +
                 '<span class="mtxt">' + Math.round(S.dette) + ' F</span>';
 }
@@ -5302,7 +5336,6 @@ function vivreDansLaZone(dt){
     }
   } else if (S.zone === 'CHANTIER'){
     if (S.saisonPluies && !S.toitRepare) reparerLeToit();
-    if (S.motoOfferte && !S.moto) prendreLaMoto();
     if (estNuit){
       S.serie = 0;
       if (S.cool <= 0){
@@ -5324,19 +5357,19 @@ function vivreDansLaZone(dt){
       /* Le quartier parle : le patron paie moins bien un homme dont la
          maison se vide. -10 % par Dame absente. */
       var paye = CFG.GAIN_CHANTIER * payeModou() * NIV().paye * rendT * bonus * prime * payeDesequilibre() * dt;
-      if (S.moto && S.dette > 0){
+      if (S.dette > 0){
         var retenue = Math.min(S.dette, paye * CFG.MOTO_RETENUE);
         S.dette -= retenue;
         paye -= retenue;
         if (S.suivi) S.suivi.rembourse += retenue;
         if (S.dette <= 0){
           S.dette = 0;
-          flash('La moto est pay\u00e9e. Elle est \u00e0 toi pour de bon.', 3600);
-          parler('La moto est pay\u00e9e ! Elle est \u00e0 moi !', VOIX_MODOU);
-          noter(S.jour, 'Moto rembours\u00e9e.');
+          flash(S.moto ? 'La moto est pay\u00e9e. Elle est \u00e0 toi pour de bon.' : 'Le v\u00e9lo est pay\u00e9. Il est \u00e0 toi pour de bon.', 2600);
+          parler(S.moto ? 'La moto est pay\u00e9e ! Elle est \u00e0 moi !' : 'Le v\u00e9lo est pay\u00e9 !', VOIX_MODOU);
+          noter(S.jour, S.moto ? 'Moto rembours\u00e9e.' : 'V\u00e9lo rembours\u00e9.');
         }
       }
-      if ((S.pret || 0) > 0 && !(S.moto && S.dette > 0)){     // une seule retenue à la fois : la moto d'abord
+      if ((S.pret || 0) > 0 && !(S.dette > 0)){     // une seule retenue à la fois : le vélo ou la moto d'abord
         var rPret = Math.min(S.pret, paye * CFG.PRET_RETENUE);
         S.pret -= rPret;
         paye -= rPret;
@@ -5369,9 +5402,7 @@ function vivreDansLaZone(dt){
     // l'état de la maison ne les concernent. Mais s'ils ne sont pas payables,
     // ils ne doivent JAMAIS empêcher de servir la Dame qui habite là.
     var affaireFaite = false;
-    if (S.zone === 'TEMPLE' && S.aneOffert && !S.ane && !S.moto && S.argent >= prixDuVelo()){
-      if (acheterLAne()){ S.cool = 2; affaireFaite = true; }
-    }
+    /* 22 nov. : le vélo ne s'achète plus tout seul en entrant au temple — c'est un choix (bouton) */
 
     if (affaireFaite){
       // rien de plus cette fois-ci
@@ -5585,6 +5616,7 @@ function tourDeBoucle(ts){
 
   majRebours();
   majBoutonPret();
+  majBoutonVehicule();
 
   // cycle jour / nuit
   S.nuit = calculerNuit();

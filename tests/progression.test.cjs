@@ -559,9 +559,14 @@ test('v17: on foot in week 1, bike for sale from week 2, moto on credit when the
   S.temps=T0+W+0.5;S.jauges=[90,90,90,90];g.last=1000;g.tourDeBoucle(1000);
   assert.equal(S.aneOffert,true);assert.equal(S.ane,false);
   const pv=g.prixDuVelo();assert.equal(pv,2*g.prixDuJour('TEMPLE'));
-  S.argent=pv+10;assert.equal(g.acheterLAne(),true);assert.equal(S.ane,true);assert.ok(S.argent<11);
+  /* v17.1 : rien ne s'achète tout seul, et tout se paye petit à petit sur la paye */
+  const L=g.LIEUX.TEMPLE;S.modou.x=L.x;S.modou.y=L.y;S.argent=99999;for(let k=0;k<20;k++)g.vivreDansLaZone(.1);
+  assert.equal(S.ane,false,'pas d achat automatique');assert.equal(g.vehiculeIci(),'velo');
+  const a0=S.argent;assert.equal(g.acheterLAne(),true);assert.equal(S.ane,true);
+  assert.equal(S.argent,a0,'rien à payer d avance');assert.equal(S.dette,pv);
   g.leFilsPart();assert.equal(S.motoOfferte,true);assert.equal(S.moto,false);
-  assert.equal(g.prendreLaMoto(),true);assert.equal(S.moto,true);assert.equal(S.dette,g.prixDeLaMoto());
+  assert.equal(g.prendreLaMoto(),true);assert.equal(S.moto,true);assert.equal(S.dette,pv+g.prixDeLaMoto());
+  assert.ok(g.CFG.MOTO_RETENUE<=0.25);
 });
 test('v17: Modou climbs one grade at a time by week, and each promotion catches up with prices',()=>{
   data.clear();g.iNiveau=1;g.demarrer();g.gamePaused=false;const S=g.S,W=g.CFG.SEC_PAR_SEMAINE,T0=76*g.CFG.SEC_PAR_JOUR;
