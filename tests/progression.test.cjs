@@ -317,12 +317,15 @@ function longueur(de, vers){
   const r = g.routeEntre(de, vers); if (!r) return null;
   let L = 0; for (let i=0;i<r.length-1;i++) L += g.ecart(r[i], r[i+1]); return L;
 }
+/* 22 nov. 2026 (Lamine) : seuls les chemins du centre ; Amour et Spiritualité n'ont
+   qu'une route, jamais barrée. Chaque départ barre la route directe d'Argent ou de Santé. */
 test('A departing Dame bars a lane, and it is her neighbour she starves',()=>{
   for (let i=0;i<4;i++){
     seules(i);
     assert.ok(g.FERMETURES[i].length > 0, `la Dame ${i+1} ne ferme rien`);
+    for (const cle of g.FERMETURES[i]) assert.ok(['PB-JL','PB-JR'].includes(cle), `${cle} : seules Argent et Sante ont un detour`);
     for (const cle of g.FERMETURES[i]){ const [a,b] = cle.split('-'); assert.equal(g.alleeFermee(a,b), true, cle); }
-    assert.equal(g.victimeDe(i), (i+1) % 4);
+    assert.equal(g.victimeDe(i), [3,0,3,0][i]);
     const avant = (seules(), longueur('CX', PORTE_DE[g.victimeDe(i)]));
     seules(i);
     assert.ok(longueur('CX', PORTE_DE[g.victimeDe(i)]) > avant * 1.3,
@@ -359,16 +362,16 @@ test('A barred lane is no longer ground: the joystick cannot cross it',()=>{
   }
 });
 test('Modou caught on a lane that closes is put back on an open one',()=>{
-  seules(); const pt = g.pointBarriere('AK','CX');
+  seules(); const pt = g.pointBarriere('PB','JL');
   g.S.modou.x = pt.x/14; g.S.modou.y = pt.y/8;
   g.S.parties = [true,false,false,false]; g.majFermetures(); g.degagerModou();
   assert.equal(g.marchable(g.S.modou.x, g.S.modou.y), true, 'Modou reste coince derriere la barriere');
   assert.equal(g.S.auto, null, 'son trajet en cours traversait la barriere');
 });
 test('Recalling a Dame takes her barrier down again',()=>{
-  seules(0); assert.equal(g.alleeFermee('AK','CX'), true);
+  seules(0); assert.equal(g.alleeFermee('PB','JL'), true);
   g.S.parties[0] = false; g.majFermetures();
-  assert.equal(g.alleeFermee('AK','CX'), false, 'la barriere reste apres le rappel');
+  assert.equal(g.alleeFermee('PB','JL'), false, 'la barriere reste apres le rappel');
 });
 test('An absent Dame costs: the others wear faster and the pay drops',()=>{
   state(40);

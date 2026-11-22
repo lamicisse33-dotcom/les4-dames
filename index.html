@@ -1257,7 +1257,7 @@ function dameSVG(i){
    ========================================================= */
 'use strict';
 
-var BUILD_TAG = 'LQD-v14.1';
+var BUILD_TAG = 'LQD-v14.2';
 document.getElementById('build').textContent = BUILD_TAG;
 var vIntro = document.getElementById('versionIntro');
 if (vIntro) vIntro.textContent = BUILD_TAG;
@@ -1832,17 +1832,28 @@ var NOEUDS = (function(){
     AK:[PLAN.AMOUR.x,C.y],   AP:[PLAN.AMOUR.porte.x,PLAN.AMOUR.porte.y],
     TK:[PLAN.TEMPLE.x,C.y],  TP:[PLAN.TEMPLE.porte.x,PLAN.TEMPLE.porte.y],
     BK:[PLAN.BANQUE.x,A.y1], BP:[PLAN.BANQUE.porte.x,PLAN.BANQUE.porte.y],
-    SK:[PLAN.SANTE.x,A.y1],  SP:[PLAN.SANTE.porte.x,PLAN.SANTE.porte.y]
+    SK:[PLAN.SANTE.x,A.y1],  SP:[PLAN.SANTE.porte.x,PLAN.SANTE.porte.y],
+    /* 22 nov. 2026 — ce repère est invisible : seules comptent les longueurs,
+       et les allées restent droites (Modou avance sur un axe à la fois).
+       PB : bas de la place. JL / JR : route directe vers Argent / Santé.
+       BK-BQ / SK-SQ : le chemin du bas et l'escalier, plus long (le détour). */
+    PB:[700,520], JL:[330,520], JR:[1070,520],
+    BB:[700,760], BQ:[60,621], SQ:[1340,621]
   };
 })();
+NOEUDS.BK = [60, 760];
+NOEUDS.SK = [1340, 760];
+/* 22 nov. 2026, Lamine : « il doit seulement utiliser les chemins du centre…
+   seulement les routes reliées depuis le foyer, les maisons et le chantier. »
+   L'anneau et les côtés sont retirés. Argent et Santé gardent deux routes :
+   la courbe directe depuis la place, ou le chemin du bas et l'escalier. */
 var ARETES = [
-  ['TL','HE'],['HE','TR'],
-  ['TL','GO'],['GO','BL'],
-  ['TR','DR'],['DR','BR'],
-  ['BL','BK'],['BK','BF'],['BF','SK'],['SK','BR'],
-  ['GO','AK'],['AK','CX'],['CX','TK'],['TK','DR'],
-  ['HE','CX'],['CX','BF'],
-  ['HE','CH'],['AK','AP'],['TK','TP'],['BK','BP'],['SK','SP']
+  ['AK','CX'],['CX','TK'],['HE','CX'],['HE','CH'],['AK','AP'],['TK','TP'],
+  ['CX','PB'],['PB','BF'],
+  ['PB','JL'],['JL','BP'],['PB','JR'],['JR','SP'],
+  ['BF','BB'],
+  ['BB','BK'],['BK','BQ'],['BQ','BP'],
+  ['BB','SK'],['SK','SQ'],['SQ','SP']
 ];
 var VOIES = ARETES.map(function(a){
   return [NOEUDS[a[0]][0], NOEUDS[a[0]][1], NOEUDS[a[1]][0], NOEUDS[a[1]][1]];
@@ -1882,14 +1893,20 @@ var VOISINS = {};
       contournent sans rien changer. Une répartition sans chevauchement
       n'existe pas — c'est pourquoi deux Dames partagent CX-TK, et deux
       autres CX-BF. */
+/* 22 nov. 2026, décidé par Lamine : sans l'anneau, Amour et Spiritualité
+   n'ont qu'une route — on ne la barre jamais. Les barrières ne font faire
+   un détour que vers Argent et Santé : la courbe directe se ferme, Modou
+   passe par le chemin du bas et l'escalier. */
 var FERMETURES = [
-  ['AK-CX'],            // la 1re partie coupe les FLEURS de la 2e    +214 %
-  ['CX-TK'],            // la 2e  partie coupe les PRIÈRES de la 3e   +214 %
-  ['GO-BL','CX-BF'],    // la 3e  partie coupe l'ARGENT de la 4e      +156 %
-  ['CX-TK','CX-BF']     // la 4e  partie coupe les SOINS de la 1re    +134 %
+  ['PB-JL'],            // la 1re partie coupe la route directe de l'ARGENT de la 4e
+  ['PB-JR'],            // la 2e  partie coupe la route directe des SOINS de la 1re
+  ['PB-JL'],            // la 3e  partie coupe la route directe de l'ARGENT de la 4e
+  ['PB-JR']             // la 4e  partie coupe la route directe des SOINS de la 1re
 ];
-/* Qui souffre du départ de qui : la chaîne 1 → 2 → 3 → 4 → 1. */
-function victimeDe(i){ return (i + 1) % 4; }
+/* Qui souffre du départ de qui : chaque départ allonge la route d'Argent (4e Dame)
+   ou de Santé (1re Dame), les deux seules maisons qui ont un second chemin. */
+var VICTIMES = [3, 0, 3, 0];
+function victimeDe(i){ return VICTIMES[i]; }
 var FERMEES = {};
 function alleeFermee(a, b){ return !!(FERMEES[a + '-' + b] || FERMEES[b + '-' + a]); }
 function majFermetures(){
@@ -2157,34 +2174,30 @@ function imageVersPlace(x, y){
 /* Chaque allée logique et le chemin peint qu'elle suit (px de l'image).
    Un troisième nombre fixe l'avancement logique à ce point (bord de la place). */
 var VUE_ALLEES = {
-  /* 22 nov. 2026, Lamine : « il doit impérativement suivre les tracés ».
-     Chaque allée logique passe UNIQUEMENT par des chemins peints. Celles qui
-     n'ont pas de chemin direct dans l'image (l'anneau du haut, les côtés)
-     font le tour par les chemins qui existent : diagonales, place, escaliers. */
-  'TL-HE':[[85,248],[45,268],[20,305],[18,345],[40,385],[110,410],[230,445],[360,470],[455,478],[560,488],[690,458],[760,420],[835,340],[835,258]],
-  'HE-TR':[[835,258],[835,340],[910,420],[980,458],[1110,490],[1235,480],[1350,462],[1480,430],[1560,395],[1620,362],[1653,345],[1640,290],[1615,250]],
-  'TL-GO':[[85,248],[45,268],[20,305],[18,345]],
-  'GO-BL':[[18,345],[40,385],[110,410],[230,445],[360,470],[455,478],[440,530],[430,590],[450,625],[490,650],[505,708],[420,712],[300,712],[160,702],[70,688]],
-  'TR-DR':[[1615,250],[1640,290],[1653,345]],
-  'DR-BR':[[1653,345],[1620,362],[1560,395],[1480,430],[1350,462],[1235,480],[1225,540],[1235,600],[1270,650],[1265,705],[1420,702],[1540,695],[1600,685]],
-  'BL-BK':[[70,688],[160,702],[300,712],[420,712],[505,708]],
-  'BK-BF':[[505,708],[650,714],[835,712]],
-  'BF-SK':[[835,712],[1000,714],[1150,712],[1265,705]],
-  'SK-BR':[[1265,705],[1420,702],[1540,695],[1600,685]],
-  'GO-AK':[[18,345],[40,385],[110,410],[230,445],[360,470],[455,478],[560,488],[690,458],[700,420],[700,390],[690,362],[630,358],[560,345],[500,322],[465,300]],
+  /* 22 nov. 2026, Lamine : « il doit impérativement suivre les tracés »,
+     et seulement les chemins du centre (foyer, maisons, chantier). */
   'AK-CX':[[465,300],[500,322],[560,345],[630,358],[690,362],[697,390],[695,420,0.4865],[835,420]],
   'CX-TK':[[835,420],[980,420,0.5135],[978,385],[987,352],[1050,362],[1150,348],[1230,330],[1295,318]],
-  'TK-DR':[[1295,318],[1230,330],[1150,348],[1050,362],[987,352],[972,385],[972,420],[980,458],[1110,490],[1235,480],[1350,462],[1480,430],[1560,395],[1620,362],[1653,345]],
   'HE-CX':[[835,258],[835,340,0.431],[835,420]],
-  'CX-BF':[[835,420],[835,505,0.569],[835,712]],
+  'CX-PB':[[835,420],[835,482]],
+  'PB-BF':[[835,482],[835,505,0.265],[835,690]],
+  'BF-BB':[[835,690],[835,712]],
+  'PB-JL':[[835,482],[695,482,0.5135],[680,465],[640,478],[560,488],[480,482],[445,520],[432,560]],
+  'JL-BP':[[432,560],[432,585],[420,602],[380,610],[330,612]],
+  'PB-JR':[[835,482],[980,482,0.5135],[990,465],[1030,478],[1110,490],[1200,485],[1228,520],[1230,560]],
+  'JR-SP':[[1230,560],[1232,590],[1260,608],[1350,612],[1445,600]],
+  'BB-BK':[[835,712],[650,714],[505,708]],
+  'BK-BQ':[[505,708],[495,665],[470,630]],
+  'BQ-BP':[[470,630],[400,615],[330,612]],
+  'BB-SK':[[835,712],[1000,714],[1150,712],[1265,705]],
+  'SK-SQ':[[1265,705],[1268,672],[1290,642]],
+  'SQ-SP':[[1290,642],[1350,616],[1445,600]],
   'HE-CH':[[835,258],[835,228]],
   'AK-AP':[[465,300],[440,268],[380,272],[300,282]],
   'TK-TP':[[1295,318],[1345,338],[1380,335],[1395,300]],
-  'BK-BP':[[505,708],[495,665],[470,630],[400,615],[330,612]],
-  'SK-SP':[[1265,705],[1268,672],[1290,642],[1350,616],[1445,600]]
 };
 /* Les allées du fond (derrière les maisons) : un toucher ne les choisit qu'en dernier. */
-var ALLEES_DU_FOND = { 'TL-HE':1, 'HE-TR':1, 'GO-AK':1, 'TK-DR':1, 'GO-BL':1, 'DR-BR':1, 'TL-GO':1, 'TR-DR':1 };
+var ALLEES_DU_FOND = {};
 
 /* Ce qui ne marche pas : bâtiments, enseignes, lanternes (px de l'image). */
 var VUE_LIEUX = {
@@ -6525,10 +6538,10 @@ var AIDE = [
     'Le rappel efface tout d\u2019un coup : la maison retrouve son \u00e9quilibre.'
   ]},
   { t:'Les all\u00e9es barr\u00e9es', l:[
-    'Une Dame qui s\u2019en va barre une all\u00e9e derri\u00e8re elle.',
-    'Elle ne te punit pas toi : elle coupe la route de sa voisine.',
-    'La premi\u00e8re coupe les fleurs, la deuxi\u00e8me les pri\u00e8res,',
-    'la troisi\u00e8me l\u2019argent, la quatri\u00e8me les soins.',
+    'Une Dame qui s\u2019en va peut barrer une all\u00e9e derri\u00e8re elle.',
+    'Elle ne te punit pas toi : elle allonge la route de sa voisine.',
+    'La 1re et la 3e coupent la route directe de l\u2019argent, la 2e et la 4e celle des soins :',
+    'Modou passe alors par le chemin du bas et l\u2019escalier.',
     'La route du chantier, elle, n\u2019est jamais barr\u00e9e : la paye rentre toujours.',
     'Rappeler la Dame fait tomber sa barri\u00e8re.'
   ]},
