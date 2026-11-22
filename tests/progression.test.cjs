@@ -127,6 +127,11 @@ test('The actual game loop introduces features at the announced levels',()=>{
     g.S.temps=(day-1)*g.CFG.SEC_PAR_JOUR;
     g.S.force=100;g.S.jauges=[90,90,90,90];g.S.argent=100000;g.S.attente=0;
     g.last=1000;g.tourDeBoucle(1000);
+    /* 22 nov. 2026 : chaque fin de mois s'arrête d'abord sur le tableau de victoire */
+    assert.ok(g.S.chapitre&&g.S.chapitre.mois===day-77,'tableau du mois '+(day-77));
+    assert.equal(g.S.jour,day-1);
+    g.fermerLeMoisTenu(false);g.last=1000;g.tourDeBoucle(1000);
+    assert.equal(g.S.jour,day);
     if(day===78)assert.equal(g.S.enfant,null);
     if(day===79)assert.ok(g.S.enfant);                       // mois 3 : le fils arrive
     if(day===80){assert.equal(g.S.filsParti,true);assert.equal(g.S.enfant,null);   // mois 4 : il part
@@ -253,7 +258,7 @@ test('Foyer charges once per recovering visit and enforces a full-day cooldown',
   g.iNiveau=1;g.demarrer();g.S.jour=1;g.S.temps=0;g.S.force=70;g.S.argent=1000;
   g.S.zone='CHANTIER';g.S.modou.x=g.CENTRE.x;g.S.modou.y=g.CENTRE.y;
   g.vivreDansLaZone(.1);assert.equal(g.S.argent,898);assert.ok(g.S.force>70);
-  g.S.temps+=g.CFG.SEC_PAR_JOUR;g.vivreDansLaZone(.1);assert.equal(g.S.argent,898);
+  g.S.temps+=g.CFG.SEC_PAR_CYCLE;g.vivreDansLaZone(.1);assert.equal(g.S.argent,898);
   g.S.zone='CHANTIER';g.vivreDansLaZone(.1);assert.equal(g.S.argent,796);
   g.S.zone='CHANTIER';g.vivreDansLaZone(.1);assert.equal(g.S.argent,796);
   g.sauvegarder();const saved=JSON.parse(data.get(g.CLE_PARTIE));
@@ -272,7 +277,7 @@ test('Foyer costs scale with ordinary wages; poverty never blocks recovery',()=>
   g.vivreDansLaZone(.1);assert.equal(g.S.argent,20);
   g.S.force=20;g.S.zone='CHANTIER';g.vivreDansLaZone(.1);
   assert.equal(g.S.argent,0);assert.ok(g.S.force>20);
-  g.S.temps+=g.CFG.SEC_PAR_JOUR;g.S.zone='CHANTIER';g.S.force=20;
+  g.S.temps+=g.CFG.SEC_PAR_CYCLE;g.S.zone='CHANTIER';g.S.force=20;
   g.vivreDansLaZone(.1);assert.equal(g.S.argent,0);assert.ok(g.S.force>20);
   delete g.S.dernierVersementFoyer;g.S.zone='CHANTIER';g.S.argent=1000;
   g.vivreDansLaZone(.1);assert.ok(g.S.argent<1000);
@@ -416,8 +421,8 @@ test('An absence weighs nothing on the day it happens and fully after two days',
   g.demarrer();g.gamePaused=false;g.S.argent=1000;
   g.S.parties[1]=true;g.S.departs=[null,g.S.temps,null,null];
   assert.ok(Math.abs(g.poidsDesAbsences())<1e-9);assert.equal(g.usureDesequilibre(),1);assert.equal(g.payeDesequilibre(),1);
-  g.S.temps+=g.CFG.SEC_PAR_JOUR;assert.ok(Math.abs(g.poidsDesAbsences()-0.5)<1e-9);
-  g.S.temps+=g.CFG.SEC_PAR_JOUR*3;assert.equal(g.poidsDesAbsences(),1);
+  g.S.temps+=g.CFG.SEC_PAR_CYCLE;assert.ok(Math.abs(g.poidsDesAbsences()-0.5)<1e-9);
+  g.S.temps+=g.CFG.SEC_PAR_CYCLE*3;assert.equal(g.poidsDesAbsences(),1);
   assert.ok(Math.abs(g.usureDesequilibre()-(1+g.CFG.DESEQUILIBRE_USURE))<1e-9);
   assert.ok(Math.abs(g.payeDesequilibre()-(1-g.CFG.DESEQUILIBRE_PAYE))<1e-9);
   delete g.S.departs;assert.equal(g.poidsDesAbsences(),1); // une vieille sauvegarde : plein poids
@@ -447,3 +452,36 @@ test('Level objectives: judged on the level, starred in progress, rewarded, then
   const saved=g.migrerSauvegarde({jour:8});assert.ok(saved.suivi&&saved.etoiles&&saved.departs);
 });
 console.log(`TOTAL: ${checks} tests passed, v13.3 incluse.`);
+
+/* ── 22 nov. 2026, v16 : un mois = cinq minutes, tableau de victoire, reprise du mois ── */
+test('A month lasts at least five minutes of play',()=>{
+  data.clear();g.iNiveau=0;g.demarrer();g.gamePaused=false;
+  assert.ok(g.CFG.SEC_PAR_JOUR>=300);
+  const debut=g.S.temps;
+  g.S.temps=debut+299;g.S.jauges=[90,90,90,90];g.S.force=100;g.last=1000;g.tourDeBoucle(1000);
+  assert.equal(g.S.jour,77);assert.equal(g.S.chapitre||null,null);
+  assert.ok(g.S.nuit===0||g.S.nuit>=0);   // la nuit continue de tourner dans le mois
+});
+test('Month end shows the victory board, then the next month starts',()=>{
+  data.clear();g.iNiveau=0;g.demarrer();g.gamePaused=false;
+  g.S.temps=77*g.CFG.SEC_PAR_JOUR+0.5;g.S.jauges=[90,90,90,90];g.S.force=100;
+  g.last=1000;g.tourDeBoucle(1000);
+  assert.equal(g.S.chapitre.mois,1);
+  assert.ok(nodes.get('chapitre').innerHTML.includes('Nous avons tenu un mois la maison de Modou'));
+  const t=g.S.temps;g.tourDeBoucle(1050);assert.equal(g.S.temps,t);   // tout est suspendu
+  g.fermerLeMoisTenu(false);g.last=1000;g.tourDeBoucle(1000);
+  assert.equal(g.S.jour,78);assert.equal(g.S.chapitre||null,null);
+});
+test('A lost month is replayed from its start with the same difficulty',()=>{
+  data.clear();g.iNiveau=1;g.demarrer();g.gamePaused=false;
+  g.S.temps=77*g.CFG.SEC_PAR_JOUR+0.5;g.S.jauges=[90,90,90,90];g.S.force=100;
+  g.last=1000;g.tourDeBoucle(1000);g.fermerLeMoisTenu(false);g.last=1000;g.tourDeBoucle(1000);
+  const photo=g.debutDuMoisEnAttente();
+  assert.equal(photo.jour,78);const argent=photo.argent,diff=photo.difficulte;
+  g.S.temps+=200;g.S.argent=3;g.finir('abandon');
+  assert.equal(nodes.get('btnReprendreMois').textContent,'Reprendre le mois 2');
+  g.iNiveau=0;g.reprendreLeMois();
+  assert.equal(g.S.jour,78);assert.equal(g.S.argent,argent);assert.equal(g.S.difficulte,diff);
+  assert.ok(g.S.temps<78*g.CFG.SEC_PAR_JOUR);assert.equal(g.S.enCours,true);
+});
+console.log(`TOTAL: ${checks} tests passed, v16 inclus.`);

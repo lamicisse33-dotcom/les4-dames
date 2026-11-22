@@ -1015,6 +1015,7 @@ body.playing #etapeJeu.visible{display:block}
   <div id="verdictList"></div>
   <p class="lede" id="finTexte"></p>
   <div style="display:flex;gap:9px;flex-wrap:wrap;justify-content:center">
+    <button class="cta hide" id="btnReprendreMois">Reprendre le mois</button>
     <button class="cta hide" id="btnProgres2">Continuer</button>
     <button class="cta ghost" id="btnRejouer">Recommencer</button>
     <button class="cta ghost" id="btnPartager">Partager</button>
@@ -1259,7 +1260,7 @@ function dameSVG(i){
    ========================================================= */
 'use strict';
 
-var BUILD_TAG = 'LQD-v15';
+var BUILD_TAG = 'LQD-v16';
 document.getElementById('build').textContent = BUILD_TAG;
 var vIntro = document.getElementById('versionIntro');
 if (vIntro) vIntro.textContent = BUILD_TAG;
@@ -1340,6 +1341,14 @@ function traiterAppui(e, n){
       demanderRappel(Number(n.id.slice(-1))); return;
     }
     if (n.id === 'chMenu'){ fermerLeChapitre(true); retourAuMenu(); return; }
+    if (n.id === 'moisSuivant'){ try { sonBouton(); fermerLeMoisTenu(false); } catch (err) {} return; }
+    if (n.id === 'moisMenu'){ try { sonBouton(); fermerLeMoisTenu(true); } catch (err) {} return; }
+    if (n.id === 'btnReprendreMois'){
+      if (e.cancelable) e.preventDefault();
+      try { audioInit(); sonBouton(); reprendreLeMois(); }
+      catch (err){ montrerErreur('reprise du mois : ' + (err && err.message ? err.message : err)); }
+      return;
+    }
     if (n.id === 'bordFermer'){ if (e.cancelable) e.preventDefault(); sonBouton(); fermerLeBord(); return; }
     if (n.id === 'bordVerrou'){
       try { localStorage.removeItem(CLE_ACCES); } catch (e) {}
@@ -1468,7 +1477,8 @@ document.addEventListener('touchend', surAppui, {passive:false});
 
 /* ---------- RÉGLAGES ---------- */
 var CFG = {
-  SEC_PAR_JOUR: 13,       // 8 s de jour, 5 s de nuit
+  SEC_PAR_JOUR: 300,      // 22 nov. 2026 : un mois dure cinq minutes
+  SEC_PAR_CYCLE: 13,      // à l'intérieur du mois, le chantier ouvre 8 s et ferme 5 s, comme avant
   PART_JOUR: 0.62,
   TRANSITION: 0.09,       // douceur de l'aube et du crépuscule
   NUIT_USURE: 0.60,       // la nuit, les Dames dorment : elles s'usent moins
@@ -2098,7 +2108,7 @@ var modouEl = null, voileNuit = null, voileCrep = null, cibleEl = null, enfantEl
 /* ---------- LE CYCLE JOUR / NUIT ---------- */
 function lissage(x){ x = Math.max(0, Math.min(1, x)); return x*x*(3 - 2*x); }
 function calculerNuit(){
-  var phase = (S.temps % CFG.SEC_PAR_JOUR) / CFG.SEC_PAR_JOUR;
+  var phase = ((S.temps % CFG.SEC_PAR_JOUR) % CFG.SEC_PAR_CYCLE) / CFG.SEC_PAR_CYCLE;   // chaque mois s'ouvre au matin
   var j = CFG.PART_JOUR, tr = CFG.TRANSITION;
   var n;
   if (phase < j - tr) n = 0;                                   // plein jour
@@ -2132,7 +2142,7 @@ function damesAbsentes(){
    cinq niveaux sur dix-huit tombaient en cascade le dernier jour. */
 function poidsDesAbsences(){
   if (!S || !S.parties) return 0;
-  var total = 0, fenetre = CFG.DESEQUILIBRE_MONTEE * CFG.SEC_PAR_JOUR;
+  var total = 0, fenetre = CFG.DESEQUILIBRE_MONTEE * CFG.SEC_PAR_CYCLE;
   for (var i=0;i<DAMES.length;i++){
     if (!S.parties[i]) continue;
     var depuis = (S.departs && S.departs[i] != null) ? S.temps - S.departs[i] : fenetre;
@@ -5030,7 +5040,7 @@ function prixCoursesFoyer(){
 function contribuerAuFoyer(){
   if (S.force >= 100) return;
   if (S.dernierVersementFoyer != null &&
-      S.temps - S.dernierVersementFoyer < CFG.SEC_PAR_JOUR) return;
+      S.temps - S.dernierVersementFoyer < CFG.SEC_PAR_CYCLE) return;
   var somme = Math.min(Math.max(0, S.argent), prixCoursesFoyer());
   S.argent -= somme;
   S.dernierVersementFoyer = S.temps;
@@ -5261,6 +5271,12 @@ function tourDeBoucle(ts){
   S.temps += dt;
 
   var jour = Math.floor(S.temps / CFG.SEC_PAR_JOUR) + 1;
+  /* 22 nov. 2026 : le mois est tenu. On s'arrête, on fête, et le mois suivant
+     ne commence qu'au bouton. */
+  if (jour > S.jour && S.jour >= CFG.DEBUT_JOUR && S.moisCelebre !== S.jour){
+    ouvrirLeMoisTenu();
+    return;
+  }
   if (jour !== S.jour){
     var palierAvant = palierActuel(S.jour);
     S.jour = jour;
@@ -5335,6 +5351,7 @@ function tourDeBoucle(ts){
         modouDit('Un mois. Je tiens encore.', 3000);
       }
     }
+    sauverDebutDuMois();
   }
 
   // cycle jour / nuit
@@ -5503,6 +5520,12 @@ function finir(cause){
     verdictRecord + '<br><br>Modou a gagn\u00e9 <b>' + Math.round(S.gagne) + ' F</b> sur le chantier.';
   afficherRecordAccueil();
   majBoutonProgres();
+  var bRm = document.getElementById('btnReprendreMois'), dm = debutDuMoisEnAttente();
+  if (bRm){
+    if (dm){ bRm.textContent = 'Reprendre le mois ' + moisDe(dm.jour); bRm.classList.remove('hide');
+             var bP = document.getElementById('btnProgres2'); if (bP) bP.classList.add('hide'); }
+    else bRm.classList.add('hide');
+  }
   document.getElementById('scrFin').classList.remove('hide');
   if (window.appliquerLaMajSiPossible) setTimeout(window.appliquerLaMajSiPossible, 1500);
 }
@@ -5673,6 +5696,48 @@ function ouvrirLeChapitre(){
   ecrireProgres();
   S.suivi = nouveauSuivi();     // le niveau suivant repart de zéro
   sauvegarder();
+}
+
+/* 22 nov. 2026 : le tableau de victoire, à la fin de chaque mois */
+function ouvrirLeMoisTenu(){
+  var mois = moisDe(S.jour);
+  noterAction('mois tenu');
+  S.chapitre = { niveau: Math.min(15, mois * 3), t:0, prochain:0, mois:mois };
+  document.body.classList.remove('playing');
+  couperLaParole();
+  stopperAuto();
+  var z = document.getElementById('chapitre');
+  z.className = 'on niv' + Math.min(5, mois);
+  z.innerHTML =
+    '<div class="chFond"></div>' +
+    '<div class="chScene"><div class="chModou">' + bonhommeSVG() + '</div>' +
+      (S.enfant ? '<div class="chEnfant">' + enfantSVG() + '</div>' : '') +
+      (S.moto ? '<div class="chAne">' + motoSVG() + '</div>' :
+       (S.ane ? '<div class="chAne">' + aneSVG() + '</div>' : '')) + '</div>' +
+    '<div class="chTexte">' +
+      '<div class="chPartie">MOIS ' + mois + ' \u00b7 ' + nomDuMois(S.jour).toUpperCase() + '</div>' +
+      '<div class="chTitre">MOIS TENU !</div>' +
+      '<div class="chSous">Nous avons tenu un mois la maison de Modou.<br>' +
+        '<b>Mois ' + (mois + 1) + ' : ' + nomDuMois(S.jour + 1) + '.</b> Ce sera un peu plus dur.</div>' +
+    '</div><div class="chBoutons">' +
+      '<button class="cta" id="moisSuivant">Mois suivant</button>' +
+      '<button class="cta ghost" id="moisMenu">Sauvegarder et quitter</button></div>';
+  ouvrirLaMusiqueDeFete();
+  fanfare(Math.min(4, mois));
+  parler('Mois ' + mois + ' tenu. Nous avons tenu un mois la maison de Modou.', VOIX_MODOU);
+  noter(S.jour, 'Mois ' + mois + ' tenu.');
+}
+function fermerLeMoisTenu(quitter){
+  S.moisCelebre = S.jour;
+  S.chapitre = null;
+  var z = document.getElementById('chapitre');
+  if (z){ z.className = ''; z.innerHTML = ''; }
+  var fx = document.getElementById('feux');
+  if (fx) setTimeout(function(){ if (fx) fx.innerHTML = ''; }, 1400);
+  fermerLaMusiqueDeFete();
+  if (quitter){ retourAuMenu(); return; }
+  document.body.classList.add('playing');
+  last = 0;
 }
 
 function majChapitre(dt){
@@ -6356,6 +6421,35 @@ function sauvegarder(){
     localStorage.setItem(CLE_PARTIE, JSON.stringify(copie));
   } catch (e) {}
 }
+/* 22 nov. 2026 : la photo du début du mois. Si la maison tombe, on reprend
+   ce mois-là depuis son premier instant, avec la même difficulté. */
+var CLE_DEBUT_MOIS = 'lqd_debut_mois_v1';
+function sauverDebutDuMois(){
+  if (!S || !S.enCours) return;
+  try {
+    var copie = JSON.parse(JSON.stringify(S));
+    copie.chapitre = null; copie.fete = null; copie.auto = null; copie.sortieVue = 0;
+    if (copie.enfant){ copie.enfant.route = null; copie.enfant.phase = 'libre'; }
+    copie.cool = 0;
+    copie.version = BUILD_TAG;
+    localStorage.setItem(CLE_DEBUT_MOIS, JSON.stringify(copie));
+  } catch (e) {}
+}
+function debutDuMoisEnAttente(){
+  try {
+    var t = localStorage.getItem(CLE_DEBUT_MOIS);
+    if (!t) return null;
+    var d = JSON.parse(t);
+    if (!d || !d.enCours || !d.jauges) return null;
+    return d;
+  } catch (e) { return null; }
+}
+function reprendreLeMois(){
+  var d = debutDuMoisEnAttente();
+  if (!d) { demarrer(); return; }
+  try { localStorage.setItem(CLE_PARTIE, JSON.stringify(d)); } catch (e) { demarrer(); return; }
+  reprendreLaPartie();
+}
 function partieEnAttente(){
   try {
     var t = localStorage.getItem(CLE_PARTIE);
@@ -6819,6 +6913,7 @@ function demarrer(){
   document.getElementById('scrFin').classList.add('hide');
   majRecord();
   sauvegarder();
+  sauverDebutDuMois();
   majBoutonReprendre();
   couperLaParole();
   majBoutonEnfant();
