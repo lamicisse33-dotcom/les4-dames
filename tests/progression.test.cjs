@@ -121,7 +121,7 @@ console.log(`${checks} progression tests passed; all ${scripts.length} inline sc
 test('The actual game loop introduces features at the announced levels',()=>{
   data.clear();g.iNiveau=0;g.demarrer();g.gamePaused=false;
   /* 22 nov. 2026 : la partie s'ouvre au 77e jour (mois 1), à vélo, sans le fils. */
-  assert.equal(g.S.jour,77);assert.equal(g.S.ane,true);assert.equal(g.S.moto,false);assert.equal(g.S.enfant,null);
+  assert.equal(g.S.jour,77);assert.equal(g.S.ane,false);assert.equal(g.S.aneOffert,false);assert.equal(g.S.moto,false);assert.equal(g.S.enfant,null);   // v17 : à pied
   for(let day=78;day<=88;day++){
     if(g.S.chapitre)g.fermerLeChapitre(true);
     g.S.temps=(day-1)*g.CFG.SEC_PAR_JOUR;
@@ -135,7 +135,7 @@ test('The actual game loop introduces features at the announced levels',()=>{
     if(day===78)assert.ok(g.S.enfant);                       // mois 2 : le fils arrive
     // (22 nov. : le fils arrive au mois 2, part au mois 3)
     if(day===79){assert.equal(g.S.filsParti,true);assert.equal(g.S.enfant,null);   // mois 4 : il part
-      assert.equal(g.S.moto,true);assert.equal(g.S.ane,false);assert.equal(g.S.dette,0);} // vélo échangé contre la moto
+      assert.equal(g.S.motoOfferte,true);assert.equal(g.S.moto,false);} // v17 : la moto est proposée à crédit, à prendre au chantier
     if(day===79)assert.equal(g.S.mandatsEnvoyes,1);   // dès la semaine qui suit son départ
     if(day===82){assert.equal(g.S.vacances,true);assert.ok(g.S.enfant);}       // mois 6 : le fils revient
     if(day===83){assert.equal(g.S.vacances,false);assert.equal(g.S.enfant,null);   // mois 7 : il repart
@@ -553,4 +553,26 @@ test('A departed Dame costs a weekly pension, stopped when she is back',()=>{
   assert.ok(S.argent>=a-50,'plus de pension quand elle est revenue');
   assert.equal(String(nodes.get('semaineNum').textContent),'2');   // deux semaines tenues
 });
-console.log(`TOTAL: ${checks} tests passed, v16.5 inclus.`);
+test('v17: on foot in week 1, bike for sale from week 2, moto on credit when the son leaves',()=>{
+  data.clear();g.iNiveau=1;g.demarrer();g.gamePaused=false;const S=g.S,W=g.CFG.SEC_PAR_SEMAINE,T0=76*g.CFG.SEC_PAR_JOUR;
+  assert.equal(S.ane,false);assert.equal(g.statutActuel().nom,'Apprenti');
+  S.temps=T0+W+0.5;S.jauges=[90,90,90,90];g.last=1000;g.tourDeBoucle(1000);
+  assert.equal(S.aneOffert,true);assert.equal(S.ane,false);
+  const pv=g.prixDuVelo();assert.equal(pv,2*g.prixDuJour('TEMPLE'));
+  S.argent=pv+10;assert.equal(g.acheterLAne(),true);assert.equal(S.ane,true);assert.ok(S.argent<11);
+  g.leFilsPart();assert.equal(S.motoOfferte,true);assert.equal(S.moto,false);
+  assert.equal(g.prendreLaMoto(),true);assert.equal(S.moto,true);assert.equal(S.dette,g.prixDeLaMoto());
+});
+test('v17: Modou climbs one grade at a time by week, and each promotion catches up with prices',()=>{
+  data.clear();g.iNiveau=1;g.demarrer();g.gamePaused=false;const S=g.S,W=g.CFG.SEC_PAR_SEMAINE,T0=76*g.CFG.SEC_PAR_JOUR;
+  const noms=[];let avant=0;
+  for(let w=0;w<48;w++){
+    S.temps=T0+w*W+1;const n=g.statutActuel().nom;if(noms[noms.length-1]!==n)noms.push(n);
+    const ratio=g.payeModou()/(g.CFG.PAYE_BASE*g.facteurPrix());
+    assert.ok(ratio<=1+1e-9&&ratio>0.85,'la paye suit les prix (semaine '+w+' : '+ratio.toFixed(3)+')');
+    if(g.GRADES.some(x=>x.sem===w))assert.ok(Math.abs(ratio-1)<1e-9,'promotion = rattrapage');
+    assert.ok(g.payeModou()>=avant);avant=g.payeModou();
+  }
+  assert.equal(noms.length,8);assert.equal(noms[0],'Apprenti');assert.equal(noms[7],'Ma\u00eetre b\u00e2tisseur');
+});
+console.log(`TOTAL: ${checks} tests passed, v17 inclus.`);

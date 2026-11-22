@@ -2,7 +2,7 @@
    Règle d'or : le HTML passe TOUJOURS par le réseau d'abord.
    Sinon une mise à jour du jeu ne remonte jamais sur l'appareil. */
 
-var CACHE = 'lqd-v16.9';
+var CACHE = 'lqd-v17';
 var FICHIERS = [
   './',
   './index.html',

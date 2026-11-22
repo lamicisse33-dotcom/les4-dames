@@ -1285,7 +1285,7 @@ function dameSVG(i){
    ========================================================= */
 'use strict';
 
-var BUILD_TAG = 'LQD-v16.9';
+var BUILD_TAG = 'LQD-v17';
 document.getElementById('build').textContent = BUILD_TAG;
 var vIntro = document.getElementById('versionIntro');
 if (vIntro) vIntro.textContent = BUILD_TAG;
@@ -1597,6 +1597,9 @@ var CFG = {
   DESEQUILIBRE_USURE: 0.35,   // 22 nov. 2026 : 0,15 → 0,35, sinon sur des mois de 5 min une Dame laissée partir ne coûtait plus rien (robot : 101 %)
   /* ancien : 0,15 */   // +15 % d'usure par Dame absente (30 % à deux) — la montée sur deux jours rend ce taux tenable
   DESEQUILIBRE_PAYE: 0,     // 22 nov. 2026 : remplacée par la pension, visible, à chaque semaine
+  PAYE_BASE: 1.80,        // la paye de l'apprenti du mois 1 (inchangée : l'équilibre des prix en dépend)
+  VELO_FOIS: 2,           // le vélo coûte deux courses au temple
+  MOTO_FOIS: 6,           // la moto, six — à crédit, retenue sur la paye
   PENSION_PART: 0.50,     // la pension d'une Dame partie : 50 % d'une semaine de paye pleine du chantier
   MOIS_CHAMPION: 12,      // tenir un an = champion (Lamine, 22 nov.)
      // -15 % de paye par Dame absente (30 % à deux)
@@ -1653,9 +1656,31 @@ var STATUTS = [
   { nom:'Chef de chantier',   paye:3.20 },
   { nom:'Ma\u00eetre b\u00e2tisseur',   paye:4.20 }
 ];
+/* 22 nov. 2026, 18 h, Lamine : Modou progresse À LA SEMAINE, comme avant par
+   grades — apprenti, manœuvre, maçon… — et « les augmentations doivent suivre
+   les dépenses ». Entre deux promotions sa paye monte un peu moins vite que les
+   prix ; à chaque promotion elle les rattrape entièrement. */
+var GRADES = [
+  { sem:0,  nom:'Apprenti' },
+  { sem:2,  nom:'Man\u0153uvre' },
+  { sem:5,  nom:'Ma\u00e7on' },
+  { sem:9,  nom:'Chef d\u2019\u00e9quipe' },
+  { sem:14, nom:'Contrema\u00eetre' },
+  { sem:20, nom:'Chef de chantier' },
+  { sem:28, nom:'Conducteur de travaux' },
+  { sem:38, nom:'Ma\u00eetre b\u00e2tisseur' }
+];
+function gradeDeLaSemaine(w){
+  var i = 0;
+  for (var k=0;k<GRADES.length;k++) if (w >= GRADES[k].sem) i = k;
+  return i;
+}
 function statutActuel(){
   if (!S) return STATUTS[0];
-  return STATUTS[Math.min(STATUTS.length - 1, Math.floor((Math.min(S.jour, CFG.DEBUT_JOUR) - 1) / CFG.MOIS))];   // ensuite, Modou avance à la semaine (payeModou)
+  if (S.jour < CFG.DEBUT_JOUR)
+    return STATUTS[Math.min(STATUTS.length - 1, Math.floor((S.jour - 1) / CFG.MOIS))];
+  /* la base de paye (1,80) ne bouge plus : elle fixe aussi le niveau des prix */
+  return { nom: GRADES[gradeDeLaSemaine(semaineDe())].nom, paye: CFG.PAYE_BASE };
 }
 /* 22 nov. 2026 : tout avance à la semaine (quatre par mois de cinq minutes).
    Chaque semaine, les prix montent, la paye de Modou monte un peu moins vite,
@@ -1665,8 +1690,11 @@ function semaineDe(){
   return Math.max(0, Math.floor((S.temps - (CFG.DEBUT_JOUR - 1) * CFG.SEC_PAR_JOUR) / CFG.SEC_PAR_SEMAINE));
 }
 function semaineDuMois(){ return (semaineDe() % 4) + 1; }
-function facteurPrix(){ return Math.pow(1 + (NIV().hausseHebdo || 0), semaineDe()); }
-function facteurPaye(){ return Math.pow(1 + (NIV().payeHebdo || 0), semaineDe()); }
+function facteurPrix(w){ return Math.pow(1 + (NIV().hausseHebdo || 0), w == null ? semaineDe() : w); }
+function facteurPaye(){
+  var w = semaineDe(), wp = GRADES[gradeDeLaSemaine(w)].sem;      // la dernière promotion
+  return facteurPrix(wp) * Math.pow(1 + (NIV().payeHebdo || 0), w - wp);
+}
 function payeModou(){ return statutActuel().paye * facteurPaye(); }
 function annoncerLePromotion(){
   var st = statutActuel();
@@ -1715,12 +1743,14 @@ function estConge(j){ return Math.floor((j - 1) / CFG.MOIS) % 6 === 5; }
 /* 22 nov. 2026 — réglage à la semaine (robot, tests/economie.cjs, un mois = 5 min) :
    (v16.5, année du champion = 12 mois) Facile perdu vers le mois 11, Difficile vers le mois 6,
    Très difficile vers le mois 3. Personne ne devient champion sans bien jouer.
+   v17 : la paye rattrape les prix à chaque promotion ; la difficulté vient de l'usure
+   (pressionHebdo), du mandat, des pensions. Semaine 1 à pied, vélo acheté ensuite.
    hausseHebdo : les prix et les charges, chaque semaine ; payeHebdo : la paye de Modou ;
    pressionHebdo : l'usure des Dames ; pressionDepart : l'usure au premier mois. */
 var NIVEAUX = [
   { cle:'facile',  nom:'Facile',
     inflation:0.20, pressionMax:1.00, usure:0.90, paye:1.20, mandat:0.70,
-    hausseHebdo:0.030, payeHebdo:0.010, pressionHebdo:0.035, pressionDepart:0.30,
+    hausseHebdo:0.030, payeHebdo:0.020, pressionHebdo:0.090, pressionDepart:0.30,
     dit:'Les prix montent moins vite et Modou s\u2019use moins. Pour d\u00e9couvrir.' },
   { cle:'dur',     nom:'Difficile',
     /* 31 oct. 2026 : 1,25 → 1,15. Les allées barrées ajoutent de la
@@ -1728,11 +1758,11 @@ var NIVEAUX = [
        robot tombait au jour 83 et ne passait plus que 13 niveaux sur 18.
        À 1,15 : jour 96, 18 niveaux sur 18. La pente reste celle du 30. */
     inflation:0.30, pressionMax:1.60, usure:1.15, paye:1.00, mandat:1.00,
-    hausseHebdo:0.035, payeHebdo:0.025, pressionHebdo:0.030, pressionDepart:0.65,
+    hausseHebdo:0.035, payeHebdo:0.025, pressionHebdo:0.045, pressionDepart:0.65,
     dit:'Le r\u00e9glage normal du jeu. Les scores de r\u00e9f\u00e9rence.' },
   { cle:'tresdur', nom:'Très difficile',
     inflation:0.40, pressionMax:2.20, usure:1.35, paye:0.85, mandat:1.30,
-    hausseHebdo:0.050, payeHebdo:0.025, pressionHebdo:0.045, pressionDepart:0.30,
+    hausseHebdo:0.050, payeHebdo:0.040, pressionHebdo:0.045, pressionDepart:0.15,
     dit:'Tout co\u00fbte plus cher, la paye baisse. La vie ne fait aucun cadeau.' }
 ];
 var iNiveau = 0;
@@ -4221,39 +4251,45 @@ function aneSVG(){
   '</svg>';
 }
 
-function proposerLAne(){
-  if (S.aneOffert) return;
+function proposerLAne(delai){
+  var premier = !S.aneOffert;
   S.aneOffert = true;
   S.rappelAne = 0;
-  flash('L\u2019\u00e2ne du Vieux Serigne : ' + CFG.PRIX_ANE +
-        ' F. Va au temple avec la somme, il est \u00e0 toi.', 4600);
-  parler('Un \u00e2ne\u2026 je n\u2019aurais plus mal aux jambes.', VOIX_MODOU);
-  noter(S.jour, 'Le gardien du temple propose son \u00e2ne.');
+  setTimeout(function(){
+    if (!S || !S.enCours || S.ane || S.moto) return;
+    flash('Un v\u00e9lo est \u00e0 vendre au temple : ' + fmtF(prixDuVelo()) +
+          '. Vas-y avec la somme, il est \u00e0 toi.', 4600);
+    if (premier) parler('Un v\u00e9lo\u2026 je n\u2019aurais plus mal aux jambes.', VOIX_MODOU);
+  }, delai || 0);
+  if (premier) noter(S.jour, 'Un v\u00e9lo est \u00e0 vendre au temple.');
   var b = badgesEl.TEMPLE;
   if (b) b.classList.add('dernier');
 }
 
+function prixDuVelo(){ return Math.round(CFG.VELO_FOIS * prixDuJour('TEMPLE')); }
+function prixDeLaMoto(){ return Math.round(CFG.MOTO_FOIS * prixDuJour('TEMPLE')); }
 function acheterLAne(){
   if (S.ane || !S.aneOffert) return false;
-  if (S.argent < CFG.PRIX_ANE){
+  var pv = prixDuVelo();
+  if (S.argent < pv){
     if (S.cool <= 0){
-      flash('L\u2019\u00e2ne co\u00fbte ' + CFG.PRIX_ANE + ' F. Il te manque ' +
-            (CFG.PRIX_ANE - Math.floor(S.argent)) + ' F.', 2600);
+      flash('Le v\u00e9lo co\u00fbte ' + fmtF(pv) + '. Il te manque ' +
+            fmtF(pv - Math.floor(S.argent)) + '.', 2600);
       S.cool = 3;
     }
     return false;
   }
-  S.argent -= CFG.PRIX_ANE;
+  S.argent -= pv;
   S.ane = true;
-  volant('-' + CFG.PRIX_ANE + ' F', '#9A8F85');
+  volant('-' + pv + ' F', '#9A8F85');
   sonCaisse();
   var b = badgesEl.TEMPLE;
   if (b) b.classList.remove('dernier');
   if (modouEl) modouEl.classList.add('surLane');
-  flash('Modou a son \u00e2ne. Il va deux fois plus vite.', 3600);
+  flash('Modou a son v\u00e9lo. Il va deux fois plus vite.', 3600);
   parleDame(2, 'Que la route te soit douce.');
   parler('Merci Serigne ! Je vais voler maintenant !', VOIX_MODOU);
-  noter(S.jour, 'Modou ach\u00e8te l\u2019\u00e2ne pour ' + CFG.PRIX_ANE + ' F.');
+  noter(S.jour, 'Modou ach\u00e8te le v\u00e9lo pour ' + fmtF(pv) + '.');
   return true;
 }
 
@@ -4276,17 +4312,8 @@ function leFilsPart(){
         ' F partent tout seuls pour lui.', 4600);
   parler('Mon fils s\u2019en va \u00e9tudier. Qu\u2019Allah le garde.', VOIX_MODOU);
   noter(S.jour, 'Le fils part \u00e9tudier.');
-  if (!S.moto){
-    S.ane = false; S.moto = true; S.dette = 0; S.motoOfferte = true;
-    if (modouEl){ modouEl.classList.remove('surLane'); modouEl.classList.add('surLaMoto'); }
-    setTimeout(function(){
-      if (!S || !S.enCours) return;
-      flash('Seul maintenant, Modou \u00e9change son v\u00e9lo contre une moto. Ses trajets vont deux fois plus vite.', 4600);
-      parler('Une moto ! Il va falloir tenir la maison tout seul.', VOIX_MODOU);
-      sonCaisse();
-    }, 4800);
-    noter(S.jour, 'Modou \u00e9change son v\u00e9lo contre une moto.');
-  }
+  /* 22 nov. 2026, 18 h : la moto ne tombe plus du ciel, Modou l'achète (à crédit) */
+  if (!S.moto) proposerLaMoto(4800);
 }
 
 /* L'argent part tout seul. Modou l'appelle ensuite pour s'assurer qu'il est arrivé. */
@@ -4371,7 +4398,7 @@ function verserLesPensions(){
   }
   if (!qui.length) return;
   var txt = 'Pension vers\u00e9e \u00e0 ' + qui.join(' et ') + ' : \u2212' + fmtF(p * qui.length);
-  setTimeout(function(){ if (S && S.enCours) flash(txt, 3400); }, 3700);
+  setTimeout(function(){ if (S && S.enCours) flash(txt, 2600); }, 5400);
   noter(S.jour, txt);
   sonCaisse();
 }
@@ -4381,13 +4408,25 @@ function nouvelleSemaine(){
   var txt = 'Semaine ' + semaineDuMois() + ' \u2014 les prix montent de ' + String(hp).replace('.', ',') +
             ' %, ta paye de ' + String(hy).replace('.', ',') + ' %.';
   if (semaineDuMois() !== 1){                      // la semaine 1 s'ouvre avec le nouveau mois
-    flash('<b>UNE SEMAINE TENUE ! BRAVO !</b><br>' + txt, 3600);
+    flash('UNE SEMAINE TENUE ! BRAVO !', 2600);
     voixDuJeu('semaine');
+    setTimeout(function(){ if (S && S.enCours && !S.chapitre) flash(txt, 2600); }, 2700);
   }
   noter(S.jour, txt);
   marquerHausse();
   if (S.filsParti && !S.vacances) envoyerLeMandatSeul();
   verserLesPensions();
+  var gA = gradeDeLaSemaine(semaineDe() - 1), gB = gradeDeLaSemaine(semaineDe());
+  if (gB > gA){
+    var nomG = GRADES[gB].nom;
+    setTimeout(function(){
+      if (!S || !S.enCours) return;
+      flash('PROMOTION ! Le patron te nomme ' + nomG + '. Ta paye rattrape les prix.', 2600);
+      parler('Je suis ' + nomG + ' maintenant !', VOIX_MODOU);
+    }, 8100);
+    noter(S.jour, 'Modou devient ' + nomG + '.');
+  }
+  if (!S.ane && !S.moto) proposerLAne(10800);       // dès la 2e semaine : le vélo est à vendre (rappel chaque semaine)
 }
 function envoyerLeMandatSeul(){
   var m = montantDuMandat() + (S.arriere || 0);
@@ -4455,11 +4494,15 @@ function motoSVG(){
   '</svg>';
 }
 
-function proposerLaMoto(){
+function proposerLaMoto(delai){
   if (S.motoOfferte) return;
   S.motoOfferte = true;
-  flash('Moto \u00e0 cr\u00e9dit : rien \u00e0 payer d\u2019avance. Passe au chantier pour la prendre.', 4600);
-  parler('Une moto\u2026 \u00e0 cr\u00e9dit. Est-ce que j\u2019ose ?', VOIX_MODOU);
+  setTimeout(function(){
+    if (!S || !S.enCours || S.moto) return;
+    flash('Seul maintenant : une moto \u00e0 cr\u00e9dit, ' + fmtF(prixDeLaMoto()) +
+          ', rien \u00e0 payer d\u2019avance. Passe au chantier pour la prendre.', 5000);
+    parler('Une moto\u2026 \u00e0 cr\u00e9dit. Est-ce que j\u2019ose ?', VOIX_MODOU);
+  }, delai || 0);
   noter(S.jour, 'Le patron propose une moto \u00e0 cr\u00e9dit.');
   var b = badgesEl.CHANTIER;
   if (b) b.classList.add('dernier');
@@ -4468,7 +4511,9 @@ function proposerLaMoto(){
 function prendreLaMoto(){
   if (S.moto || !S.motoOfferte) return false;
   S.moto = true;
-  S.dette = CFG.MOTO_PRIX;
+  S.motoPrix = prixDeLaMoto();
+  S.dette = S.motoPrix;
+  S.ane = false;
   var b = badgesEl.CHANTIER;
   if (b) b.classList.remove('dernier');
   if (modouEl){ modouEl.classList.remove('surLane'); modouEl.classList.add('surLaMoto'); }
@@ -4476,7 +4521,7 @@ function prendreLaMoto(){
   flash('La moto est \u00e0 toi. Le patron retiendra ' +
         Math.round(CFG.MOTO_RETENUE * 100) + ' % de chaque paye.', 4200);
   parler('La moto est \u00e0 moi ! Je vais tout rattraper !', VOIX_MODOU);
-  noter(S.jour, 'Moto prise \u00e0 cr\u00e9dit : ' + CFG.MOTO_PRIX + ' F.');
+  noter(S.jour, 'Moto prise \u00e0 cr\u00e9dit : ' + fmtF(S.motoPrix) + '.');
   return true;
 }
 
@@ -4484,7 +4529,7 @@ function majBandeauDette(){
   var z = document.getElementById('dette');
   if (!z) return;
   if (!S || !S.moto || S.dette <= 0){ z.className = ''; return; }
-  var part = Math.max(0, Math.min(1, 1 - S.dette / CFG.MOTO_PRIX));
+  var part = Math.max(0, Math.min(1, 1 - S.dette / (S.motoPrix || CFG.MOTO_PRIX)));
   z.className = 'on';
   z.innerHTML = '<span class="mpic">\uD83C\uDFCD\uFE0F</span>' +
                 '<span class="mbar"><i style="width:' + (part*100).toFixed(0) + '%"></i></span>' +
@@ -5291,7 +5336,7 @@ function vivreDansLaZone(dt){
           noter(S.jour, 'Moto rembours\u00e9e.');
         }
       }
-      if ((S.pret || 0) > 0){
+      if ((S.pret || 0) > 0 && !(S.moto && S.dette > 0)){     // une seule retenue à la fois : la moto d'abord
         var rPret = Math.min(S.pret, paye * CFG.PRET_RETENUE);
         S.pret -= rPret;
         paye -= rPret;
@@ -5324,7 +5369,7 @@ function vivreDansLaZone(dt){
     // l'état de la maison ne les concernent. Mais s'ils ne sont pas payables,
     // ils ne doivent JAMAIS empêcher de servir la Dame qui habite là.
     var affaireFaite = false;
-    if (S.zone === 'TEMPLE' && S.aneOffert && !S.ane && S.argent >= CFG.PRIX_ANE){
+    if (S.zone === 'TEMPLE' && S.aneOffert && !S.ane && !S.moto && S.argent >= prixDuVelo()){
       if (acheterLAne()){ S.cool = 2; affaireFaite = true; }
     }
 
@@ -5510,8 +5555,7 @@ function tourDeBoucle(ts){
     if (S.aneOffert && !S.ane && !S.moto){
       S.rappelAne = (S.rappelAne || 0) + 1;
       if (S.rappelAne % 5 === 0){
-        flash('L\u2019\u00e2ne du Vieux Serigne t\u2019attend au temple \u2014 ' +
-              CFG.PRIX_ANE + ' F.', 3000);
+        flash('Le v\u00e9lo t\u2019attend au temple \u2014 ' + fmtF(prixDuVelo()) + '.', 3000);
         var bt = badgesEl.TEMPLE;
         if (bt) bt.classList.add('dernier');
       }
@@ -5871,7 +5915,7 @@ function ouvrirLeChapitre(){
        (S.ane ? '<div class="chAne">' + aneSVG() + '</div>' : '')) + '</div>' +
     '<div class="chTexte">' +
       '<div class="chPartie">NIVEAU ' + niveau + ' / ' + ETAPES.length + ' TERMINÉ</div>' +
-      '<div class="chGrade">' + statutActuel().nom + ' · paye ×' + statutActuel().paye.toFixed(2).replace('.', ',') + '</div>' +
+      '<div class="chGrade">' + statutActuel().nom + ' · paye ×' + payeModou().toFixed(2).replace('.', ',') + '</div>' +
       '<div class="chTitre">' + (suivant ? 'BRAVO !' : 'DOMAINE MAÎTRISÉ !') + '</div>' +
       '<div class="chSous">' + C.t + ' : dix jours tenus.<br>' +
       (S.verdictNiveau ? (S.verdictNiveau.reussi
@@ -7203,8 +7247,8 @@ function commencerAuMoisUn(){
   S.moisSalue = true;
   S.argent = Math.round(CFG.ARGENT_DEPART * Math.pow(1 + NIV().inflation, palierActuel()));
   S.filsParti = false;
-  S.ane = true; S.aneOffert = true;      // le vélo, dès le départ
-  S.moto = false; S.motoOfferte = true;  // la moto viendra du troc, au départ du fils
+  S.ane = false; S.aneOffert = false;    // 22 nov., 18 h : la 1re semaine à pied ; le vélo s'achète dès la 2e
+  S.moto = false; S.motoOfferte = false; // la moto s'achète à crédit au départ du fils (mois 3)
 }
 function demarrer(){
   noterAction('démarrage d une partie');
