@@ -81,7 +81,7 @@ test('Restarting each checkpoint restores its available features',()=>{
     const j=(n-1)*10+1; // 22 nov. 2026 : calendrier en mois, seuils lus dans CFG
     assert.equal(g.S.filsParti,j>=g.CFG.FILS_DEPART_JOUR);assert.equal(g.S.aneOffert,j>=g.CFG.ANE_JOUR);
     assert.equal(g.S.saisonPluies,j>=g.CFG.PLUIE_JOUR);assert.equal(g.S.motoOfferte,j>=g.CFG.MOTO_JOUR);
-    assert.equal(g.S.vacances,n===12);
+    assert.equal(g.S.vacances,j>=g.CFG.VACANCES_JOUR&&j<g.CFG.VACANCES_JOUR+g.CFG.VACANCES_DUREE);
     assert.equal(g.peutFeter(),false);
   }
 });
@@ -122,7 +122,7 @@ test('The actual game loop introduces features at the announced levels',()=>{
   data.clear();g.iNiveau=0;g.demarrer();g.gamePaused=false;
   /* 22 nov. 2026 : la partie s'ouvre au 77e jour (mois 1), à vélo, sans le fils. */
   assert.equal(g.S.jour,77);assert.equal(g.S.ane,true);assert.equal(g.S.moto,false);assert.equal(g.S.enfant,null);
-  for(let day=78;day<=181;day++){
+  for(let day=78;day<=88;day++){
     if(g.S.chapitre)g.fermerLeChapitre(true);
     g.S.temps=(day-1)*g.CFG.SEC_PAR_JOUR;
     g.S.force=100;g.S.jauges=[90,90,90,90];g.S.argent=100000;g.S.attente=0;
@@ -137,16 +137,18 @@ test('The actual game loop introduces features at the announced levels',()=>{
     if(day===79){assert.equal(g.S.filsParti,true);assert.equal(g.S.enfant,null);   // mois 4 : il part
       assert.equal(g.S.moto,true);assert.equal(g.S.ane,false);assert.equal(g.S.dette,0);} // vélo échangé contre la moto
     if(day===79)assert.equal(g.S.mandatsEnvoyes,1);   // dès la semaine qui suit son départ
-    if(day===91)assert.equal(g.S.saisonPluies,true);
-    if(day===92)assert.equal(g.S.toitPropose,true);
-    if(day===111){assert.equal(g.S.vacances,true);assert.ok(g.S.enfant);}
-    if(day===118){assert.equal(g.S.vacances,false);assert.equal(g.S.enfant,null);}
-    if(day===151)assert.equal(g.estConge(day),true);
+    if(day===83)assert.equal(g.S.saisonPluies,true);        // mois 7 : les pluies
+    if(day===84){assert.equal(g.S.toitPropose,true);assert.equal(g.S.vacances,true);assert.ok(g.S.enfant);}
+    if(day===85){assert.equal(g.S.vacances,false);assert.equal(g.S.enfant,null);}
     // A new day is processed before the transition is presented on the next frame.
     g.tourDeBoucle(1000);
   }
   assert.equal(g.S.etapesTerminees,18);
-  assert.equal(g.S.chapitre||null,null);   // plus de niveaux : aucun écran de chapitre
+  /* le 12e mois tenu : CHAMPION, la partie s'arrête en victoire */
+  g.S.temps=88*g.CFG.SEC_PAR_JOUR;g.S.jauges=[90,90,90,90];g.last=1000;g.tourDeBoucle(1000);
+  assert.ok(g.S.chapitre&&g.S.chapitre.champion);assert.equal(g.S.enCours,false);
+  assert.ok(nodes.get('chapitre').innerHTML.includes('CHAMPION'));
+  g.fermerLeChampion(false);
 });
 console.log(`TOTAL: ${checks} tests passed.`);
 test('Every Dame grants only her own benefit while she is at the foyer',()=>{
@@ -537,4 +539,14 @@ test('Loan: only with two Dames left, once a month, 2000 F repaid 4000 F from pa
   assert.ok(S.pret<p0,'la paye rembourse');
   S.pret=0;assert.equal(g.peutEmprunter(),false,'un seul prêt dans le mois');
 });
-console.log(`TOTAL: ${checks} tests passed, v16.3 inclus.`);
+test('A departed Dame costs a weekly pension, stopped when she is back',()=>{
+  data.clear();g.iNiveau=1;g.demarrer();g.gamePaused=false;const S=g.S,W=g.CFG.SEC_PAR_SEMAINE,T0=76*g.CFG.SEC_PAR_JOUR;
+  g.faitPartir(2);S.argent=50000;const p=g.pensionDUneDame();assert.ok(p>500);
+  S.temps=T0+W+0.5;S.jauges=[90,90,0,90];g.last=1000;g.tourDeBoucle(1000);
+  assert.ok(Math.abs(S.argent-(50000-p))<p*0.2,'une pension prise');
+  assert.equal(g.CFG.DESEQUILIBRE_PAYE,0);
+  S.parties[2]=false;const a=S.argent;S.temps=T0+2*W+0.5;g.last=1000;g.tourDeBoucle(1000);
+  assert.ok(S.argent>=a-50,'plus de pension quand elle est revenue');
+  assert.equal(String(nodes.get('semaineNum').textContent),'3');
+});
+console.log(`TOTAL: ${checks} tests passed, v16.5 inclus.`);

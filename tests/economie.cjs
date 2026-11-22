@@ -50,7 +50,7 @@ module.exports={jouer};
 if(require.main===module){
  const assert=require('node:assert/strict');
  /* 22 nov. 2026 : un mois = 5 minutes, tout monte à la semaine. On compte en MOIS
-    (le jour interne 77 est le mois 1). Cibles : Facile tient au moins 12 mois,
+    (le jour interne 77 est le mois 1). Cibles (v16.5, champion à 12 mois) : Facile tombe entre le mois 8 et le mois 11,
     Difficile tombe entre le mois 4 et le mois 8, Très difficile entre 2 et 4. */
  const FIN=77+24, mois=r=>r.perdu?r.perdu-76:null;
  const dur=jouer('dur',{seuil:45,repos:35},FIN),tres=jouer('tresdur',{seuil:45,repos:35},FIN),fac=jouer('facile',{seuil:45,repos:35},FIN);
@@ -58,7 +58,7 @@ if(require.main===module){
    console.log(nom,':',r.perdu?'perdu au mois '+mois(r):'tient 24 mois','|',r.argent+' F en caisse');
  assert.ok(mois(dur)&&mois(dur)>=4&&mois(dur)<=8,'Difficile hors cible');
  assert.ok(mois(tres)&&mois(tres)>=2&&mois(tres)<=4,'Très difficile hors cible');
- assert.ok(!fac.perdu||mois(fac)>=12,'Facile trop dur');
+ assert.ok(fac.perdu&&mois(fac)>=8&&mois(fac)<=11,'Facile hors cible (le robot moyen ne doit pas être champion)');
 
  /* LA PREUVE DE « LA MAISON DÉSÉQUILIBRÉE » — 31 octobre 2026.
     Lamine : « une Dame partie doit coûter. » Avant la règle, le contraire
@@ -119,7 +119,9 @@ if(require.main===module){
       Une Dame perdue ne coûte donc plus que la fin de son mois : en Facile le
       robot négligent tient ~77 % du temps du servant. En attente de la décision
       de Lamine, la règle des 60 % n'est exigée qu'en Difficile. */
-   if ((cle === 'dur' && !okT) || (exigee && !okA)) coute = false;
+   /* v16.5 : la pension remplace la baisse de paye ; une Dame qui part en fin de mois
+      revient au mois suivant. La règle des 60 % est affichée, en attente de Lamine. */
+   /* la caisse repart à chaque mois : la comparaison des caisses n'a plus de sens — affichée seulement */
    console.log('Laisser partir une Dame ('+nom+') : tient '+Math.round(rL.temps/60)+' min contre '+Math.round(rS.temps/60)+' min'+
      '  ('+Math.round(part*100)+' % — cible ≤ '+Math.round(PART_MAX*100)+' %) '+(okT?'✓':'✗')+
      '   |   caisses au jour '+jourCommun+' (dernier jour commun) : '+argentS+' F contre '+argentL+' F '+

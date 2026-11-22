@@ -352,6 +352,11 @@ html,body{height:100%;overflow:hidden;background:#1B2A1B;font-family:var(--ui);c
   padding:0;flex:0 0 auto}
 #menuBtn:active{transform:translateY(2px);box-shadow:0 1px 0 var(--trait)}
 
+#semaineBox{background:var(--trait);border:3px solid var(--trait);border-radius:18px;
+  padding:3px 10px;box-shadow:var(--ombre);text-align:center;color:var(--creme)}
+#semaineBox small{display:block;font-size:7.5px;font-weight:900;letter-spacing:.14em;opacity:.6}
+#semaineNum{font-size:16px;font-weight:900;line-height:1;color:var(--or)}
+#semaineBox b{display:block;font-size:6.5px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;opacity:.6;margin-top:1px}
 #jourBox{background:var(--blanc);border:3px solid var(--trait);border-radius:18px;
   padding:3px 10px;box-shadow:var(--ombre);text-align:center}
 #jourBox small{display:block;font-size:7.5px;font-weight:900;letter-spacing:.14em;opacity:.55}
@@ -483,6 +488,11 @@ html,body{height:100%;overflow:hidden;background:#1B2A1B;font-family:var(--ui);c
   padding:0;flex:0 0 auto}
 #menuBtn:active{transform:translateY(2px);box-shadow:0 1px 0 var(--trait)}
 
+#semaineBox{background:var(--trait);border:3px solid var(--trait);border-radius:18px;
+  padding:3px 10px;box-shadow:var(--ombre);text-align:center;color:var(--creme)}
+#semaineBox small{display:block;font-size:7.5px;font-weight:900;letter-spacing:.14em;opacity:.6}
+#semaineNum{font-size:16px;font-weight:900;line-height:1;color:var(--or)}
+#semaineBox b{display:block;font-size:6.5px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;opacity:.6;margin-top:1px}
 #jourBox{background:var(--blanc);border:3px solid var(--trait);border-radius:18px;
   padding:3px 10px;box-shadow:var(--ombre);text-align:center}
 #jourBox small{display:block;font-size:7.5px;font-weight:900;letter-spacing:.14em;opacity:.55}
@@ -968,7 +978,7 @@ body.playing #etapeJeu.visible{display:block}
     <button id="menuBtn">⌂</button>
     <div id="sous"><span class="pic">&#128176;</span><span id="sousVal">0</span></div>
     <div id="jourBox"><small>MOIS</small><div id="jour">1</div><b id="nomJour">Janvier</b></div>
-    <div id="recordBox"><small>RECORD</small><div id="record">0</div></div>
+    <div id="semaineBox"><small>SEMAINE</small><div id="semaineNum">1</div><b>sur 4</b></div>
   </div>
 </div>
 
@@ -1275,7 +1285,7 @@ function dameSVG(i){
    ========================================================= */
 'use strict';
 
-var BUILD_TAG = 'LQD-v16.4';
+var BUILD_TAG = 'LQD-v16.5';
 document.getElementById('build').textContent = BUILD_TAG;
 var vIntro = document.getElementById('versionIntro');
 if (vIntro) vIntro.textContent = BUILD_TAG;
@@ -1361,6 +1371,8 @@ function traiterAppui(e, n){
       if (S && S.enCours) demanderUnPret();
       return;
     }
+    if (n.id === 'champRejouer'){ try { sonBouton(); fermerLeChampion(true); } catch (err) {} return; }
+    if (n.id === 'champMenu'){ try { sonBouton(); fermerLeChampion(false); } catch (err) {} return; }
     if (n.id === 'moisSuivant'){ try { sonBouton(); fermerLeMoisTenu(false); } catch (err) {} return; }
     if (n.id === 'moisMenu'){ try { sonBouton(); fermerLeMoisTenu(true); } catch (err) {} return; }
     if (n.id === 'btnReprendreMois'){
@@ -1542,15 +1554,15 @@ var CFG = {
   MANDAT_DELAI: 3,        // il a trois jours pour l'envoyer
   MANDAT_PEINE: 22,       // ce que lui coûte un mandat oublié
 
-  PLUIE_JOUR: 91,         // quatrième partie : la saison des pluies
+  PLUIE_JOUR: 83,         // mois 7 (juillet) : la saison des pluies — 22 nov., dans l'année du champion
   PLUIE_PERIODE: 26,      // une averse toutes les vingt-six secondes
   PLUIE_DUREE: 9,
   TOIT_PRIX: 500,        // réparer le toit du foyer
   FOYER_FUITE: 0.5,       // sous la pluie, un toit percé ne repose qu'à moitié
   PLUIE_USURE: 1.25,      // et les Dames supportent mal l'humidité
 
-  VACANCES_JOUR: 111,     // le fils revient une semaine
-  VACANCES_DUREE: 7,
+  VACANCES_JOUR: 84,      // mois 8 (août) : le fils revient pour les vacances
+  VACANCES_DUREE: 1,      // un mois
 
   MOTO_JOUR: 99999,      // plus de moto à crédit : elle vient du troc au départ du fils
   MOTO_PRIX: 450,
@@ -1579,7 +1591,10 @@ var CFG = {
      la maison se vide. Par Dame absente, et le rappel efface tout. */
   DESEQUILIBRE_USURE: 0.35,   // 22 nov. 2026 : 0,15 → 0,35, sinon sur des mois de 5 min une Dame laissée partir ne coûtait plus rien (robot : 101 %)
   /* ancien : 0,15 */   // +15 % d'usure par Dame absente (30 % à deux) — la montée sur deux jours rend ce taux tenable
-  DESEQUILIBRE_PAYE: 0.35,      // -15 % de paye par Dame absente (30 % à deux)
+  DESEQUILIBRE_PAYE: 0,     // 22 nov. 2026 : remplacée par la pension, visible, à chaque semaine
+  PENSION_PART: 0.50,     // la pension d'une Dame partie : 50 % d'une semaine de paye pleine du chantier
+  MOIS_CHAMPION: 12,      // tenir un an = champion (Lamine, 22 nov.)
+     // -15 % de paye par Dame absente (30 % à deux)
   DESEQUILIBRE_MONTEE: 2,     // la pénalité monte sur deux jours après le départ : le temps de se relever
   PRIME_REPOS: 2.0,      // samedi, dimanche et jours fériés : la paye double
   ATTENTE_MAX: 15,       // le jour chômé attend Modou au chantier, au plus quinze secondes      // samedi, dimanche et jours fériés : la paye double     // quatre fois plus rapide qu'à pied
@@ -1693,13 +1708,14 @@ function estConge(j){ return Math.floor((j - 1) / CFG.MOIS) % 6 === 5; }
    ×1,8, usure relevée : le robot tient 108 jours en Difficile, 49 en
    Très difficile, et garde une caisse serrée en Facile. */
 /* 22 nov. 2026 — réglage à la semaine (robot, tests/economie.cjs, un mois = 5 min) :
-   Facile perdu vers le mois 18, Difficile vers le mois 5, Très difficile vers le mois 3.
+   (v16.5, année du champion = 12 mois) Facile perdu vers le mois 11, Difficile vers le mois 6,
+   Très difficile vers le mois 3. Personne ne devient champion sans bien jouer.
    hausseHebdo : les prix et les charges, chaque semaine ; payeHebdo : la paye de Modou ;
    pressionHebdo : l'usure des Dames ; pressionDepart : l'usure au premier mois. */
 var NIVEAUX = [
   { cle:'facile',  nom:'Facile',
     inflation:0.20, pressionMax:1.00, usure:0.90, paye:1.20, mandat:0.70,
-    hausseHebdo:0.025, payeHebdo:0.010, pressionHebdo:0.020, pressionDepart:0.30,
+    hausseHebdo:0.030, payeHebdo:0.010, pressionHebdo:0.035, pressionDepart:0.30,
     dit:'Les prix montent moins vite et Modou s\u2019use moins. Pour d\u00e9couvrir.' },
   { cle:'dur',     nom:'Difficile',
     /* 31 oct. 2026 : 1,25 → 1,15. Les allées barrées ajoutent de la
@@ -4327,6 +4343,27 @@ function majRebours(){
     } else { el.className = ''; el.innerHTML = ''; }
   }
 }
+/* 22 nov. 2026, Lamine : « quand une dame part, tu dois lui verser de l'argent
+   à chaque paye ». Chaque semaine, une pension par Dame partie, prise sur la
+   caisse. Elle s'arrête quand la Dame revient (rappel, ou nouveau mois). */
+function pensionDUneDame(){
+  return Math.round(CFG.PENSION_PART * CFG.GAIN_CHANTIER * payeModou() * NIV().paye * CFG.SEC_PAR_SEMAINE);
+}
+function verserLesPensions(){
+  var p = pensionDUneDame(), qui = [];
+  for (var i=0;i<DAMES.length;i++){
+    if (!S.parties[i]) continue;
+    var verse = Math.min(Math.max(0, S.argent), p);
+    S.argent -= verse;
+    S.pensions = (S.pensions || 0) + verse;
+    qui.push('la ' + DAMES[i].nom);
+  }
+  if (!qui.length) return;
+  var txt = 'Pension vers\u00e9e \u00e0 ' + qui.join(' et ') + ' : \u2212' + fmtF(p * qui.length);
+  setTimeout(function(){ if (S && S.enCours) flash(txt, 3400); }, 3700);
+  noter(S.jour, txt);
+  sonCaisse();
+}
 function nouvelleSemaine(){
   var hp = Math.round((NIV().hausseHebdo || 0) * 1000) / 10;
   var hy = Math.round((NIV().payeHebdo || 0) * 1000) / 10;
@@ -4339,6 +4376,7 @@ function nouvelleSemaine(){
   noter(S.jour, txt);
   marquerHausse();
   if (S.filsParti && !S.vacances) envoyerLeMandatSeul();
+  verserLesPensions();
 }
 function envoyerLeMandatSeul(){
   var m = montantDuMandat() + (S.arriere || 0);
@@ -5014,6 +5052,8 @@ function rendre(){
   var bp = badgesEl.CENTRE.querySelector('.txt');
   if (bp) bp.textContent = S.foyer ? 'FOYER' : 'REVIENS ICI D\u2019ABORD';
   elJour.textContent = moisDe(S.jour);
+  var elSem = document.getElementById('semaineNum');
+  if (elSem) elSem.textContent = semaineDuMois();
   afficherEtape();
 
   // prix du jour sur les badges + zone trop chère
@@ -5840,7 +5880,45 @@ function ouvrirLeChapitre(){
 }
 
 /* 22 nov. 2026 : le tableau de victoire, à la fin de chaque mois */
+function ouvrirLeChampion(){
+  var mois = moisDe(S.jour);
+  cacherRebours();
+  noterAction('champion');
+  majRecord();
+  S.chapitre = { niveau: 15, t:0, prochain:0, mois:mois, champion:true };
+  S.enCours = false;
+  effacerPartie();
+  try { localStorage.removeItem(CLE_DEBUT_MOIS); } catch (e) {}
+  ecrireProgres(); enregistrerPartie();
+  document.body.classList.remove('playing');
+  couperLaParole(); stopperAuto();
+  var z = document.getElementById('chapitre');
+  z.className = 'on niv5';
+  z.innerHTML =
+    '<div class="chFond"></div>' +
+    '<div class="chScene"><div class="chModou">' + bonhommeSVG() + '</div>' +
+      (S.moto ? '<div class="chAne">' + motoSVG() + '</div>' : '') + '</div>' +
+    '<div class="chTexte">' +
+      '<div class="chPartie">DOUZE MOIS \u00b7 UNE ANN\u00c9E</div>' +
+      '<div class="chTitre">CHAMPION !</div>' +
+      '<div class="chSous">Modou a tenu sa maison une ann\u00e9e enti\u00e8re.<br>' +
+        '<b>Les quatre Dames sont fi\u00e8res de lui.</b></div>' +
+    '</div><div class="chBoutons">' +
+      '<button class="cta" id="champRejouer">Rejouer</button>' +
+      '<button class="cta ghost" id="champMenu">Menu</button></div>';
+  ouvrirLaMusiqueDeFete();
+  fanfare(4);
+  parler('Champion ! Modou a tenu sa maison une ann\u00e9e enti\u00e8re.', VOIX_MODOU);
+}
+function fermerLeChampion(rejouer){
+  S.chapitre = null;
+  var z = document.getElementById('chapitre');
+  if (z){ z.className = ''; z.innerHTML = ''; }
+  fermerLaMusiqueDeFete();
+  if (rejouer) demarrer(); else retourAuMenu();
+}
 function ouvrirLeMoisTenu(){
+  if (moisDe(S.jour) >= CFG.MOIS_CHAMPION){ ouvrirLeChampion(); return; }
   var mois = moisDe(S.jour);
   cacherRebours();
   noterAction('mois tenu');
