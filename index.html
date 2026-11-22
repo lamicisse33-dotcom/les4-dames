@@ -77,8 +77,9 @@ html,body{height:100%;overflow:hidden;background:#1B2A1B;font-family:var(--ui);c
 /* ---- ZONES ---- */
 .zone{border-radius:50%;pointer-events:none;border:3px solid transparent;background:transparent;
   transition:background .25s,border-color .25s,opacity .25s;opacity:0}
-.zone.proche{opacity:1;border-color:rgba(255,255,255,.75);background:rgba(255,255,255,.14)}
-.zone.actif{opacity:1;background:rgba(255,255,255,.3);border-color:#fff}
+/* 22 nov. 2026, 22 h 38, Lamine : plus de cercles blancs autour des lieux */
+.zone.proche{opacity:0;border-color:transparent;background:transparent}
+.zone.actif{opacity:0;background:transparent;border-color:transparent}
 .zone.foyerdu{opacity:1;border-color:#FF9EC4;border-style:solid;background:rgba(255,158,196,.24);
   animation:appelZone 1.1s ease-in-out infinite}
 .badge.foyerdu{opacity:1;background:#FFDCEB}
@@ -92,6 +93,8 @@ html,body{height:100%;overflow:hidden;background:#1B2A1B;font-family:var(--ui);c
 @keyframes appelZone{0%,100%{box-shadow:0 0 0 0 rgba(255,197,61,0)}
   50%{box-shadow:0 0 0 12px rgba(255,197,61,.3)}}
 .zone.cher{border-color:#FF5C7A;background:rgba(255,92,122,.18)}
+/* les halos de couleur (une Dame appelle, trop cher) restent visibles quand Modou approche */
+.zone.appel.proche,.zone.appel.actif,.zone.cher.proche,.zone.cher.actif{opacity:1}
 
 /* ---- BADGES ---- */
 .pret{position:absolute;transform:translate(-50%,-50%);z-index:30;pointer-events:auto;
@@ -1288,7 +1291,7 @@ function dameSVG(i){
    ========================================================= */
 'use strict';
 
-var BUILD_TAG = 'LQD-v17.3';
+var BUILD_TAG = 'LQD-v17.4';
 document.getElementById('build').textContent = BUILD_TAG;
 var vIntro = document.getElementById('versionIntro');
 if (vIntro) vIntro.textContent = BUILD_TAG;
@@ -1551,7 +1554,7 @@ var CFG = {
   VIT_PLEIN: 1.40,        // à 100 de force, Modou file
   VIT_VIDE: 0.30,         // à zéro, il se traîne
   COURBE_VIT: 0.80,       // la perte se sent dès la première moitié
-  RAYON_ZONE: 0.062,     // cercles nettement plus larges, plus faciles à attraper
+  RAYON_ZONE: 0.090,     // 22 nov. : un bâtiment s'active dès que Modou arrive à sa porte (0,062 avant)
   RAYON_CENTRE: 0.088,
 
   GAIN_ACHAT: 45,         // ce que l'objet rend à la Dame
@@ -1772,7 +1775,7 @@ function estConge(j){ return Math.floor((j - 1) / CFG.MOIS) % 6 === 5; }
 var NIVEAUX = [
   { cle:'facile',  nom:'Facile',
     inflation:0.20, pressionMax:1.00, usure:0.90, paye:1.20, mandat:0.70,
-    hausseHebdo:0.030, payeHebdo:0.020, pressionHebdo:0.090, pressionDepart:0.30,
+    hausseHebdo:0.030, payeHebdo:0.020, pressionHebdo:0.110, pressionDepart:0.30,
     dit:'Les prix montent moins vite et Modou s\u2019use moins. Pour d\u00e9couvrir.' },
   { cle:'dur',     nom:'Difficile',
     /* 31 oct. 2026 : 1,25 → 1,15. Les allées barrées ajoutent de la
@@ -1780,7 +1783,7 @@ var NIVEAUX = [
        robot tombait au jour 83 et ne passait plus que 13 niveaux sur 18.
        À 1,15 : jour 96, 18 niveaux sur 18. La pente reste celle du 30. */
     inflation:0.30, pressionMax:1.60, usure:1.15, paye:1.00, mandat:1.00,
-    hausseHebdo:0.035, payeHebdo:0.025, pressionHebdo:0.045, pressionDepart:0.65,
+    hausseHebdo:0.035, payeHebdo:0.025, pressionHebdo:0.065, pressionDepart:0.65,
     dit:'Le r\u00e9glage normal du jeu. Les scores de r\u00e9f\u00e9rence.' },
   { cle:'tresdur', nom:'Très difficile',
     inflation:0.40, pressionMax:2.20, usure:1.35, paye:0.85, mandat:1.30,
